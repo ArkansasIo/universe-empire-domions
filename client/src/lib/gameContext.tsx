@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CommanderState, Item } from './commanderTypes';
+import { CommanderState, Item, RaceId, ClassId, SubClassId, RACES, CLASSES, SUBCLASSES } from './commanderTypes';
 
 interface Resources {
   metal: number;
@@ -79,6 +79,7 @@ interface GameState {
   unequipItem: (slot: "weapon" | "armor" | "module") => void;
   craftItem: (item: Item, cost: {metal: number, crystal: number, deuterium?: number}) => void;
   temperItem: (itemId: string) => void;
+  setCommanderIdentity: (race: RaceId, cls: ClassId, subClass: SubClassId | null) => void;
 }
 
 const GameContext = createContext<GameState | undefined>(undefined);
@@ -131,6 +132,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [commander, setCommander] = useState<CommanderState>({
+    name: "Commander",
+    race: "terran",
+    class: "admiral",
+    subClass: null,
     stats: { level: 1, xp: 0, warfare: 1, logistics: 1, science: 1, engineering: 1 },
     equipment: { weapon: null, armor: null, module: null },
     inventory: [
@@ -150,7 +155,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // Calculate production
   const getProduction = () => {
     // Add Commander Logistics Bonus
-    const logisticsBonus = 1 + (commander.stats.logistics * 0.05); // 5% per level
+    let logisticsBonus = 1 + (commander.stats.logistics * 0.05); // 5% per level
+
+    // Add Race/Class Bonuses
+    if (commander.race === "terran") logisticsBonus += 0.05;
+    if (commander.race === "lithoid") logisticsBonus += 0.10; // Mock
+    if (commander.class === "industrialist") logisticsBonus += 0.15;
 
     const metalProd = 30 * buildings.metalMine * Math.pow(1.1, buildings.metalMine) * logisticsBonus;
     const crystalProd = 20 * buildings.crystalMine * Math.pow(1.1, buildings.crystalMine) * logisticsBonus;
@@ -223,7 +233,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [buildings, commander.stats.logistics]);
+  }, [buildings, commander.stats.logistics, commander.race, commander.class]);
 
   const addEvent = (title: string, description: string, type: GameEvent["type"]) => {
     setEvents(prev => [{
@@ -323,7 +333,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const temperItem = (itemId: string) => {
-     // Simplified Tempering: +1 to tempering stat, costs 1000 metal
      if (resources.metal >= 1000) {
         setResources(prev => ({ ...prev, metal: prev.metal - 1000 }));
         setCommander(prev => ({
@@ -337,6 +346,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }));
         addEvent("Tempering Success", "Item improved successfully.", "success");
      }
+  };
+
+  const setCommanderIdentity = (race: RaceId, cls: ClassId, subClass: SubClassId | null) => {
+    setCommander(prev => ({ ...prev, race, class: cls, subClass }));
+    addEvent("Identity Updated", `Commander identity re-sequenced to ${RACES[race].name} ${CLASSES[cls].name}.`, "info");
   };
 
   return (
@@ -356,7 +370,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        equipItem,
        unequipItem,
        craftItem,
-       temperItem
+       temperItem,
+       setCommanderIdentity
     }}>
       {children}
     </GameContext.Provider>

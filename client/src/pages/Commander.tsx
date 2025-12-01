@@ -1,18 +1,19 @@
 import GameLayout from "@/components/layout/GameLayout";
 import { useGame } from "@/lib/gameContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   User, Sword, Shield, Cpu, Hammer, Anvil, Sparkles, 
-  Box, Gem, Database, Flame, Star, ChevronRight 
+  Box, Gem, Database, Flame, Star, Fingerprint, Dna
 } from "lucide-react";
-import { Item, blueprints } from "@/lib/commanderTypes";
+import { Item, blueprints, RACES, CLASSES, SUBCLASSES, RaceId, ClassId, SubClassId } from "@/lib/commanderTypes";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 const ItemCard = ({ item, onEquip, onTemper }: { item: Item, onEquip?: (item: Item) => void, onTemper?: (id: string) => void }) => (
    <div className={cn(
@@ -73,19 +74,24 @@ const ItemCard = ({ item, onEquip, onTemper }: { item: Item, onEquip?: (item: It
 );
 
 export default function Commander() {
-  const { commander, equipItem, unequipItem, craftItem, temperItem, resources } = useGame();
+  const { commander, equipItem, unequipItem, craftItem, temperItem, setCommanderIdentity } = useGame();
+
+  const [selectedRace, setSelectedRace] = useState<RaceId>(commander.race);
+  const [selectedClass, setSelectedClass] = useState<ClassId>(commander.class);
+  const [selectedSubClass, setSelectedSubClass] = useState<SubClassId | "none">(commander.subClass || "none");
 
   return (
     <GameLayout>
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div>
           <h2 className="text-3xl font-orbitron font-bold text-slate-900">High Command</h2>
-          <p className="text-muted-foreground font-rajdhani text-lg">Manage your commander's profile, equipment, and crafting.</p>
+          <p className="text-muted-foreground font-rajdhani text-lg">Manage your commander's profile, equipment, and identity.</p>
         </div>
 
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start">
             <TabsTrigger value="profile" className="font-orbitron"><User className="w-4 h-4 mr-2" /> Profile & Equipment</TabsTrigger>
+            <TabsTrigger value="identity" className="font-orbitron"><Dna className="w-4 h-4 mr-2" /> Identity & Class</TabsTrigger>
             <TabsTrigger value="inventory" className="font-orbitron"><Box className="w-4 h-4 mr-2" /> Inventory</TabsTrigger>
             <TabsTrigger value="smithy" className="font-orbitron"><Anvil className="w-4 h-4 mr-2" /> Smithy</TabsTrigger>
           </TabsList>
@@ -96,16 +102,22 @@ export default function Commander() {
                 {/* Stats Column */}
                 <Card className="bg-white border-slate-200">
                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-slate-900"><Activity className="w-5 h-5 text-primary" /> Commander Stats</CardTitle>
+                      <CardTitle className="flex items-center gap-2 text-slate-900"><Fingerprint className="w-5 h-5 text-primary" /> Commander Stats</CardTitle>
                    </CardHeader>
                    <CardContent className="space-y-6">
                       <div className="text-center">
-                         <div className="w-24 h-24 mx-auto bg-slate-100 rounded-full border-4 border-white shadow-lg flex items-center justify-center mb-2">
+                         <div className="w-24 h-24 mx-auto bg-slate-100 rounded-full border-4 border-white shadow-lg flex items-center justify-center mb-2 overflow-hidden relative">
                             <User className="w-12 h-12 text-slate-400" />
+                            <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[9px] uppercase py-0.5">
+                               {RACES[commander.race].name}
+                            </div>
                          </div>
                          <h3 className="text-xl font-orbitron text-slate-900">Commander</h3>
-                         <Badge className="bg-primary text-white">Level {commander.stats.level}</Badge>
-                         <div className="mt-2 px-4">
+                         <div className="flex justify-center gap-2 mt-1">
+                            <Badge variant="outline" className="border-primary text-primary">{CLASSES[commander.class].name}</Badge>
+                            {commander.subClass && <Badge variant="secondary">{SUBCLASSES[commander.subClass].name}</Badge>}
+                         </div>
+                         <div className="mt-4 px-4">
                             <div className="flex justify-between text-xs text-slate-500 mb-1">
                                <span>XP</span>
                                <span>{commander.stats.xp} / 1000</span>
@@ -133,6 +145,13 @@ export default function Commander() {
                             <span className="text-sm font-bold text-slate-700 flex items-center gap-2"><Hammer className="w-4 h-4 text-slate-500" /> Engineering</span>
                             <span className="font-mono text-lg text-slate-900">{commander.stats.engineering}</span>
                          </div>
+                      </div>
+
+                      <div className="bg-slate-50 p-3 rounded border border-slate-100 text-xs space-y-2">
+                         <div className="font-bold text-slate-900 uppercase">Active Bonuses</div>
+                         {RACES[commander.race].bonuses.map((b, i) => <div key={`r-${i}`} className="text-slate-600 flex items-center gap-1"><div className="w-1 h-1 bg-primary rounded-full" /> {b}</div>)}
+                         {CLASSES[commander.class].bonuses.map((b, i) => <div key={`c-${i}`} className="text-slate-600 flex items-center gap-1"><div className="w-1 h-1 bg-blue-500 rounded-full" /> {b}</div>)}
+                         {commander.subClass && SUBCLASSES[commander.subClass].bonuses.map((b, i) => <div key={`sc-${i}`} className="text-slate-600 flex items-center gap-1"><div className="w-1 h-1 bg-purple-500 rounded-full" /> {b}</div>)}
                       </div>
                    </CardContent>
                 </Card>
@@ -181,6 +200,110 @@ export default function Commander() {
                    </div>
                 </div>
              </div>
+          </TabsContent>
+
+          {/* IDENTITY TAB (New) */}
+          <TabsContent value="identity" className="mt-6">
+             <Card className="bg-white border-slate-200">
+                <CardHeader>
+                   <CardTitle className="flex items-center gap-2 text-slate-900"><Dna className="w-5 h-5 text-primary" /> Genetic & Professional Sequencing</CardTitle>
+                   <CardDescription>Modify your commander's biological origin and specialization.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                   
+                   {/* Race Selection */}
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                         <label className="text-sm font-bold text-slate-900">Origin Species</label>
+                         <Select value={selectedRace} onValueChange={(v: RaceId) => setSelectedRace(v)}>
+                            <SelectTrigger>
+                               <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                               {Object.values(RACES).map(r => (
+                                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                               ))}
+                            </SelectContent>
+                         </Select>
+                         <div className="bg-slate-50 p-3 rounded border border-slate-100 text-sm">
+                            <p className="mb-2">{RACES[selectedRace].description}</p>
+                            <div className="space-y-1">
+                               {RACES[selectedRace].bonuses.map((b, i) => (
+                                  <Badge key={i} variant="outline" className="bg-white">{b}</Badge>
+                               ))}
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* Class Selection */}
+                      <div className="space-y-2">
+                         <label className="text-sm font-bold text-slate-900">Career Path</label>
+                         <Select value={selectedClass} onValueChange={(v: ClassId) => {
+                            setSelectedClass(v);
+                            setSelectedSubClass("none"); // Reset sub
+                         }}>
+                            <SelectTrigger>
+                               <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                               {Object.values(CLASSES).map(c => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                               ))}
+                            </SelectContent>
+                         </Select>
+                         <div className="bg-slate-50 p-3 rounded border border-slate-100 text-sm">
+                            <p className="mb-2">{CLASSES[selectedClass].description}</p>
+                            <div className="space-y-1">
+                               {CLASSES[selectedClass].bonuses.map((b, i) => (
+                                  <Badge key={i} variant="outline" className="bg-white">{b}</Badge>
+                               ))}
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* SubClass Selection */}
+                      <div className="space-y-2">
+                         <label className="text-sm font-bold text-slate-900">Specialization</label>
+                         <Select 
+                           value={selectedSubClass} 
+                           onValueChange={(v: SubClassId | "none") => setSelectedSubClass(v)}
+                           disabled={commander.stats.level < 10 && false} // Mock disabled
+                         >
+                            <SelectTrigger>
+                               <SelectValue placeholder="Requires Level 10" />
+                            </SelectTrigger>
+                            <SelectContent>
+                               <SelectItem value="none">-- None --</SelectItem>
+                               {CLASSES[selectedClass].subClasses.map(scId => (
+                                  <SelectItem key={scId} value={scId}>{SUBCLASSES[scId].name}</SelectItem>
+                               ))}
+                            </SelectContent>
+                         </Select>
+                         {selectedSubClass !== "none" ? (
+                            <div className="bg-slate-50 p-3 rounded border border-slate-100 text-sm">
+                               <p className="mb-2">{SUBCLASSES[selectedSubClass as SubClassId].description}</p>
+                               <div className="space-y-1">
+                                  {SUBCLASSES[selectedSubClass as SubClassId].bonuses.map((b, i) => (
+                                     <Badge key={i} variant="outline" className="bg-white border-purple-200 text-purple-700">{b}</Badge>
+                                  ))}
+                               </div>
+                            </div>
+                         ) : (
+                            <div className="bg-slate-50 p-3 rounded border border-slate-100 text-sm text-slate-400 italic text-center">
+                               Select a specialization to see details.
+                            </div>
+                         )}
+                      </div>
+                   </div>
+
+                   <div className="flex justify-end">
+                      <Button size="lg" onClick={() => setCommanderIdentity(selectedRace, selectedClass, selectedSubClass === "none" ? null : selectedSubClass)}>
+                         Confirm Identity Sequence
+                      </Button>
+                   </div>
+
+                </CardContent>
+             </Card>
           </TabsContent>
 
           {/* INVENTORY TAB */}
