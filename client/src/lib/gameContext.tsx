@@ -63,6 +63,16 @@ export interface QueueItem {
   amount?: number;
 }
 
+export interface Mission {
+  id: string;
+  type: "attack" | "transport" | "espionage" | "colonize" | "deploy";
+  target: string; // Coordinates e.g. "1:102:8"
+  units: Units;
+  arrivalTime: number;
+  returnTime: number;
+  status: "outbound" | "holding" | "return";
+}
+
 interface GameState {
   resources: Resources;
   buildings: Buildings;
@@ -73,6 +83,7 @@ interface GameState {
   planetName: string;
   events: GameEvent[];
   queue: QueueItem[];
+  activeMissions: Mission[];
   updateBuilding: (building: keyof Buildings, name: string, time: number) => void;
   updateResearch: (tech: string, name: string, time: number) => void;
   buildUnit: (unitId: string, amount: number, name: string, time: number) => void;
@@ -85,6 +96,7 @@ interface GameState {
   setGovernmentType: (type: GovernmentId) => void;
   togglePolicy: (policyId: string) => void;
   setTaxRate: (rate: number) => void;
+  dispatchFleet: (mission: Omit<Mission, "id" | "status" | "returnTime">) => void;
 }
 
 const GameContext = createContext<GameState | undefined>(undefined);
@@ -167,6 +179,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [activeMissions, setActiveMissions] = useState<Mission[]>([]);
 
   const planetName = "Homeworld";
 
@@ -241,6 +254,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         });
 
         return remaining;
+      });
+
+      // Process Missions (Simple mock)
+      setActiveMissions(prev => {
+         const finished = prev.filter(m => m.returnTime <= now);
+         const active = prev.filter(m => m.returnTime > now);
+         
+         if (finished.length > 0) {
+            finished.forEach(m => {
+               addEvent("Fleet Returned", `Fleet returned from ${m.target}.`, "info");
+               // Return units to base (mock)
+               setUnits(u => {
+                  const newUnits = {...u};
+                  Object.entries(m.units).forEach(([id, count]) => {
+                     newUnits[id] = (newUnits[id] || 0) + count;
+                  });
+                  return newUnits;
+               });
+            });
+         }
+         return active;
       });
 
       // Random Events (Mock)
@@ -409,6 +443,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
      setGovernment(prev => ({ ...prev, taxRate: rate }));
   };
 
+  const dispatchFleet = (missionData: Omit<Mission, "id" | "status" | "returnTime">) => {
+     const flightTime = missionData.arrivalTime; // In ms
+     const now = Date.now();
+     
+     const mission: Mission = {
+        id: Math.random().toString(36).substr(2, 9),
+        ...missionData,
+        arrivalTime: now + flightTime,
+        returnTime: now + (flightTime * 2),
+        status: "outbound"
+     };
+
+     setActiveMissions(prev => [...prev, mission]);
+     
+     // Deduct units
+     setUnits(prev => {
+        const newUnits = {...prev};
+        Object.entries(missionData.units).forEach(([id, count]) => {
+           newUnits[id] = Math.max(0, (newUnits[id] || 0) - count);
+        });
+        return newUnits;
+     });
+
+     addEvent("Fleet Dispatched", `Fleet sent to ${missionData.target} on ${missionData.type} mission.`, "info");
+  };
+
   return (
     <GameContext.Provider value={{ 
        resources, 
@@ -420,6 +480,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        planetName, 
        events,
        queue,
+       activeMissions,
        updateBuilding,
        updateResearch,
        buildUnit,
@@ -431,7 +492,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        setCommanderIdentity,
        setGovernmentType,
        togglePolicy,
-       setTaxRate
+       setTaxRate,
+       dispatchFleet
     }}>
       {children}
     </GameContext.Provider>
