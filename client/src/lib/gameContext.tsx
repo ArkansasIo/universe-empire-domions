@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// Removed the invalid import of Research interface
-// import { Research } from './researchData'; 
+import { CommanderState, Item } from './commanderTypes';
 
 interface Resources {
   metal: number;
@@ -68,6 +67,7 @@ interface GameState {
   buildings: Buildings;
   research: {[key: string]: number};
   units: Units;
+  commander: CommanderState;
   planetName: string;
   events: GameEvent[];
   queue: QueueItem[];
@@ -75,6 +75,10 @@ interface GameState {
   updateResearch: (tech: string, name: string, time: number) => void;
   buildUnit: (unitId: string, amount: number, name: string, time: number) => void;
   addEvent: (title: string, description: string, type: GameEvent["type"]) => void;
+  equipItem: (item: Item) => void;
+  unequipItem: (slot: "weapon" | "armor" | "module") => void;
+  craftItem: (item: Item, cost: {metal: number, crystal: number, deuterium?: number}) => void;
+  temperItem: (itemId: string) => void;
 }
 
 const GameContext = createContext<GameState | undefined>(undefined);
@@ -126,6 +130,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     colonist: 100
   });
 
+  const [commander, setCommander] = useState<CommanderState>({
+    stats: { level: 1, xp: 0, warfare: 1, logistics: 1, science: 1, engineering: 1 },
+    equipment: { weapon: null, armor: null, module: null },
+    inventory: [
+      { id: "bp_plasmaRifle", name: "Plasma Rifle Blueprint", description: "Blueprint for a standard plasma rifle.", type: "blueprint", rarity: "common", level: 1 },
+      { id: "raw_metal", name: "Refined Metal", description: "High quality crafting material.", type: "material", rarity: "common", level: 1 }
+    ]
+  });
+
   const [events, setEvents] = useState<GameEvent[]>([
     { id: "1", title: "Welcome Commander", description: "Colony established on Homeworld.", type: "success", timestamp: Date.now() }
   ]);
@@ -136,9 +149,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Calculate production
   const getProduction = () => {
-    const metalProd = 30 * buildings.metalMine * Math.pow(1.1, buildings.metalMine);
-    const crystalProd = 20 * buildings.crystalMine * Math.pow(1.1, buildings.crystalMine);
-    const deutProd = 10 * buildings.deuteriumSynthesizer * Math.pow(1.1, buildings.deuteriumSynthesizer);
+    // Add Commander Logistics Bonus
+    const logisticsBonus = 1 + (commander.stats.logistics * 0.05); // 5% per level
+
+    const metalProd = 30 * buildings.metalMine * Math.pow(1.1, buildings.metalMine) * logisticsBonus;
+    const crystalProd = 20 * buildings.crystalMine * Math.pow(1.1, buildings.crystalMine) * logisticsBonus;
+    const deutProd = 10 * buildings.deuteriumSynthesizer * Math.pow(1.1, buildings.deuteriumSynthesizer) * logisticsBonus;
     const energyProd = 20 * buildings.solarPlant * Math.pow(1.1, buildings.solarPlant);
     
     const metalCons = 10 * buildings.metalMine * Math.pow(1.1, buildings.metalMine);
@@ -177,9 +193,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
            if (item.type === "building") {
              setBuildings(b => ({ ...b, [item.id]: b[item.id as keyof Buildings] + 1 }));
              addEvent("Construction Complete", `${item.name} upgrade finished.`, "success");
+             // Give XP
+             setCommander(c => ({ ...c, stats: { ...c.stats, xp: c.stats.xp + 100 } }));
            } else if (item.type === "research") {
              setResearch(r => ({ ...r, [item.id]: (r[item.id] || 0) + 1 }));
              addEvent("Research Complete", `${item.name} research finished.`, "info");
+             setCommander(c => ({ ...c, stats: { ...c.stats, xp: c.stats.xp + 200 } }));
            } else if (item.type === "unit" && item.amount) {
              setUnits(u => ({ ...u, [item.id]: (u[item.id] || 0) + item.amount! }));
              addEvent("Shipyard Order", `${item.amount}x ${item.name} constructed.`, "success");
@@ -204,7 +223,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [buildings]);
+  }, [buildings, commander.stats.logistics]);
 
   const addEvent = (title: string, description: string, type: GameEvent["type"]) => {
     setEvents(prev => [{
@@ -213,7 +232,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       description,
       type,
       timestamp: Date.now()
-    }, ...prev].slice(0, 10)); // Keep last 10
+    }, ...prev].slice(0, 10));
   };
 
   const updateBuilding = (building: keyof Buildings, name: string, time: number = 5000) => {
@@ -226,7 +245,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         metal: prev.metal - costMetal,
         crystal: prev.crystal - costCrystal
       }));
-      // Add to queue instead of instant
       setQueue(prev => [...prev, {
         id: building,
         name: name,
@@ -239,7 +257,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateResearch = (tech: string, name: string, time: number = 5000) => {
-     // Mock cost check skipped for prototype brevity in this update
      setQueue(prev => [...prev, {
         id: tech,
         name: name,
@@ -258,19 +275,88 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }]);
   };
 
+  const equipItem = (item: Item) => {
+    if (item.type === "blueprint" || item.type === "material") return;
+    
+    setCommander(prev => {
+      const slot = item.type as "weapon" | "armor" | "module";
+      const currentEquip = prev.equipment[slot];
+      const newInventory = prev.inventory.filter(i => i.id !== item.id);
+      if (currentEquip) newInventory.push(currentEquip);
+      
+      return {
+        ...prev,
+        equipment: { ...prev.equipment, [slot]: item },
+        inventory: newInventory
+      };
+    });
+  };
+
+  const unequipItem = (slot: "weapon" | "armor" | "module") => {
+    setCommander(prev => {
+      const item = prev.equipment[slot];
+      if (!item) return prev;
+      return {
+        ...prev,
+        equipment: { ...prev.equipment, [slot]: null },
+        inventory: [...prev.inventory, item]
+      };
+    });
+  };
+
+  const craftItem = (item: Item, cost: {metal: number, crystal: number, deuterium?: number}) => {
+     if (resources.metal >= cost.metal && resources.crystal >= cost.crystal && (!cost.deuterium || resources.deuterium >= cost.deuterium)) {
+        setResources(prev => ({
+           ...prev,
+           metal: prev.metal - cost.metal,
+           crystal: prev.crystal - cost.crystal,
+           deuterium: prev.deuterium - (cost.deuterium || 0)
+        }));
+        setCommander(prev => ({
+           ...prev,
+           inventory: [...prev.inventory, item]
+        }));
+        addEvent("Crafting Complete", `Created ${item.name}`, "success");
+     } else {
+        alert("Insufficient Resources");
+     }
+  };
+
+  const temperItem = (itemId: string) => {
+     // Simplified Tempering: +1 to tempering stat, costs 1000 metal
+     if (resources.metal >= 1000) {
+        setResources(prev => ({ ...prev, metal: prev.metal - 1000 }));
+        setCommander(prev => ({
+           ...prev,
+           inventory: prev.inventory.map(i => i.id === itemId ? { ...i, tempering: (i.tempering || 0) + 1 } : i),
+           equipment: {
+              weapon: prev.equipment.weapon?.id === itemId ? { ...prev.equipment.weapon, tempering: (prev.equipment.weapon.tempering || 0) + 1 } : prev.equipment.weapon,
+              armor: prev.equipment.armor?.id === itemId ? { ...prev.equipment.armor, tempering: (prev.equipment.armor.tempering || 0) + 1 } : prev.equipment.armor,
+              module: prev.equipment.module?.id === itemId ? { ...prev.equipment.module, tempering: (prev.equipment.module.tempering || 0) + 1 } : prev.equipment.module,
+           }
+        }));
+        addEvent("Tempering Success", "Item improved successfully.", "success");
+     }
+  };
+
   return (
     <GameContext.Provider value={{ 
        resources, 
        buildings, 
        research,
        units,
+       commander,
        planetName, 
        events,
        queue,
        updateBuilding,
        updateResearch,
        buildUnit,
-       addEvent
+       addEvent,
+       equipItem,
+       unequipItem,
+       craftItem,
+       temperItem
     }}>
       {children}
     </GameContext.Provider>

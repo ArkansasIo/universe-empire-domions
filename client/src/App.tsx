@@ -13,6 +13,7 @@ import Research from "@/pages/Research";
 import Shipyard from "@/pages/Shipyard";
 import Fleet from "@/pages/Fleet";
 import Galaxy from "@/pages/Galaxy";
+import Commander from "@/pages/Commander";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/shipyard" component={Shipyard} />
       <Route path="/fleet" component={Fleet} />
       <Route path="/galaxy" component={Galaxy} />
+      <Route path="/commander" component={Commander} />
       
       <Route component={NotFound} />
     </Switch>
