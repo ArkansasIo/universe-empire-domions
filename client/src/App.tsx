@@ -17,6 +17,8 @@ import Commander from "@/pages/Commander";
 import Government from "@/pages/Government";
 import Settings from "@/pages/Settings";
 import Messages from "@/pages/Messages";
+import Alliance from "@/pages/Alliance";
+import Artifacts from "@/pages/Artifacts";
 
 function Router() {
   return (
@@ -25,11 +27,13 @@ function Router() {
       <Route path="/resources" component={Resources} />
       <Route path="/facilities" component={Facilities} />
       <Route path="/research" component={Research} />
+      <Route path="/artifacts" component={Artifacts} />
       <Route path="/shipyard" component={Shipyard} />
       <Route path="/fleet" component={Fleet} />
       <Route path="/galaxy" component={Galaxy} />
       <Route path="/commander" component={Commander} />
       <Route path="/government" component={Government} />
+      <Route path="/alliance" component={Alliance} />
       <Route path="/messages" component={Messages} />
       <Route path="/settings" component={Settings} />
       

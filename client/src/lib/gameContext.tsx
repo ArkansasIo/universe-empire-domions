@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CommanderState, Item, RaceId, ClassId, SubClassId, RACES, CLASSES, SUBCLASSES } from './commanderTypes';
 import { GovernmentState, GOVERNMENTS, GovernmentId, POLICIES } from './governmentData';
+import { Alliance, AllianceMember, MOCK_ALLIANCES } from './allianceData';
+import { Artifact, ARTIFACTS } from './artifactData';
 
 interface Resources {
   metal: number;
@@ -108,6 +110,8 @@ interface GameState {
   activeMissions: Mission[];
   config: GameConfig;
   messages: Message[];
+  alliance: Alliance | null;
+  artifacts: Artifact[];
   updateBuilding: (building: keyof Buildings, name: string, time: number) => void;
   updateResearch: (tech: string, name: string, time: number) => void;
   buildUnit: (unitId: string, amount: number, name: string, time: number) => void;
@@ -125,6 +129,10 @@ interface GameState {
   sendMessage: (to: string, subject: string, body: string) => void;
   markMessageRead: (id: string) => void;
   deleteMessage: (id: string) => void;
+  createAlliance: (name: string, tag: string) => void;
+  joinAlliance: (id: string) => void;
+  leaveAlliance: () => void;
+  activateArtifact: (id: string) => void;
 }
 
 const GameContext = createContext<GameState | undefined>(undefined);
@@ -216,6 +224,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([
      { id: "1", from: "High Command", to: "Commander", subject: "Welcome to Nexus-Alpha", body: "Greetings Commander. Establish your base and prepare for expansion.", timestamp: Date.now(), read: false, type: "system" },
      { id: "2", from: "Pirate King", to: "Commander", subject: "Surrender or Die", body: "This sector belongs to the Red Skull gang. Pay tribute or face destruction.", timestamp: Date.now() - 86400000, read: true, type: "player" }
+  ]);
+
+  const [alliance, setAlliance] = useState<Alliance | null>(null);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([
+    ARTIFACTS[0], ARTIFACTS[3] // Start with Star Map and Banner
   ]);
 
   const [events, setEvents] = useState<GameEvent[]>([
@@ -546,6 +559,83 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
      setMessages(prev => prev.filter(m => m.id !== id));
   };
 
+  const createAlliance = (name: string, tag: string) => {
+     const newAlliance: Alliance = {
+        id: Math.random().toString(36).substr(2, 9),
+        name,
+        tag,
+        description: "A new power rises.",
+        announcement: "Welcome to the alliance.",
+        members: [{
+           id: "player",
+           name: "Commander",
+           rank: "leader",
+           points: 1000,
+           status: "online",
+           lastActive: Date.now()
+        }],
+        applications: [],
+        resources: { metal: 0, crystal: 0, deuterium: 0 }
+     };
+     setAlliance(newAlliance);
+     addEvent("Alliance Formed", `You have founded the ${name} [${tag}].`, "success");
+  };
+
+  const joinAlliance = (id: string) => {
+     const mockAlliance = MOCK_ALLIANCES.find(a => a.id === id);
+     if (mockAlliance) {
+        setAlliance({
+           id: mockAlliance.id!,
+           name: mockAlliance.name!,
+           tag: mockAlliance.tag!,
+           description: mockAlliance.description!,
+           announcement: "Welcome new recruit.",
+           members: [{
+              id: "player",
+              name: "Commander",
+              rank: "recruit",
+              points: 1000,
+              status: "online",
+              lastActive: Date.now()
+           }],
+           applications: [],
+           resources: { metal: 0, crystal: 0, deuterium: 0 }
+        });
+        addEvent("Alliance Joined", `You have joined ${mockAlliance.name}.`, "success");
+     }
+  };
+
+  const leaveAlliance = () => {
+     setAlliance(null);
+     addEvent("Alliance Left", "You have left your alliance.", "warning");
+  };
+
+  const activateArtifact = (id: string) => {
+     const artifact = artifacts.find(a => a.id === id);
+     if (artifact && artifact.type === "active") {
+        // Check cooldown
+        const now = Date.now();
+        if (artifact.lastUsed && now - artifact.lastUsed < (artifact.cooldown || 0)) {
+           alert("Artifact is on cooldown!");
+           return;
+        }
+        
+        // Apply effect
+        setArtifacts(prev => prev.map(a => a.id === id ? { ...a, lastUsed: now } : a));
+        addEvent("Artifact Activated", `${artifact.name} activated.`, "success");
+        
+        // Mock effect implementation (e.g. chronos device)
+        if (id === "chronos_device") {
+           setQueue(prev => {
+              // Finish all construction immediately
+              const finished = prev.map(q => ({ ...q, endTime: now }));
+              // Effect will happen in next tick
+              return finished;
+           });
+        }
+     }
+  };
+
   return (
     <GameContext.Provider value={{ 
        resources, 
@@ -560,6 +650,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        activeMissions,
        config,
        messages,
+       alliance,
+       artifacts,
        updateBuilding,
        updateResearch,
        buildUnit,
@@ -576,7 +668,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        updateConfig,
        sendMessage,
        markMessageRead,
-       deleteMessage
+       deleteMessage,
+       createAlliance,
+       joinAlliance,
+       leaveAlliance,
+       activateArtifact
     }}>
       {children}
     </GameContext.Provider>
