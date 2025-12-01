@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { getPlanetDetails } from "@/lib/planetUtils";
 
 type SystemObject = {
   type: "planet" | "asteroid" | "nebula" | "blackhole" | "station" | "empty";
@@ -27,26 +28,37 @@ type SystemObject = {
   alliance?: string;
   debris?: { metal: number, crystal: number };
   moon?: boolean;
+  class?: string;
 };
 
 export default function Galaxy() {
   const [universe, setUniverse] = useState("uni1");
   const [galaxy, setGalaxy] = useState(1);
-  const [sector, setSector] = useState(4); // New Sector layer
+  const [sector, setSector] = useState(4); 
   const [system, setSystem] = useState(102);
 
   // Mock Data Generator based on coordinates
   const getSystemData = (pos: number): SystemObject => {
-    // Seed-like behavior based on position and system inputs
+    // Seed-like behavior
     const seed = (universe.length + galaxy + sector + system + pos) * 1.1;
     const random = (seed * 9301 + 49297) % 233280 / 233280;
 
-    if (pos === 8) return { type: "planet", name: "Homeworld", owner: "Commander", alliance: "ADMIN", moon: true };
+    // Get deterministic planet details for planets
+    const details = getPlanetDetails(seed);
+
+    if (pos === 8) return { type: "planet", name: "Homeworld", owner: "Commander", alliance: "ADMIN", moon: true, class: "M" };
     if (random > 0.95) return { type: "blackhole", name: "Singularity", debris: { metal: 50000, crystal: 50000 } };
     if (random > 0.90) return { type: "nebula", name: "Ion Cloud" };
     if (random > 0.85) return { type: "asteroid", name: "Asteroid Field", debris: { metal: 5000, crystal: 1000 } };
     if (random > 0.80) return { type: "station", name: "Pirate Outpost", owner: "Pirates" };
-    if (random > 0.60) return { type: "planet", name: `Colony ${pos}`, owner: `Player_${Math.floor(random * 1000)}`, alliance: random > 0.7 ? "NOOBS" : undefined, moon: random > 0.75 };
+    if (random > 0.60) return { 
+        type: "planet", 
+        name: `Colony ${pos}`, 
+        owner: `Player_${Math.floor(random * 1000)}`, 
+        alliance: random > 0.7 ? "NOOBS" : undefined, 
+        moon: random > 0.75,
+        class: details.class 
+    };
     
     return { type: "empty", name: "" };
   };
@@ -122,7 +134,7 @@ export default function Galaxy() {
                  <TableHead className="text-center w-[60px] text-slate-700">Pos</TableHead>
                  <TableHead className="w-[80px] text-slate-700">Visual</TableHead>
                  <TableHead className="text-slate-700">Name</TableHead>
-                 <TableHead className="text-slate-700">Type</TableHead>
+                 <TableHead className="text-slate-700">Class</TableHead>
                  <TableHead className="text-slate-700">Moon/Debris</TableHead>
                  <TableHead className="text-slate-700">Player / Status</TableHead>
                  <TableHead className="text-slate-700">Alliance</TableHead>
@@ -175,13 +187,18 @@ export default function Galaxy() {
                          )}
                       </TableCell>
 
-                      {/* Type Column */}
+                      {/* Class/Type Column */}
                       <TableCell>
                          {data.type === "asteroid" && <Badge variant="outline" className="border-slate-400 text-slate-600">Asteroid</Badge>}
                          {data.type === "blackhole" && <Badge variant="destructive" className="bg-black hover:bg-black text-white">Singularity</Badge>}
                          {data.type === "nebula" && <Badge variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-100">Nebula</Badge>}
                          {data.type === "station" && <Badge variant="outline" className="border-red-400 text-red-600">Pirate Base</Badge>}
-                         {data.type === "planet" && <Badge variant="secondary">Planet</Badge>}
+                         {data.type === "planet" && <Badge variant="secondary" className={cn(
+                            data.class === "M" ? "bg-green-100 text-green-700" :
+                            data.class === "Y" ? "bg-red-100 text-red-700" :
+                            data.class === "J" ? "bg-orange-100 text-orange-700" :
+                            "bg-blue-100 text-blue-700"
+                         )}>Class {data.class}</Badge>}
                       </TableCell>
                       
                       {/* Moon/Debris Column */}
