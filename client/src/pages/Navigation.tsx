@@ -12,6 +12,7 @@ const navItems = [
   { href: "/resources", icon: Pickaxe, label: "Resources" },
   { href: "/facilities", icon: Factory, label: "Facilities" },
   { href: "/research", icon: FlaskConical, label: "Research" },
+  { href: "/colonies", icon: Hexagon, label: "Colonies" },
   { href: "/shipyard", icon: Rocket, label: "Shipyard" },
   { href: "/fleet", icon: Send, label: "Fleet" },
   { href: "/combat", icon: Sword, label: "Combat" },

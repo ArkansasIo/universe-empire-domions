@@ -34,6 +34,7 @@ import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import ServerConsole from "@/pages/ServerConsole";
 import Exploration from "@/pages/Exploration";
+import Colonies from "@/pages/Colonies";
 import { useGame } from "@/lib/gameContext";
 
 function LoadingSplash() {
@@ -123,6 +124,7 @@ function RouterContent() {
       <Route path="/combat" component={Combat} />
       <Route path="/battle-logs" component={BattleLogs} />
       <Route path="/exploration" component={Exploration} />
+      <Route path="/colonies" component={Colonies} />
       <Route path="/settings" component={Settings} />
       <Route path="/admin" component={Admin} />
       <Route path="/console" component={ServerConsole} />
