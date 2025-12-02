@@ -349,7 +349,7 @@ export function registerRoutes(app: Express) {
     try {
       const { id } = req.params;
       const { unitId, role } = req.body;
-      const member = await storage.addTeamMember(id, unitId, role);
+      const member = await storage.addExpeditionMember(id, unitId, role);
       res.json(member);
     } catch (error: any) {
       console.error("Error adding team member:", error);
@@ -507,7 +507,7 @@ export function registerRoutes(app: Express) {
       
       const auction = await storage.createAuction({
         sellerId: userId,
-        sellerName: user.username,
+        sellerName: user.username || "Unknown",
         itemType,
         itemId,
         itemName,
@@ -545,7 +545,7 @@ export function registerRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid bid amount" });
       }
       
-      const result = await storage.placeBid(req.params.id, userId, user.username, bidAmount);
+      const result = await storage.placeBid(req.params.id, userId, user.username || "Unknown", bidAmount);
       
       if (!result.success) {
         return res.status(400).json({ message: result.error });
@@ -568,7 +568,7 @@ export function registerRoutes(app: Express) {
         return res.status(401).json({ message: "User not found" });
       }
       
-      const result = await storage.buyoutAuction(req.params.id, userId, user.username);
+      const result = await storage.buyoutAuction(req.params.id, userId, user.username || "Unknown");
       
       if (!result.success) {
         return res.status(400).json({ message: result.error });
