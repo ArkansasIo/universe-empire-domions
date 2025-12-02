@@ -744,3 +744,17 @@ export const playerColonies = pgTable("player_colonies", {
 });
 
 export type PlayerColony = typeof playerColonies.$inferSelect;
+
+// System Settings table for game configuration
+export const systemSettings = pgTable("system_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key").unique().notNull(),
+  value: jsonb("value").notNull(),
+  description: text("description"),
+  category: varchar("category").default("general"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSystemSettingsSchema = createInsertSchema(systemSettings).omit({ id: true, updatedAt: true });
+export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
+export type SystemSettings = typeof systemSettings.$inferSelect;

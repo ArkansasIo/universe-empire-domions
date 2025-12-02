@@ -97,3 +97,32 @@ CREATE TABLE IF NOT EXISTS trade_history (
 );
 
 -- Additional tables can be added as needed
+
+-- System Settings table for game configuration
+CREATE TABLE IF NOT EXISTS system_settings (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+  key varchar UNIQUE NOT NULL,
+  value jsonb NOT NULL,
+  description text,
+  category varchar DEFAULT 'general',
+  updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert default system settings
+INSERT INTO system_settings (key, value, description, category) VALUES
+  ('game_speed', '{"turnsPerMinute": 6, "resourceProductionRate": 1.0, "researchSpeedMultiplier": 1.0}', 'Game speed and progression multipliers', 'game'),
+  ('resource_prices', '{"metal": 1, "crystal": 1.5, "deuterium": 2.0}', 'Market prices for resources', 'economy'),
+  ('starting_resources', '{"metal": 1000, "crystal": 500, "deuterium": 0, "energy": 0}', 'Starting resources for new players', 'economy'),
+  ('player_limits', '{"maxFleets": 10, "maxMissions": 50, "maxAlliances": 1}', 'Player action limits', 'gameplay'),
+  ('turn_system', '{"turnsPerMinute": 6, "offlineAccumulationCap": 24, "maxCurrentTurns": 1000}', 'Turn system configuration', 'gameplay'),
+  ('combat_enabled', 'true', 'Enable/disable player combat system', 'gameplay'),
+  ('alliance_enabled', 'true', 'Enable/disable alliance system', 'gameplay'),
+  ('trading_enabled', 'true', 'Enable/disable player-to-player trading', 'gameplay'),
+  ('auction_enabled', 'true', 'Enable/disable auction house', 'economy'),
+  ('maintenance_mode', 'false', 'Enable maintenance mode (restrict logins)', 'system'),
+  ('server_message', '""', 'Server-wide announcement message', 'system'),
+  ('rate_limit_login', '{"attempts": 5, "windowMs": 900000}', 'Login rate limiting (5 attempts per 15 min)', 'security'),
+  ('rate_limit_api', '{"requestsPerMinute": 60}', 'API rate limiting', 'security'),
+  ('database_version', '1', 'Current database schema version', 'system'),
+  ('last_backup', '"' || to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS') || '"', 'Last database backup timestamp', 'system')
+ON CONFLICT (key) DO NOTHING;

@@ -10,6 +10,7 @@ import {
   auctionBids,
   tradeOffers,
   tradeHistory,
+  systemSettings,
   queueItems,
   playerColonies,
   resourceFields,
@@ -46,6 +47,8 @@ import {
   type TradeOffer,
   type InsertTradeOffer,
   type TradeHistory,
+  type SystemSettings,
+  type InsertSystemSettings,
   type QueueItem,
   type InsertQueueItem,
   type PlayerColony,
@@ -186,6 +189,12 @@ export interface IStorage {
   cancelTradeOffer(tradeId: string, senderId: string): Promise<{ success: boolean; error?: string }>;
   counterTradeOffer(originalTradeId: string, counterOffer: InsertTradeOffer): Promise<{ success: boolean; trade?: TradeOffer; error?: string }>;
   getTradeHistory(userId: string): Promise<TradeHistory[]>;
+
+  // System Settings operations
+  getSetting(key: string): Promise<SystemSettings | undefined>;
+  getAllSettings(): Promise<SystemSettings[]>;
+  setSetting(key: string, value: any, description?: string, category?: string): Promise<SystemSettings>;
+  seedDefaultSettings(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1234,6 +1243,51 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(desc(tradeHistory.completedAt));
+  }
+
+  // System Settings operations
+  async getSetting(key: string): Promise<SystemSettings | undefined> {
+    const [setting] = await db.select().from(systemSettings).where(eq(systemSettings.key, key));
+    return setting;
+  }
+
+  async getAllSettings(): Promise<SystemSettings[]> {
+    return await db.select().from(systemSettings);
+  }
+
+  async setSetting(key: string, value: any, description?: string, category?: string): Promise<SystemSettings> {
+    const [setting] = await db
+      .insert(systemSettings)
+      .values({ key, value, description, category })
+      .onConflictDoUpdate({
+        target: systemSettings.key,
+        set: { value, description, category }
+      })
+      .returning();
+    return setting;
+  }
+
+  async seedDefaultSettings(): Promise<void> {
+    const defaults = [
+      { key: "game_speed", value: { turnsPerMinute: 6, resourceProductionRate: 1.0, researchSpeedMultiplier: 1.0 }, category: "game", description: "Game speed multipliers" },
+      { key: "resource_prices", value: { metal: 1, crystal: 1.5, deuterium: 2.0 }, category: "economy", description: "Resource market prices" },
+      { key: "starting_resources", value: { metal: 1000, crystal: 500, deuterium: 0, energy: 0 }, category: "economy", description: "New player starting resources" },
+      { key: "player_limits", value: { maxFleets: 10, maxMissions: 50, maxAlliances: 1 }, category: "gameplay", description: "Player action limits" },
+      { key: "turn_system", value: { turnsPerMinute: 6, offlineAccumulationCap: 24, maxCurrentTurns: 1000 }, category: "gameplay", description: "Turn system config" },
+      { key: "combat_enabled", value: true, category: "gameplay", description: "Enable combat system" },
+      { key: "alliance_enabled", value: true, category: "gameplay", description: "Enable alliance system" },
+      { key: "trading_enabled", value: true, category: "gameplay", description: "Enable trading" },
+      { key: "auction_enabled", value: true, category: "economy", description: "Enable auction house" },
+      { key: "maintenance_mode", value: false, category: "system", description: "Maintenance mode status" },
+      { key: "server_message", value: "", category: "system", description: "Server announcement" },
+      { key: "rate_limit_login", value: { attempts: 5, windowMs: 900000 }, category: "security", description: "Login rate limits" },
+      { key: "rate_limit_api", value: { requestsPerMinute: 60 }, category: "security", description: "API rate limits" },
+      { key: "database_version", value: "1", category: "system", description: "Schema version" }
+    ];
+
+    for (const setting of defaults) {
+      await this.setSetting(setting.key, setting.value, setting.description, setting.category);
+    }
   }
 }
 
