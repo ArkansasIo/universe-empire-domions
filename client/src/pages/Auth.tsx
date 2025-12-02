@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGame } from "@/lib/gameContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Rocket, Shield, Info, Loader2, ArrowLeft } from "lucide-react";
+import { Rocket, Shield, Info, Loader2, Eye, EyeOff } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Auth() {
@@ -14,6 +14,26 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Load saved credentials from localStorage
+  useEffect(() => {
+    const savedUsername = localStorage.getItem("stellar_username");
+    const savedPassword = localStorage.getItem("stellar_password");
+    if (savedUsername) setUsername(savedUsername);
+    if (savedPassword) setPassword(savedPassword);
+  }, []);
+
+  // Save credentials to localStorage
+  const saveCredentials = (user: string, pass: string) => {
+    localStorage.setItem("stellar_username", user);
+    localStorage.setItem("stellar_password", pass);
+  };
+
+  const clearCredentials = () => {
+    localStorage.removeItem("stellar_username");
+    localStorage.removeItem("stellar_password");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +75,9 @@ export default function Auth() {
         return;
       }
 
+      // Save credentials on successful login
+      saveCredentials(username.trim(), password);
+      
       // Reload page to trigger game context update
       window.location.href = "/";
     } catch (err) {
@@ -100,19 +123,35 @@ export default function Auth() {
 
             <div>
               <Label htmlFor="password" className="text-slate-900 text-sm font-semibold">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password (min 6 characters)"
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 mt-1 focus:border-slate-600 focus:ring-slate-600"
-                data-testid="input-password"
-                disabled={submitting}
-                required
-                minLength={6}
-                autoComplete={isLogin ? "current-password" : "new-password"}
-              />
+              <div className="relative mt-1">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password (min 6 characters)"
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 pr-10 focus:border-slate-600 focus:ring-slate-600"
+                  data-testid="input-password"
+                  disabled={submitting}
+                  required
+                  minLength={6}
+                  autoComplete={isLogin ? "current-password" : "new-password"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={submitting}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-900 transition-colors disabled:opacity-50"
+                  data-testid="button-toggle-password"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {error && <div className="text-red-700 text-sm bg-red-50 border border-red-300 p-2 rounded">{error}</div>}
@@ -134,20 +173,34 @@ export default function Auth() {
             </Button>
           </form>
 
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError("");
-              setUsername("");
-              setPassword("");
-            }}
-            className="w-full text-sm text-slate-700 hover:text-slate-900 underline transition-colors"
-            disabled={submitting}
-            data-testid="button-toggle-auth"
-          >
-            {isLogin ? "Create new account" : "Already have an account? Sign in"}
-          </button>
+          <div className="space-y-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError("");
+              }}
+              className="w-full text-sm text-slate-700 hover:text-slate-900 underline transition-colors"
+              disabled={submitting}
+              data-testid="button-toggle-auth"
+            >
+              {isLogin ? "Create new account" : "Already have an account? Sign in"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearCredentials();
+                setUsername("");
+                setPassword("");
+                setError("");
+              }}
+              className="w-full text-xs text-slate-500 hover:text-slate-700 underline transition-colors"
+              disabled={submitting}
+              data-testid="button-clear-credentials"
+            >
+              Clear saved credentials
+            </button>
+          </div>
         </CardContent>
         
         <CardFooter className="flex flex-col items-center gap-4 pb-6 border-t border-slate-300 pt-6">
