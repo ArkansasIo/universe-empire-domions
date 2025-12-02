@@ -93,7 +93,7 @@ export async function setupAuth(app: Express) {
       }
 
       const user = await storage.getUserByUsername(username);
-      if (!user) {
+      if (!user || !user.passwordHash) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
