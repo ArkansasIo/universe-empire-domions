@@ -583,21 +583,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Calculate production
   const getProduction = () => {
-    // Add Commander Logistics Bonus
-    let logisticsBonus = 1 + (commander.stats.logistics * 0.05); // 5% per level
+    // Add Commander Logistics Bonus (with defensive checks)
+    const commanderStats = commander?.stats || { logistics: 1, warfare: 1, science: 1, engineering: 1 };
+    let logisticsBonus = 1 + ((commanderStats.logistics || 1) * 0.05); // 5% per level
 
     // Add Race/Class Bonuses
-    if (commander.race === "terran") logisticsBonus += 0.05;
-    if (commander.race === "lithoid") logisticsBonus += 0.10; // Mock
-    if (commander.class === "industrialist") logisticsBonus += 0.15;
+    if (commander?.race === "terran") logisticsBonus += 0.05;
+    if (commander?.race === "lithoid") logisticsBonus += 0.10; // Mock
+    if (commander?.class === "industrialist") logisticsBonus += 0.15;
 
-    // Add Government Bonuses (Stability & Corruption)
-    const stabilityFactor = government.stats.stability / 100; // 0.0 - 1.0
-    const corruptionFactor = government.stats.corruption / 100; // 0.0 - 1.0
+    // Add Government Bonuses (Stability & Corruption) - with defensive checks
+    const govStats = government?.stats || { stability: 50, corruption: 10 };
+    const stabilityFactor = (govStats.stability || 50) / 100; // 0.0 - 1.0
+    const corruptionFactor = (govStats.corruption || 10) / 100; // 0.0 - 1.0
     const govBonus = 1 + (stabilityFactor * 0.2) - (corruptionFactor * 0.5); // Up to +20%, down to -50%
 
     // Add Config Multiplier
-    const configBonus = config.resourceRate;
+    const configBonus = config?.resourceRate || 1;
 
     const totalBonus = logisticsBonus * govBonus * configBonus;
 
@@ -625,7 +627,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const interval = setInterval(() => {
       const now = Date.now();
       const production = getProduction();
-      const speedMult = config.gameSpeed;
+      const speedMult = config?.gameSpeed || 1;
 
       // 1. Resource Production (Now formally part of "resource_tick" logic, but kept inline for smooth UI)
       // We sync this with the cron job update visually
@@ -823,7 +825,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         metal: prev.metal - costMetal,
         crystal: prev.crystal - costCrystal
       }));
-      const adjustedTime = (time * Math.pow(1.15, buildings[building])) / config.gameSpeed;
+      const adjustedTime = (time * Math.pow(1.15, buildings[building] || 0)) / (config?.gameSpeed || 1);
       const now = Date.now();
       setQueue(prev => [...prev, {
         id: building,
@@ -844,7 +846,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
      if (!spendTurns(turnCost)) return;
      
      const currentLevel = research[tech] || 0;
-     const adjustedTime = (time * Math.pow(1.2, currentLevel)) / config.gameSpeed;
+     const adjustedTime = (time * Math.pow(1.2, currentLevel)) / (config?.gameSpeed || 1);
      const now = Date.now();
      setQueue(prev => [...prev, {
         id: tech,
@@ -860,7 +862,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const turnCost = amount; // 1 turn per unit
     if (!spendTurns(turnCost)) return;
     
-    const adjustedTime = (time * amount) / config.gameSpeed;
+    const adjustedTime = (time * amount) / (config?.gameSpeed || 1);
     const now = Date.now();
     setQueue(prev => [...prev, {
       id: unitId,
@@ -1000,7 +1002,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const dispatchFleet = (missionData: Omit<Mission, "id" | "status" | "returnTime">) => {
-     const flightTime = missionData.arrivalTime / config.fleetSpeed;
+     const flightTime = missionData.arrivalTime / (config?.fleetSpeed || 1);
      const now = Date.now();
      
      const arrivalTime = new Date(now + flightTime);
