@@ -24,16 +24,26 @@ import Admin from "@/pages/Admin";
 import Auth from "@/pages/Auth";
 import Market from "@/pages/Market";
 import About from "@/pages/About";
+import AccountSetup from "@/pages/AccountSetup";
 import { useGame } from "@/lib/gameContext";
 
 function Router() {
-  const { isLoggedIn } = useGame();
+  const { isLoggedIn, needsSetup } = useGame();
 
   if (!isLoggedIn) {
     return (
       <Switch>
         <Route path="/about" component={About} />
         <Route component={Auth} />
+      </Switch>
+    );
+  }
+
+  if (needsSetup) {
+    return (
+      <Switch>
+        <Route path="/about" component={About} />
+        <Route component={AccountSetup} />
       </Switch>
     );
   }

@@ -143,6 +143,7 @@ interface GameState {
   coordinates: string;
   isAdmin: boolean;
   isLoggedIn: boolean;
+  needsSetup: boolean;
   username: string;
   login: () => void;
   logout: () => void;
@@ -158,6 +159,7 @@ interface GameState {
   temperItem: (itemId: string) => void;
   setCommanderIdentity: (race: RaceId, cls: ClassId, subClass: SubClassId | null) => void;
   setGovernmentType: (type: GovernmentId) => void;
+  completeSetup: (commander: CommanderState, government: GovernmentState) => Promise<void>;
   togglePolicy: (policyId: string) => void;
   setTaxRate: (rate: number) => void;
   dispatchFleet: (mission: Omit<Mission, "id" | "status" | "returnTime">) => void;
@@ -342,6 +344,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [coordinates, setCoordinates] = useState("1:102:8");
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [username, setUsername] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -463,6 +466,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setCoordinates(state.coordinates || "1:1:1");
       setUsername(authUser.firstName || authUser.email?.split('@')[0] || 'Commander');
       setIsLoggedIn(true);
+      setNeedsSetup(!state.setupComplete);
       setIsInitialized(true);
     }
   }, [authUser, serverGameState, isInitialized]);
@@ -882,6 +886,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
      addEvent("Revolution", `Government reformed into ${GOVERNMENTS[type].name}.`, "warning");
   };
 
+  const completeSetup = async (newCommander: CommanderState, newGovernment: GovernmentState) => {
+    try {
+      await saveGameStateMutation.mutateAsync({ 
+        commander: newCommander, 
+        government: newGovernment,
+        setupComplete: true 
+      });
+      setCommander(newCommander);
+      setGovernment(newGovernment);
+      setNeedsSetup(false);
+    } catch (error) {
+      console.error("Failed to complete setup:", error);
+      throw error;
+    }
+  };
+
   const togglePolicy = (policyId: string) => {
      setGovernment(prev => {
         const isActive = prev.policies.includes(policyId);
@@ -1065,6 +1085,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        cronJobs,
        isAdmin,
        isLoggedIn,
+       needsSetup,
        isLoading,
        username,
        login,
@@ -1080,6 +1101,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        temperItem,
        setCommanderIdentity,
        setGovernmentType,
+       completeSetup,
        togglePolicy,
        setTaxRate,
        dispatchFleet,

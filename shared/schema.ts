@@ -43,6 +43,9 @@ export const playerStates = pgTable("player_states", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   
+  // Setup tracking
+  setupComplete: boolean("setup_complete").notNull().default(false),
+  
   // Planet Info
   planetName: varchar("planet_name").notNull().default("New Colony"),
   coordinates: varchar("coordinates").notNull().default("[1:1:1]"),
