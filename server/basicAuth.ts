@@ -18,8 +18,8 @@ export function getSession() {
   return session({
     secret: process.env.SESSION_SECRET || "dev-secret-key",
     store: sessionStore,
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: {
       httpOnly: true,
       secure: !isDevelopment, // Only secure in production (HTTPS)
