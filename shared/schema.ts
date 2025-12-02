@@ -282,6 +282,72 @@ export const insertMarketOrderSchema = createInsertSchema(marketOrders).omit({ i
 export type InsertMarketOrder = z.infer<typeof insertMarketOrderSchema>;
 export type MarketOrder = typeof marketOrders.$inferSelect;
 
+// Auction House - Player-to-Player Trading
+export const auctionListings = pgTable("auction_listings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: varchar("seller_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sellerName: varchar("seller_name").notNull(),
+  
+  // Item details
+  itemType: varchar("item_type").notNull(), // "equipment", "material", "resource", "blueprint", "artifact"
+  itemId: varchar("item_id").notNull(),
+  itemName: varchar("item_name").notNull(),
+  itemDescription: text("item_description"),
+  itemRarity: varchar("item_rarity").default("common"), // "common", "uncommon", "rare", "epic", "legendary"
+  itemData: jsonb("item_data"), // Additional item properties (stats, modifiers, etc.)
+  quantity: integer("quantity").notNull().default(1),
+  
+  // Pricing
+  startingPrice: integer("starting_price").notNull(), // In credits/metal
+  buyoutPrice: integer("buyout_price"), // Optional instant buy price
+  currentBid: integer("current_bid").default(0),
+  bidIncrement: integer("bid_increment").notNull().default(10), // Minimum bid increase
+  
+  // Bidder info
+  currentBidderId: varchar("current_bidder_id").references(() => users.id, { onDelete: "set null" }),
+  currentBidderName: varchar("current_bidder_name"),
+  bidCount: integer("bid_count").notNull().default(0),
+  
+  // Timing
+  duration: integer("duration").notNull().default(24), // Hours
+  expiresAt: timestamp("expires_at").notNull(),
+  
+  // Status
+  status: varchar("status").notNull().default("active"), // "active", "sold", "expired", "cancelled"
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertAuctionListingSchema = createInsertSchema(auctionListings).omit({ 
+  id: true, 
+  currentBid: true, 
+  currentBidderId: true, 
+  currentBidderName: true, 
+  bidCount: true, 
+  status: true, 
+  createdAt: true, 
+  completedAt: true 
+});
+export type InsertAuctionListing = z.infer<typeof insertAuctionListingSchema>;
+export type AuctionListing = typeof auctionListings.$inferSelect;
+
+// Auction bid history
+export const auctionBids = pgTable("auction_bids", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auctionId: varchar("auction_id").notNull().references(() => auctionListings.id, { onDelete: "cascade" }),
+  bidderId: varchar("bidder_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  bidderName: varchar("bidder_name").notNull(),
+  
+  bidAmount: integer("bid_amount").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAuctionBidSchema = createInsertSchema(auctionBids).omit({ id: true, createdAt: true });
+export type InsertAuctionBid = z.infer<typeof insertAuctionBidSchema>;
+export type AuctionBid = typeof auctionBids.$inferSelect;
+
 // Construction/Research Queue
 export const queueItems = pgTable("queue_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -6,6 +6,8 @@ import {
   alliances,
   allianceMembers,
   marketOrders,
+  auctionListings,
+  auctionBids,
   queueItems,
   playerColonies,
   resourceFields,
@@ -35,6 +37,10 @@ import {
   type InsertAllianceMember,
   type MarketOrder,
   type InsertMarketOrder,
+  type AuctionListing,
+  type InsertAuctionListing,
+  type AuctionBid,
+  type InsertAuctionBid,
   type QueueItem,
   type InsertQueueItem,
   type PlayerColony,
@@ -151,6 +157,18 @@ export interface IStorage {
   // Turn operations
   accrueAndGetTurns(userId: string): Promise<{ currentTurns: number; totalTurns: number; turnsAccrued: number; lastTurnUpdate: Date }>;
   spendTurns(userId: string, amount: number): Promise<{ success: boolean; currentTurns: number; totalTurns: number }>;
+  
+  // Auction operations
+  getActiveAuctions(filters?: { itemType?: string; search?: string; sortBy?: string }): Promise<AuctionListing[]>;
+  getAuctionById(id: string): Promise<AuctionListing | undefined>;
+  getUserAuctions(userId: string): Promise<AuctionListing[]>;
+  getUserBids(userId: string): Promise<AuctionListing[]>;
+  createAuction(auction: InsertAuctionListing): Promise<AuctionListing>;
+  placeBid(auctionId: string, bidderId: string, bidderName: string, bidAmount: number): Promise<{ success: boolean; auction?: AuctionListing; error?: string }>;
+  buyoutAuction(auctionId: string, buyerId: string, buyerName: string): Promise<{ success: boolean; auction?: AuctionListing; error?: string }>;
+  cancelAuction(auctionId: string, sellerId: string): Promise<{ success: boolean; error?: string }>;
+  completeExpiredAuctions(): Promise<AuctionListing[]>;
+  getAuctionBidHistory(auctionId: string): Promise<AuctionBid[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -734,6 +752,208 @@ export class DatabaseStorage implements IStorage {
       currentTurns: result.currentTurns || 0,
       totalTurns: result.totalTurns || 0
     };
+  }
+
+  // Auction operations
+  async getActiveAuctions(filters?: { itemType?: string; search?: string; sortBy?: string }): Promise<AuctionListing[]> {
+    let query = db.select().from(auctionListings)
+      .where(
+        and(
+          eq(auctionListings.status, "active"),
+          sql`${auctionListings.expiresAt} > NOW()`
+        )
+      );
+    
+    const results = await query;
+    
+    let filtered = results;
+    if (filters?.itemType && filters.itemType !== "all") {
+      filtered = filtered.filter(a => a.itemType === filters.itemType);
+    }
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(a => 
+        a.itemName.toLowerCase().includes(searchLower) ||
+        (a.itemDescription?.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    if (filters?.sortBy === "price_low") {
+      filtered.sort((a, b) => (a.currentBid || a.startingPrice) - (b.currentBid || b.startingPrice));
+    } else if (filters?.sortBy === "price_high") {
+      filtered.sort((a, b) => (b.currentBid || b.startingPrice) - (a.currentBid || a.startingPrice));
+    } else if (filters?.sortBy === "ending_soon") {
+      filtered.sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime());
+    } else {
+      filtered.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+    }
+    
+    return filtered;
+  }
+
+  async getAuctionById(id: string): Promise<AuctionListing | undefined> {
+    const [result] = await db.select().from(auctionListings).where(eq(auctionListings.id, id));
+    return result;
+  }
+
+  async getUserAuctions(userId: string): Promise<AuctionListing[]> {
+    return await db.select().from(auctionListings)
+      .where(eq(auctionListings.sellerId, userId))
+      .orderBy(desc(auctionListings.createdAt));
+  }
+
+  async getUserBids(userId: string): Promise<AuctionListing[]> {
+    return await db.select().from(auctionListings)
+      .where(
+        and(
+          eq(auctionListings.currentBidderId, userId),
+          eq(auctionListings.status, "active")
+        )
+      )
+      .orderBy(desc(auctionListings.expiresAt));
+  }
+
+  async createAuction(auction: InsertAuctionListing): Promise<AuctionListing> {
+    const [result] = await db.insert(auctionListings).values(auction).returning();
+    return result;
+  }
+
+  async placeBid(auctionId: string, bidderId: string, bidderName: string, bidAmount: number): Promise<{ success: boolean; auction?: AuctionListing; error?: string }> {
+    const auction = await this.getAuctionById(auctionId);
+    
+    if (!auction) {
+      return { success: false, error: "Auction not found" };
+    }
+    
+    if (auction.status !== "active") {
+      return { success: false, error: "Auction is no longer active" };
+    }
+    
+    if (new Date(auction.expiresAt) < new Date()) {
+      return { success: false, error: "Auction has expired" };
+    }
+    
+    if (auction.sellerId === bidderId) {
+      return { success: false, error: "You cannot bid on your own auction" };
+    }
+    
+    const minBid = (auction.currentBid || auction.startingPrice) + auction.bidIncrement;
+    if (bidAmount < minBid) {
+      return { success: false, error: `Minimum bid is ${minBid}` };
+    }
+    
+    // Record bid history
+    await db.insert(auctionBids).values({
+      auctionId,
+      bidderId,
+      bidderName,
+      bidAmount
+    });
+    
+    // Update auction
+    const [updated] = await db.update(auctionListings)
+      .set({
+        currentBid: bidAmount,
+        currentBidderId: bidderId,
+        currentBidderName: bidderName,
+        bidCount: sql`${auctionListings.bidCount} + 1`
+      })
+      .where(eq(auctionListings.id, auctionId))
+      .returning();
+    
+    return { success: true, auction: updated };
+  }
+
+  async buyoutAuction(auctionId: string, buyerId: string, buyerName: string): Promise<{ success: boolean; auction?: AuctionListing; error?: string }> {
+    const auction = await this.getAuctionById(auctionId);
+    
+    if (!auction) {
+      return { success: false, error: "Auction not found" };
+    }
+    
+    if (auction.status !== "active") {
+      return { success: false, error: "Auction is no longer active" };
+    }
+    
+    if (!auction.buyoutPrice) {
+      return { success: false, error: "This auction does not have a buyout option" };
+    }
+    
+    if (auction.sellerId === buyerId) {
+      return { success: false, error: "You cannot buy your own auction" };
+    }
+    
+    // Complete the auction
+    const [updated] = await db.update(auctionListings)
+      .set({
+        status: "sold",
+        currentBid: auction.buyoutPrice,
+        currentBidderId: buyerId,
+        currentBidderName: buyerName,
+        completedAt: new Date()
+      })
+      .where(eq(auctionListings.id, auctionId))
+      .returning();
+    
+    return { success: true, auction: updated };
+  }
+
+  async cancelAuction(auctionId: string, sellerId: string): Promise<{ success: boolean; error?: string }> {
+    const auction = await this.getAuctionById(auctionId);
+    
+    if (!auction) {
+      return { success: false, error: "Auction not found" };
+    }
+    
+    if (auction.sellerId !== sellerId) {
+      return { success: false, error: "You can only cancel your own auctions" };
+    }
+    
+    if (auction.status !== "active") {
+      return { success: false, error: "Auction is no longer active" };
+    }
+    
+    if (auction.bidCount > 0) {
+      return { success: false, error: "Cannot cancel auction with bids" };
+    }
+    
+    await db.update(auctionListings)
+      .set({ status: "cancelled", completedAt: new Date() })
+      .where(eq(auctionListings.id, auctionId));
+    
+    return { success: true };
+  }
+
+  async completeExpiredAuctions(): Promise<AuctionListing[]> {
+    const now = new Date();
+    
+    // Find expired active auctions
+    const expired = await db.select().from(auctionListings)
+      .where(
+        and(
+          eq(auctionListings.status, "active"),
+          sql`${auctionListings.expiresAt} <= ${now}`
+        )
+      );
+    
+    const completed: AuctionListing[] = [];
+    
+    for (const auction of expired) {
+      const newStatus = auction.bidCount > 0 ? "sold" : "expired";
+      const [updated] = await db.update(auctionListings)
+        .set({ status: newStatus, completedAt: now })
+        .where(eq(auctionListings.id, auction.id))
+        .returning();
+      completed.push(updated);
+    }
+    
+    return completed;
+  }
+
+  async getAuctionBidHistory(auctionId: string): Promise<AuctionBid[]> {
+    return await db.select().from(auctionBids)
+      .where(eq(auctionBids.auctionId, auctionId))
+      .orderBy(desc(auctionBids.createdAt));
   }
 }
 
