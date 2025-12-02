@@ -418,4 +418,183 @@ export function registerRoutes(app: Express) {
       res.status(500).json({ message: "Failed to spend turns" });
     }
   });
+
+  // ==== AUCTION HOUSE ROUTES ====
+
+  // Get active auctions with optional filters
+  app.get("/api/auctions", async (req: Request, res: any) => {
+    try {
+      const { itemType, search, sortBy } = req.query;
+      const auctions = await storage.getActiveAuctions({
+        itemType: itemType as string,
+        search: search as string,
+        sortBy: sortBy as string
+      });
+      res.json(auctions);
+    } catch (error: any) {
+      console.error("Error fetching auctions:", error);
+      res.status(500).json({ message: "Failed to fetch auctions" });
+    }
+  });
+
+  // Get single auction by ID
+  app.get("/api/auctions/:id", async (req: Request, res: any) => {
+    try {
+      const auction = await storage.getAuctionById(req.params.id);
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+      res.json(auction);
+    } catch (error: any) {
+      console.error("Error fetching auction:", error);
+      res.status(500).json({ message: "Failed to fetch auction" });
+    }
+  });
+
+  // Get user's own auctions
+  app.get("/api/auctions/user/listings", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const auctions = await storage.getUserAuctions(userId);
+      res.json(auctions);
+    } catch (error: any) {
+      console.error("Error fetching user auctions:", error);
+      res.status(500).json({ message: "Failed to fetch user auctions" });
+    }
+  });
+
+  // Get auctions user has bid on
+  app.get("/api/auctions/user/bids", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const auctions = await storage.getUserBids(userId);
+      res.json(auctions);
+    } catch (error: any) {
+      console.error("Error fetching user bids:", error);
+      res.status(500).json({ message: "Failed to fetch user bids" });
+    }
+  });
+
+  // Get bid history for an auction
+  app.get("/api/auctions/:id/bids", async (req: Request, res: any) => {
+    try {
+      const bids = await storage.getAuctionBidHistory(req.params.id);
+      res.json(bids);
+    } catch (error: any) {
+      console.error("Error fetching auction bids:", error);
+      res.status(500).json({ message: "Failed to fetch auction bids" });
+    }
+  });
+
+  // Create new auction
+  app.post("/api/auctions", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      const { itemType, itemId, itemName, itemDescription, itemRarity, itemData, quantity, startingPrice, buyoutPrice, bidIncrement, duration } = req.body;
+      
+      if (!itemType || !itemId || !itemName || !startingPrice) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      const durationHours = duration || 24;
+      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+      
+      const auction = await storage.createAuction({
+        sellerId: userId,
+        sellerName: user.username,
+        itemType,
+        itemId,
+        itemName,
+        itemDescription,
+        itemRarity: itemRarity || "common",
+        itemData,
+        quantity: quantity || 1,
+        startingPrice,
+        buyoutPrice,
+        bidIncrement: bidIncrement || 10,
+        duration: durationHours,
+        expiresAt
+      });
+      
+      res.status(201).json(auction);
+    } catch (error: any) {
+      console.error("Error creating auction:", error);
+      res.status(500).json({ message: "Failed to create auction" });
+    }
+  });
+
+  // Place a bid
+  app.post("/api/auctions/:id/bid", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      const { bidAmount } = req.body;
+      
+      if (typeof bidAmount !== 'number' || bidAmount <= 0) {
+        return res.status(400).json({ message: "Invalid bid amount" });
+      }
+      
+      const result = await storage.placeBid(req.params.id, userId, user.username, bidAmount);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.json(result.auction);
+    } catch (error: any) {
+      console.error("Error placing bid:", error);
+      res.status(500).json({ message: "Failed to place bid" });
+    }
+  });
+
+  // Buyout an auction
+  app.post("/api/auctions/:id/buyout", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      const result = await storage.buyoutAuction(req.params.id, userId, user.username);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.json(result.auction);
+    } catch (error: any) {
+      console.error("Error buying out auction:", error);
+      res.status(500).json({ message: "Failed to buyout auction" });
+    }
+  });
+
+  // Cancel an auction
+  app.delete("/api/auctions/:id", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const result = await storage.cancelAuction(req.params.id, userId);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.json({ message: "Auction cancelled" });
+    } catch (error: any) {
+      console.error("Error cancelling auction:", error);
+      res.status(500).json({ message: "Failed to cancel auction" });
+    }
+  });
 }
