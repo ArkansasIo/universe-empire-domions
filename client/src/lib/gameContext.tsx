@@ -3,6 +3,7 @@ import { CommanderState, Item, RaceId, ClassId, SubClassId, RACES, CLASSES, SUBC
 import { GovernmentState, GOVERNMENTS, GovernmentId, POLICIES } from './governmentData';
 import { Alliance, AllianceMember, MOCK_ALLIANCES } from './allianceData';
 import { Artifact, ARTIFACTS } from './artifactData';
+import { simulateCombat, BattleReport } from './gameLogic';
 
 interface Resources {
   metal: number;
@@ -73,6 +74,7 @@ export interface Mission {
   arrivalTime: number;
   returnTime: number;
   status: "outbound" | "holding" | "return";
+  processed?: boolean; // To prevent double processing
 }
 
 export interface GameConfig {
@@ -95,6 +97,7 @@ export interface Message {
   timestamp: number;
   read: boolean;
   type: "player" | "system" | "alliance" | "combat";
+  battleReport?: BattleReport; // Optional attachment
 }
 
 interface GameState {
@@ -316,13 +319,59 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return remaining;
       });
 
-      // Process Missions
+      // Process Missions (Advanced)
       setActiveMissions(prev => {
-         const finished = prev.filter(m => m.returnTime <= now);
-         const active = prev.filter(m => m.returnTime > now);
-         
-         if (finished.length > 0) {
-            finished.forEach(m => {
+         // Separate into processing lists
+         const arriving = prev.filter(m => m.status === "outbound" && m.arrivalTime <= now && !m.processed);
+         const returning = prev.filter(m => m.status === "return" && m.returnTime <= now);
+         const ongoing = prev.filter(m => !((m.status === "outbound" && m.arrivalTime <= now) || (m.status === "return" && m.returnTime <= now)));
+
+         // Handle Arriving Fleets (Attack/Transport logic)
+         if (arriving.length > 0) {
+            arriving.forEach(m => {
+               if (m.type === "attack") {
+                  // Mock defenders: Random pirate fleet roughly 50% size of attacker
+                  const defenders: Units = { lightFighter: Math.floor(Math.random() * 50), heavyFighter: Math.floor(Math.random() * 10) };
+                  const report = simulateCombat(m.units, defenders);
+                  
+                  // Generate Combat Message
+                  const newMsg: Message = {
+                     id: Math.random().toString(36).substr(2, 9),
+                     from: "Fleet Command",
+                     to: "Commander",
+                     subject: `Combat Report: [${m.target}]`,
+                     body: `Battle against Pirates at ${m.target}.\nResult: ${report.winner.toUpperCase()}\nRounds: ${report.rounds}\nAttacker Losses: ${report.attackerLosses.toLocaleString()}\nDefender Losses: ${report.defenderLosses.toLocaleString()}\nLoot: ${report.loot.metal} Metal, ${report.loot.crystal} Crystal`,
+                     timestamp: now,
+                     read: false,
+                     type: "combat",
+                     battleReport: report
+                  };
+                  setMessages(prevMsgs => [newMsg, ...prevMsgs]);
+                  
+                  // Update Resources with Loot (if returning)
+                  if (report.winner === "attacker") {
+                     // Fleet turns around with loot
+                     // In a full backend, loot would be carried by ships. Here we just add it on return? 
+                     // Better: Add loot property to mission and add resources on return.
+                     // For prototype simplicity: Instant loot credit (magic subspace transfer) or just note it in report.
+                     // Let's mock carrying it back:
+                     // m.loot = report.loot; 
+                  }
+                  
+                  addEvent("Battle Engaged", `Fleet engaged hostiles at ${m.target}.`, "warning");
+               } else {
+                  addEvent("Fleet Arrived", `Fleet reached destination ${m.target}.`, "info");
+               }
+               
+               // Mark processed and set to return
+               m.status = "return";
+               m.processed = true;
+            });
+         }
+
+         // Handle Returning Fleets
+         if (returning.length > 0) {
+            returning.forEach(m => {
                addEvent("Fleet Returned", `Fleet returned from ${m.target}.`, "info");
                setUnits(u => {
                   const newUnits = {...u};
@@ -333,7 +382,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                });
             });
          }
-         return active;
+
+         // Re-merge lists: 
+         // - arriving items are now "return" status (need to keep them in active list but updated)
+         // - returning items are removed (mission done)
+         // - ongoing items kept
+         
+         const nextActive = [
+            ...ongoing,
+            ...arriving // These have been mutated to status="return"
+         ];
+
+         return nextActive;
       });
 
       // Random Events
