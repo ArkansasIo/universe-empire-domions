@@ -1,640 +1,194 @@
-import type { Express, Request } from "express";
-import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./basicAuth";
-import { z } from "zod";
-import { 
-  insertMissionSchema, 
-  insertMessageSchema, 
-  insertAllianceSchema,
-  insertMarketOrderSchema,
+import { Express, Request, Response } from "express";
+import passport from "passport";
+import { eq, desc, and, gte, lte, or, asc } from "drizzle-orm";
+import { db } from "./db/index";
+import {
+  users,
+  playerStates,
+  missions,
+  messages,
+  alliances,
+  allianceMembers,
+  marketOrders,
+  queueItems,
+  playerColonies,
+  resourceFields,
+  miningOperations,
+  equipmentDurability,
+  fleetDurability,
+  buildingDurability,
+  battles,
+  battleLogs,
   researchAreas,
   researchSubcategories,
   researchTechnologies,
-  playerResearchProgress
+  playerResearchProgress,
+  expeditions,
+  expeditionTeams,
+  expeditionEncounters,
 } from "@shared/schema";
-import { db } from "./db/index";
-import { eq, inArray } from "drizzle-orm";
+import { storage } from "./storage";
 
-// Helper to get user ID from authenticated request
-function getUserId(req: any): string {
-  return (req.session as any)?.userId;
+function getUserId(req: Request) {
+  const user = req.user as any;
+  return user?.id || "";
 }
 
-// Validation schemas
-const updateGameStateSchema = z.object({
-  planetName: z.string().min(1).max(50).optional(),
-  coordinates: z.string().optional(),
-  resources: z.object({
-    metal: z.number().min(0),
-    crystal: z.number().min(0),
-    deuterium: z.number().min(0),
-    energy: z.number()
-  }).optional(),
-  buildings: z.record(z.string(), z.number().min(0)).optional(),
-  orbitalBuildings: z.record(z.string(), z.number().min(0)).optional(),
-  research: z.record(z.string(), z.number().min(0)).optional(),
-  units: z.record(z.string(), z.number().min(0)).optional(),
-  commander: z.any().optional(),
-  government: z.any().optional(),
-  artifacts: z.array(z.any()).optional(),
-  cronJobs: z.array(z.any()).optional(),
-  setupComplete: z.boolean().optional()
-});
+function isAuthenticated(req: Request, res: Response, next: Function) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  next();
+}
 
-const createMissionSchema = z.object({
-  type: z.enum(["attack", "transport", "espionage", "sabotage", "colonize", "deploy"]),
-  target: z.string().min(1).max(50),
-  origin: z.string().min(1).max(50),
-  units: z.record(z.string(), z.number().min(0)),
-  cargo: z.record(z.string(), z.number().min(0)).optional(),
-  departureTime: z.string().or(z.date()),
-  arrivalTime: z.string().or(z.date()),
-  returnTime: z.string().or(z.date()).optional(),
-  status: z.enum(["outbound", "return", "completed"]).default("outbound")
-});
-
-const sendMessageSchema = z.object({
-  toUserId: z.string().min(1),
-  to: z.string().min(1),
-  subject: z.string().min(1).max(200),
-  body: z.string().min(1).max(10000),
-  type: z.enum(["player", "system", "alliance", "combat", "espionage"]).default("player")
-});
-
-const createAllianceSchema = z.object({
-  name: z.string().min(3).max(50),
-  tag: z.string().min(2).max(10),
-  description: z.string().max(1000).optional()
-});
-
-const createMarketOrderSchema = z.object({
-  type: z.enum(["buy", "sell"]),
-  resource: z.enum(["metal", "crystal", "deuterium"]),
-  amount: z.number().int().min(1).max(1000000000),
-  pricePerUnit: z.number().min(0.001).max(1000)
-});
-
-const updateMissionSchema = z.object({
-  status: z.enum(["outbound", "return", "completed"]).optional(),
-  processed: z.boolean().optional()
-}).strict();
-
-export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const user = await storage.getUser(userId);
-      const adminUser = await storage.getAdminUser(userId);
-      res.json({
-        ...user,
-        isAdmin: !!(adminUser && adminUser.isActive),
-        adminRole: adminUser?.role || null
-      });
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
+export function registerRoutes(app: Express) {
   // ==== PLAYER STATE ROUTES ====
-  
-  // Get player state (with initialization if needed)
-  app.get("/api/game/state", isAuthenticated, async (req: any, res) => {
+
+  app.get("/api/player/state", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
-      let state = await storage.getPlayerState(userId);
-      
-      // Initialize state if it doesn't exist
-      if (!state) {
-        const user = await storage.getUser(userId);
-        const displayName = user?.firstName || user?.email?.split('@')[0] || 'Commander';
-        
-        state = await storage.createPlayerState({
-          userId,
-          planetName: `${displayName}'s Colony`,
-          coordinates: `[${Math.floor(Math.random() * 9) + 1}:${Math.floor(Math.random() * 50) + 1}:${Math.floor(Math.random() * 15) + 1}]`,
-          resources: { metal: 1000, crystal: 500, deuterium: 0, energy: 0 },
-          buildings: { roboticsFactory: 0, shipyard: 0, researchLab: 0 },
-          orbitalBuildings: {},
-          research: {},
-          units: {},
-          commander: {
-            name: displayName,
-            race: "terran",
-            class: "admiral",
-            subClass: null,
-            stats: { level: 1, xp: 0, warfare: 10, logistics: 10, science: 10, engineering: 10 },
-            equipment: { weapon: null, armor: null, module: null },
-            inventory: []
-          },
-          government: {
-            type: "democracy",
-            taxRate: 20,
-            policies: [],
-            stats: { stability: 50, efficiency: 50, militaryReadiness: 50, approval: 50 }
-          },
-          artifacts: [],
-          cronJobs: [
-            { id: "resource_tick", name: "Resource Production", enabled: true, interval: 10000, lastRun: Date.now() }
-          ]
-        });
-      }
-      
-      res.json(state);
-    } catch (error) {
+      const playerState = await storage.getPlayerState(userId);
+      res.json(playerState || { resources: {}, lastUpdated: new Date() });
+    } catch (error: any) {
       console.error("Error fetching player state:", error);
       res.status(500).json({ message: "Failed to fetch player state" });
     }
   });
-  
-  // Update player state
-  app.patch("/api/game/state", isAuthenticated, async (req: any, res) => {
+
+  app.put("/api/player/state", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
-      const validated = updateGameStateSchema.safeParse(req.body);
-      
-      if (!validated.success) {
-        return res.status(400).json({ message: "Invalid data", errors: validated.error.errors });
-      }
-      
-      const state = await storage.updatePlayerState(userId, validated.data);
-      res.json(state);
-    } catch (error) {
+      const updates = req.body;
+      const updatedState = await storage.updatePlayerState(userId, updates);
+      res.json(updatedState);
+    } catch (error: any) {
       console.error("Error updating player state:", error);
       res.status(500).json({ message: "Failed to update player state" });
     }
   });
-  
+
   // ==== MISSION ROUTES ====
-  
-  // Get active missions
-  app.get("/api/missions/active", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const missions = await storage.getActiveMissions(userId);
-      res.json(missions);
-    } catch (error) {
-      console.error("Error fetching missions:", error);
-      res.status(500).json({ message: "Failed to fetch missions" });
-    }
-  });
-  
-  // Get all missions
-  app.get("/api/missions", isAuthenticated, async (req: any, res) => {
+
+  app.get("/api/missions", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
       const missions = await storage.getMissionsByUser(userId);
       res.json(missions);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching missions:", error);
       res.status(500).json({ message: "Failed to fetch missions" });
     }
   });
-  
-  // Create new mission
-  app.post("/api/missions", isAuthenticated, async (req: any, res) => {
+
+  app.post("/api/missions", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
-      const validated = createMissionSchema.safeParse(req.body);
-      
-      if (!validated.success) {
-        return res.status(400).json({ message: "Invalid mission data", errors: validated.error.errors });
-      }
-      
-      const missionData = {
-        ...validated.data,
-        userId,
-        departureTime: new Date(validated.data.departureTime),
-        arrivalTime: new Date(validated.data.arrivalTime),
-        returnTime: validated.data.returnTime ? new Date(validated.data.returnTime) : null
-      };
-      
-      const mission = await storage.createMission(missionData);
+      const mission = await storage.createMission({ ...req.body, userId });
       res.json(mission);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating mission:", error);
       res.status(500).json({ message: "Failed to create mission" });
     }
   });
-  
-  // Update mission (with validation and atomic ownership check)
-  app.patch("/api/missions/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const { id } = req.params;
-      
-      const validated = updateMissionSchema.safeParse(req.body);
-      if (!validated.success) {
-        return res.status(400).json({ message: "Invalid update data", errors: validated.error.errors });
-      }
-      
-      // Atomic update with userId scope in storage layer
-      const mission = await storage.updateMissionByUser(userId, id, validated.data);
-      if (!mission) {
-        return res.status(403).json({ message: "Mission not found or you don't have permission to update it" });
-      }
-      
-      res.json(mission);
-    } catch (error) {
-      console.error("Error updating mission:", error);
-      res.status(500).json({ message: "Failed to update mission" });
-    }
-  });
-  
-  // Delete mission (with atomic ownership check)
-  app.delete("/api/missions/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const { id } = req.params;
-      
-      // Atomic delete with userId scope
-      const deleted = await storage.deleteMissionByUser(userId, id);
-      if (!deleted) {
-        return res.status(403).json({ message: "Mission not found or you don't have permission to delete it" });
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting mission:", error);
-      res.status(500).json({ message: "Failed to delete mission" });
-    }
-  });
-  
+
   // ==== MESSAGE ROUTES ====
-  
-  // Get messages
-  app.get("/api/messages", isAuthenticated, async (req: any, res) => {
+
+  app.get("/api/messages", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
-      const limit = parseInt(req.query.limit as string) || 50;
-      
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const messages = await storage.getMessagesByUser(userId, limit);
       res.json(messages);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
     }
   });
-  
-  // Get unread count
-  app.get("/api/messages/unread-count", isAuthenticated, async (req: any, res) => {
+
+  app.post("/api/messages/:id/read", isAuthenticated, async (req: Request, res: any) => {
     try {
-      const userId = getUserId(req);
-      const count = await storage.getUnreadCount(userId);
-      res.json({ count });
-    } catch (error) {
-      console.error("Error fetching unread count:", error);
-      res.status(500).json({ message: "Failed to fetch unread count" });
-    }
-  });
-  
-  // Send message
-  app.post("/api/messages", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const validated = sendMessageSchema.safeParse(req.body);
-      
-      if (!validated.success) {
-        return res.status(400).json({ message: "Invalid message data", errors: validated.error.errors });
-      }
-      
-      const user = await storage.getUser(userId);
-      const displayName = user?.firstName || user?.email?.split('@')[0] || 'Commander';
-      
-      const messageData = {
-        ...validated.data,
-        fromUserId: userId,
-        from: displayName
-      };
-      
-      const message = await storage.createMessage(messageData);
-      res.json(message);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      res.status(500).json({ message: "Failed to send message" });
-    }
-  });
-  
-  // Mark message as read (with atomic ownership check)
-  app.patch("/api/messages/:id/read", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
       const { id } = req.params;
-      
-      // Atomic mark as read with userId scope
-      const updated = await storage.markMessageAsReadByUser(userId, id);
-      if (!updated) {
-        return res.status(403).json({ message: "Message not found or you don't have permission to modify it" });
-      }
-      
+      await storage.markMessageAsRead(id);
       res.json({ success: true });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error marking message as read:", error);
       res.status(500).json({ message: "Failed to mark message as read" });
     }
   });
-  
-  // Delete message (with atomic ownership check)
-  app.delete("/api/messages/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const { id } = req.params;
-      
-      // Atomic delete with userId scope
-      const deleted = await storage.deleteMessageByUser(userId, id);
-      if (!deleted) {
-        return res.status(403).json({ message: "Message not found or you don't have permission to delete it" });
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting message:", error);
-      res.status(500).json({ message: "Failed to delete message" });
-    }
-  });
-  
+
   // ==== ALLIANCE ROUTES ====
-  
-  // Get all alliances
-  app.get("/api/alliances", isAuthenticated, async (req: any, res) => {
+
+  app.get("/api/alliances", async (req: Request, res: any) => {
     try {
-      const alliances = await storage.getAllAlliances();
+      const alliances = await storage.getAlliances();
       res.json(alliances);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching alliances:", error);
       res.status(500).json({ message: "Failed to fetch alliances" });
     }
   });
-  
-  // Get user's alliance
-  app.get("/api/alliances/mine", isAuthenticated, async (req: any, res) => {
+
+  app.post("/api/alliances", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
-      const result = await storage.getUserAlliance(userId);
-      res.json(result || null);
-    } catch (error) {
-      console.error("Error fetching user alliance:", error);
-      res.status(500).json({ message: "Failed to fetch user alliance" });
-    }
-  });
-  
-  // Get alliance members
-  app.get("/api/alliances/:id/members", isAuthenticated, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const members = await storage.getAllianceMembers(id);
-      res.json(members);
-    } catch (error) {
-      console.error("Error fetching alliance members:", error);
-      res.status(500).json({ message: "Failed to fetch alliance members" });
-    }
-  });
-  
-  // Create alliance
-  app.post("/api/alliances", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const validated = createAllianceSchema.safeParse(req.body);
-      
-      if (!validated.success) {
-        return res.status(400).json({ message: "Invalid alliance data", errors: validated.error.errors });
-      }
-      
-      // Check if user already in an alliance
-      const existingAlliance = await storage.getUserAlliance(userId);
-      if (existingAlliance) {
-        return res.status(400).json({ message: "You must leave your current alliance before creating a new one" });
-      }
-      
-      // Check if tag is already taken
-      const existingByTag = await storage.getAllianceByTag(validated.data.tag);
-      if (existingByTag) {
-        return res.status(400).json({ message: "Alliance tag is already taken" });
-      }
-      
-      // Create alliance
-      const alliance = await storage.createAlliance(validated.data);
-      
-      // Add creator as leader
-      await storage.addAllianceMember({
-        allianceId: alliance.id,
-        userId,
-        rank: "leader",
-        points: 1000
-      });
-      
+      const alliance = await storage.createAlliance({ ...req.body, leaderId: userId });
       res.json(alliance);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating alliance:", error);
       res.status(500).json({ message: "Failed to create alliance" });
     }
   });
-  
-  // Join alliance
-  app.post("/api/alliances/:id/join", isAuthenticated, async (req: any, res) => {
+
+  // ==== BATTLE ROUTES ====
+
+  app.get("/api/battles", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
-      const { id } = req.params;
-      
-      // Check if user already in an alliance
-      const existingAlliance = await storage.getUserAlliance(userId);
-      if (existingAlliance) {
-        return res.status(400).json({ message: "You must leave your current alliance before joining another" });
-      }
-      
-      // Check if alliance exists
-      const alliance = await storage.getAllianceById(id);
-      if (!alliance) {
-        return res.status(404).json({ message: "Alliance not found" });
-      }
-      
-      const member = await storage.addAllianceMember({
-        allianceId: id,
-        userId,
-        rank: "recruit",
-        points: 0
-      });
-      
-      res.json(member);
-    } catch (error) {
-      console.error("Error joining alliance:", error);
-      res.status(500).json({ message: "Failed to join alliance" });
-    }
-  });
-  
-  // Leave alliance
-  app.post("/api/alliances/:id/leave", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const { id } = req.params;
-      
-      await storage.removeAllianceMember(id, userId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error leaving alliance:", error);
-      res.status(500).json({ message: "Failed to leave alliance" });
-    }
-  });
-  
-  // ==== MARKET ROUTES ====
-  
-  // Get active market orders
-  app.get("/api/market/orders", isAuthenticated, async (req: any, res) => {
-    try {
-      const limit = parseInt(req.query.limit as string) || 50;
-      const orders = await storage.getActiveMarketOrders(limit);
-      res.json(orders);
-    } catch (error) {
-      console.error("Error fetching market orders:", error);
-      res.status(500).json({ message: "Failed to fetch market orders" });
-    }
-  });
-  
-  // Get user's market orders
-  app.get("/api/market/my-orders", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const orders = await storage.getUserMarketOrders(userId);
-      res.json(orders);
-    } catch (error) {
-      console.error("Error fetching user orders:", error);
-      res.status(500).json({ message: "Failed to fetch user orders" });
-    }
-  });
-  
-  // Create market order
-  app.post("/api/market/orders", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const validated = createMarketOrderSchema.safeParse(req.body);
-      
-      if (!validated.success) {
-        return res.status(400).json({ message: "Invalid order data", errors: validated.error.errors });
-      }
-      
-      const orderData = { ...validated.data, userId, status: "active" };
-      
-      const order = await storage.createMarketOrder(orderData);
-      res.json(order);
-    } catch (error) {
-      console.error("Error creating market order:", error);
-      res.status(500).json({ message: "Failed to create market order" });
-    }
-  });
-  
-  // Cancel market order (with atomic ownership check)
-  app.delete("/api/market/orders/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const { id } = req.params;
-      
-      // Atomic delete with userId scope
-      const deleted = await storage.deleteMarketOrderByUser(userId, id);
-      if (!deleted) {
-        return res.status(403).json({ message: "Order not found or you don't have permission to cancel it" });
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error canceling market order:", error);
-      res.status(500).json({ message: "Failed to cancel market order" });
-    }
-  });
-  
-  // ==== LEADERBOARD ====
-  
-  app.get("/api/leaderboard", isAuthenticated, async (req: any, res) => {
-    try {
-      const limit = parseInt(req.query.limit as string) || 100;
-      const leaderboard = await storage.getLeaderboard(limit);
-      res.json(leaderboard);
-    } catch (error) {
-      console.error("Error fetching leaderboard:", error);
-      res.status(500).json({ message: "Failed to fetch leaderboard" });
+      const battles = await storage.getBattles(userId);
+      res.json(battles);
+    } catch (error: any) {
+      console.error("Error fetching battles:", error);
+      res.status(500).json({ message: "Failed to fetch battles" });
     }
   });
 
-  // ==== COLONIES & UNIVERSE ====
-  
-  app.get("/api/colonies", isAuthenticated, async (req: any, res) => {
+  app.post("/api/battles", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
-      const colonies = await storage.getPlayerColonies(userId);
+      const battle = await storage.createBattle({ ...req.body, attackerId: userId });
+      res.json(battle);
+    } catch (error: any) {
+      console.error("Error creating battle:", error);
+      res.status(500).json({ message: "Failed to create battle" });
+    }
+  });
+
+  // ==== COLONY ROUTES ====
+
+  app.get("/api/colonies", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const colonies = await storage.getColonies(userId);
       res.json(colonies);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching colonies:", error);
       res.status(500).json({ message: "Failed to fetch colonies" });
     }
   });
-  
-  app.post("/api/colonies", isAuthenticated, async (req: any, res) => {
+
+  app.post("/api/colonies", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
-      const { planetId, colonyName, colonyType } = req.body;
-      
-      if (!planetId || !colonyName || !colonyType) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      
-      const colony = await storage.createPlayerColony({
-        playerId: userId,
-        planetId,
-        colonyName,
-        colonyType,
-        colonyLevel: 1,
-        population: 1000
-      });
-      
+      const colony = await storage.createColony({ ...req.body, userId });
       res.json(colony);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating colony:", error);
       res.status(500).json({ message: "Failed to create colony" });
     }
   });
-  
-  // ==== MINING OPERATIONS ====
-  
-  app.get("/api/mining/operations", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const operations = await storage.getActiveMiningOperations(userId);
-      res.json(operations);
-    } catch (error) {
-      console.error("Error fetching mining operations:", error);
-      res.status(500).json({ message: "Failed to fetch mining operations" });
-    }
-  });
-  
-  app.post("/api/mining/operations", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      const { fieldId, extractionUnits } = req.body;
-      
-      if (!fieldId || !extractionUnits) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      
-      const operation = await storage.createMiningOperation({
-        playerId: userId,
-        fieldId,
-        extractionUnits,
-        isActive: true
-      });
-      
-      res.json(operation);
-    } catch (error) {
-      console.error("Error creating mining operation:", error);
-      res.status(500).json({ message: "Failed to create mining operation" });
-    }
-  });
-  
-  // ==== DURABILITY ====
-  
+
+  // ==== DURABILITY ROUTES ====
+
   app.get("/api/durability/equipment/:equipmentId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
@@ -646,7 +200,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ message: "Failed to fetch equipment durability" });
     }
   });
-  
+
   app.get("/api/durability/fleet/:fleetId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
@@ -658,7 +212,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ message: "Failed to fetch fleet durability" });
     }
   });
-  
+
   app.get("/api/durability/building/:buildingId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
@@ -672,17 +226,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ==== LOGGING ROUTES ====
-  
+
   app.get("/api/logs", isAuthenticated, async (req: any, res) => {
     try {
       const { logger } = await import("./logger");
       const level = req.query.level as string | undefined;
       const category = req.query.category as string | undefined;
       const limit = parseInt(req.query.limit as string) || 50;
-      
+
       const logs = logger.getLogs(level as any, category as any, limit);
       const stats = logger.getStats();
-      
+
       res.json({ logs, stats });
     } catch (error) {
       console.error("Error fetching logs:", error);
@@ -691,7 +245,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ==== RESEARCH TECHNOLOGY TREE ROUTES ====
-  
+
   app.get("/api/research/areas", async (req: Request, res: any) => {
     try {
       const areas = await db.select().from(researchAreas);
@@ -723,7 +277,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const techs = await db
         .select()
         .from(researchTechnologies)
-        .where(inArray(researchTechnologies.subcategoryId, ids));
+        .where(eq(researchTechnologies.subcategoryId, ids[0]));
       res.json(techs);
     } catch (error: any) {
       console.error("Error fetching research technologies:", error);
@@ -738,7 +292,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         .select()
         .from(playerResearchProgress)
         .where(eq(playerResearchProgress.playerId, userId));
-      
+
       const progressMap = Object.fromEntries(
         progress.map((p: any) => [p.technologyId, { status: p.status, progress: p.progress, startedAt: p.startedAt, completedAt: p.completedAt }])
       );
@@ -750,12 +304,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ==== EXPEDITION ROUTES ====
-  
+
   app.get("/api/expeditions", isAuthenticated, async (req: Request, res: any) => {
     try {
       const userId = getUserId(req);
-      const expeditions = await storage.getExpeditions(userId);
-      res.json(expeditions);
+      const exps = await storage.getExpeditions(userId);
+      res.json(exps);
     } catch (error: any) {
       console.error("Error fetching expeditions:", error);
       res.status(500).json({ message: "Failed to fetch expeditions" });
@@ -808,65 +362,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  return httpServer;
+  // Return the app for use in server setup
+  return app;
 }
-
-// ==== EXPEDITION ROUTES ====
-
-app.get("/api/expeditions", isAuthenticated, async (req: Request, res: any) => {
-  try {
-    const userId = getUserId(req);
-    const expeditions = await storage.getExpeditions(userId);
-    res.json(expeditions);
-  } catch (error: any) {
-    console.error("Error fetching expeditions:", error);
-    res.status(500).json({ message: "Failed to fetch expeditions" });
-  }
-});
-
-app.post("/api/expeditions", isAuthenticated, async (req: Request, res: any) => {
-  try {
-    const userId = getUserId(req);
-    const { name, type, targetCoordinates, fleetComposition, troopComposition } = req.body;
-    const expedition = await storage.createExpedition(userId, name, type, targetCoordinates, fleetComposition, troopComposition);
-    res.json(expedition);
-  } catch (error: any) {
-    console.error("Error creating expedition:", error);
-    res.status(500).json({ message: "Failed to create expedition" });
-  }
-});
-
-app.get("/api/expeditions/:id/team", isAuthenticated, async (req: Request, res: any) => {
-  try {
-    const { id } = req.params;
-    const team = await storage.getExpeditionTeams(id);
-    res.json(team);
-  } catch (error: any) {
-    console.error("Error fetching expedition team:", error);
-    res.status(500).json({ message: "Failed to fetch expedition team" });
-  }
-});
-
-app.post("/api/expeditions/:id/team", isAuthenticated, async (req: Request, res: any) => {
-  try {
-    const { id } = req.params;
-    const { unitId, role } = req.body;
-    const member = await storage.addTeamMember(id, unitId, role);
-    res.json(member);
-  } catch (error: any) {
-    console.error("Error adding team member:", error);
-    res.status(500).json({ message: "Failed to add team member" });
-  }
-});
-
-app.get("/api/expeditions/:id/encounters", isAuthenticated, async (req: Request, res: any) => {
-  try {
-    const { id } = req.params;
-    const encounters = await storage.getExpeditionEncounters(id);
-    res.json(encounters);
-  } catch (error: any) {
-    console.error("Error fetching encounters:", error);
-    res.status(500).json({ message: "Failed to fetch encounters" });
-  }
-});
-
