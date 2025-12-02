@@ -1808,3 +1808,48 @@ export const playerItems = pgTable("player_items", {
 export type PlayerItem = typeof playerItems.$inferSelect;
 export const insertPlayerItemSchema = createInsertSchema(playerItems).omit({ id: true, acquiredAt: true });
 export type InsertPlayerItem = z.infer<typeof insertPlayerItemSchema>;
+
+// 3-Tier Currency System (Silver, Gold, Platinum)
+export const playerCurrency = pgTable("player_currency", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // 3-tier currency balances
+  silver: bigint("silver").notNull().default(0),
+  gold: bigint("gold").notNull().default(0),
+  platinum: bigint("platinum").notNull().default(0),
+  
+  // Lifetime earned/spent tracking
+  silverEarned: bigint("silver_earned").notNull().default(0),
+  silverSpent: bigint("silver_spent").notNull().default(0),
+  goldEarned: bigint("gold_earned").notNull().default(0),
+  goldSpent: bigint("gold_spent").notNull().default(0),
+  platinumEarned: bigint("platinum_earned").notNull().default(0),
+  platinumSpent: bigint("platinum_spent").notNull().default(0),
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+export type PlayerCurrency = typeof playerCurrency.$inferSelect;
+export const insertPlayerCurrencySchema = createInsertSchema(playerCurrency).omit({ id: true, lastUpdated: true });
+export type InsertPlayerCurrency = z.infer<typeof insertPlayerCurrencySchema>;
+
+// Currency transaction log
+export const currencyTransactions = pgTable("currency_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  currencyType: varchar("currency_type").notNull(), // "silver", "gold", "platinum"
+  amount: bigint("amount").notNull(), // positive for income, negative for expense
+  reason: varchar("reason").notNull(), // "quest_reward", "combat_loot", "construction_cost", "research_cost", "trade", "market_fee", etc
+  relatedId: varchar("related_id"), // quest ID, battle ID, etc
+  
+  balanceBefore: bigint("balance_before").notNull(),
+  balanceAfter: bigint("balance_after").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type CurrencyTransaction = typeof currencyTransactions.$inferSelect;
+export const insertCurrencyTransactionSchema = createInsertSchema(currencyTransactions).omit({ id: true, createdAt: true });
+export type InsertCurrencyTransaction = z.infer<typeof currencyTransactionSchema>;
