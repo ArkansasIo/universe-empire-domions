@@ -497,7 +497,34 @@ export class DatabaseStorage implements IStorage {
   // Player state operations
   async getPlayerState(userId: string): Promise<PlayerState | undefined> {
     const [state] = await db.select().from(playerStates).where(eq(playerStates.userId, userId));
-    return state;
+    
+    if (!state) return undefined;
+    
+    // Ensure commander has default values if missing
+    const commander = state.commander as any || {};
+    const defaultCommander = {
+      race: commander.race || "human",
+      class: commander.class || "warrior",
+      stats: commander.stats || { level: 1, xp: 0, warfare: 0, logistics: 0, engineering: 0 },
+      equipment: commander.equipment || {},
+      inventory: commander.inventory || [],
+      title: commander.title || "Commander"
+    };
+    
+    // Ensure government has default values if missing
+    const government = state.government as any || {};
+    const defaultGovernment = {
+      type: government.type || "democracy",
+      taxRate: government.taxRate || 10,
+      policies: government.policies || [],
+      stats: government.stats || { stability: 50, efficiency: 70, publicSupport: 60, militaryReadiness: 50 }
+    };
+    
+    return {
+      ...state,
+      commander: defaultCommander,
+      government: defaultGovernment
+    };
   }
 
   async createPlayerState(playerState: InsertPlayerState): Promise<PlayerState> {

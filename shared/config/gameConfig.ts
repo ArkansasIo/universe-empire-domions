@@ -627,3 +627,47 @@ export const RELICS = [
     price: 50000,
   },
 ];
+
+// Tier System (1-21 tiers) - for players, buildings, units, etc
+export const TIER_CONFIG = {
+  maxTier: 21,
+  tiers: [
+    { tier: 1, name: "Novice", resourceMultiplier: 1.0, experienceMultiplier: 1.0, researchMultiplier: 1.0, expRequirement: 1000 },
+    { tier: 2, name: "Apprentice", resourceMultiplier: 1.1, experienceMultiplier: 1.05, researchMultiplier: 1.05, expRequirement: 2500 },
+    { tier: 3, name: "Journeyman", resourceMultiplier: 1.2, experienceMultiplier: 1.1, researchMultiplier: 1.1, expRequirement: 5000 },
+    { tier: 4, name: "Adept", resourceMultiplier: 1.3, experienceMultiplier: 1.15, researchMultiplier: 1.15, expRequirement: 10000 },
+    { tier: 5, name: "Expert", resourceMultiplier: 1.5, experienceMultiplier: 1.2, researchMultiplier: 1.2, expRequirement: 20000 },
+    { tier: 6, name: "Master", resourceMultiplier: 1.7, experienceMultiplier: 1.25, researchMultiplier: 1.25, expRequirement: 35000 },
+    { tier: 7, name: "Virtuoso", resourceMultiplier: 1.9, experienceMultiplier: 1.3, researchMultiplier: 1.3, expRequirement: 50000 },
+    { tier: 8, name: "Champion", resourceMultiplier: 2.1, experienceMultiplier: 1.35, researchMultiplier: 1.35, expRequirement: 75000 },
+    { tier: 9, name: "Legend", resourceMultiplier: 2.4, experienceMultiplier: 1.4, researchMultiplier: 1.4, expRequirement: 100000 },
+    { tier: 10, name: "Mythic", resourceMultiplier: 2.7, experienceMultiplier: 1.5, researchMultiplier: 1.5, expRequirement: 150000 },
+    { tier: 11, name: "Transcendent", resourceMultiplier: 3.0, experienceMultiplier: 1.6, researchMultiplier: 1.6, expRequirement: 200000 },
+    { tier: 12, name: "Immortal", resourceMultiplier: 3.5, experienceMultiplier: 1.7, researchMultiplier: 1.7, expRequirement: 300000 },
+    { tier: 13, name: "Ascendant", resourceMultiplier: 4.0, experienceMultiplier: 1.8, researchMultiplier: 1.8, expRequirement: 400000 },
+    { tier: 14, name: "Celestial", resourceMultiplier: 4.5, experienceMultiplier: 1.9, researchMultiplier: 1.9, expRequirement: 500000 },
+    { tier: 15, name: "Divine", resourceMultiplier: 5.0, experienceMultiplier: 2.0, researchMultiplier: 2.0, expRequirement: 750000 },
+    { tier: 16, name: "Titan", resourceMultiplier: 5.5, experienceMultiplier: 2.1, researchMultiplier: 2.1, expRequirement: 1000000 },
+    { tier: 17, name: "Eternal", resourceMultiplier: 6.0, experienceMultiplier: 2.2, researchMultiplier: 2.2, expRequirement: 1500000 },
+    { tier: 18, name: "Omniscient", resourceMultiplier: 6.5, experienceMultiplier: 2.3, researchMultiplier: 2.3, expRequirement: 2000000 },
+    { tier: 19, name: "Almighty", resourceMultiplier: 7.0, experienceMultiplier: 2.4, researchMultiplier: 2.4, expRequirement: 3000000 },
+    { tier: 20, name: "Supreme", resourceMultiplier: 8.0, experienceMultiplier: 2.5, researchMultiplier: 2.5, expRequirement: 5000000 },
+    { tier: 21, name: "Absolute", resourceMultiplier: 10.0, experienceMultiplier: 3.0, researchMultiplier: 3.0, expRequirement: 10000000 },
+  ],
+};
+
+// Empire Level System (1-999)
+export const EMPIRE_LEVEL_CONFIG = {
+  maxLevel: 999,
+  baseExpRequirement: 1000,
+  expMultiplier: 1.1,
+  levelMilestones: {
+    10: { name: "Rising Power", bonusMultiplier: 1.1 },
+    25: { name: "Growing Influence", bonusMultiplier: 1.25 },
+    50: { name: "Established Empire", bonusMultiplier: 1.5 },
+    100: { name: "Galactic Force", bonusMultiplier: 2.0 },
+    250: { name: "Legendary Empire", bonusMultiplier: 3.0 },
+    500: { name: "Ancient Sovereign", bonusMultiplier: 5.0 },
+    999: { name: "Infinite Dominion", bonusMultiplier: 10.0 },
+  },
+};
