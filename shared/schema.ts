@@ -642,6 +642,145 @@ export const activeResearchBonuses = pgTable("active_research_bonuses", {
 
 export type ActiveResearchBonus = typeof activeResearchBonuses.$inferSelect;
 
+// Knowledge Library System (1-100 levels, 1-21 tiers)
+export const knowledgeTypes = pgTable("knowledge_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  typeKey: varchar("type_key").unique().notNull(),
+  typeName: varchar("type_name").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type KnowledgeType = typeof knowledgeTypes.$inferSelect;
+
+export const knowledgeClasses = pgTable("knowledge_classes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  classKey: varchar("class_key").unique().notNull(),
+  className: varchar("class_name").notNull(),
+  knowledgeTypeId: varchar("knowledge_type_id").notNull().references(() => knowledgeTypes.id),
+  bonuses: jsonb("bonuses").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type KnowledgeClass = typeof knowledgeClasses.$inferSelect;
+
+export const knowledgeTiers = pgTable("knowledge_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tierNumber: integer("tier_number").unique().notNull(),
+  tierName: varchar("tier_name").notNull(),
+  levelRangeMin: integer("level_range_min").notNull(),
+  levelRangeMax: integer("level_range_max").notNull(),
+  costMultiplier: real("cost_multiplier").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type KnowledgeTier = typeof knowledgeTiers.$inferSelect;
+
+export const playerKnowledgeProgress = pgTable("player_knowledge_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  knowledgeClassId: varchar("knowledge_class_id").notNull().references(() => knowledgeClasses.id),
+  currentLevel: integer("current_level").notNull().default(1),
+  currentTier: integer("current_tier").notNull().default(1),
+  experience: real("experience").notNull().default(0),
+  totalExperience: real("total_experience").notNull().default(0),
+  isActive: boolean("is_active").default(false),
+  unlockedAt: timestamp("unlocked_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type PlayerKnowledgeProgress = typeof playerKnowledgeProgress.$inferSelect;
+
+export const knowledgeResearchQueue = pgTable("knowledge_research_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  knowledgeClassId: varchar("knowledge_class_id").notNull().references(() => knowledgeClasses.id),
+  targetLevel: integer("target_level").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+  completionTime: timestamp("completion_time").notNull(),
+  knowledgePointsInvested: real("knowledge_points_invested").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type KnowledgeResearchQueue = typeof knowledgeResearchQueue.$inferSelect;
+
+export const knowledgePointsLog = pgTable("knowledge_points_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  knowledgeClassId: varchar("knowledge_class_id").notNull().references(() => knowledgeClasses.id),
+  pointsEarned: real("points_earned").notNull(),
+  source: varchar("source").notNull(),
+  unitId: varchar("unit_id").references(() => units.id),
+  loggedAt: timestamp("logged_at").defaultNow(),
+});
+
+export type KnowledgePointsLog = typeof knowledgePointsLog.$inferSelect;
+
+export const activeKnowledgeBonuses = pgTable("active_knowledge_bonuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  knowledgeClassId: varchar("knowledge_class_id").notNull().references(() => knowledgeClasses.id),
+  bonusType: varchar("bonus_type").notNull(),
+  bonusValue: real("bonus_value").notNull(),
+  isActive: boolean("is_active").default(true),
+  appliedAt: timestamp("applied_at").defaultNow(),
+});
+
+export type ActiveKnowledgeBonus = typeof activeKnowledgeBonuses.$inferSelect;
+
+export const knowledgeSynergies = pgTable("knowledge_synergies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  knowledgeType1: varchar("knowledge_type_1").notNull(),
+  knowledgeType2: varchar("knowledge_type_2").notNull(),
+  synergyBonus: real("synergy_bonus").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type KnowledgeSynergy = typeof knowledgeSynergies.$inferSelect;
+
+export const libraryResearchDefinitions = pgTable("library_research_definitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  researchKey: varchar("research_key").unique().notNull(),
+  researchName: varchar("research_name").notNull(),
+  knowledgeClassId: varchar("knowledge_class_id").notNull().references(() => knowledgeClasses.id),
+  requiredLevel: integer("required_level").notNull(),
+  requiredTier: integer("required_tier").notNull(),
+  cost: jsonb("cost").notNull().default({}),
+  researchTime: integer("research_time").notNull(),
+  description: text("description"),
+  unlocks: jsonb("unlocks").notNull().default([]),
+  prerequisites: jsonb("prerequisites").notNull().default([]),
+  bonuses: jsonb("bonuses").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type LibraryResearchDefinition = typeof libraryResearchDefinitions.$inferSelect;
+
+export const playerLibraryUnlocks = pgTable("player_library_unlocks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  researchId: varchar("research_id").notNull().references(() => libraryResearchDefinitions.id),
+  unlockedAt: timestamp("unlocked_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PlayerLibraryUnlock = typeof playerLibraryUnlocks.$inferSelect;
+
+export const levelUnlockEvents = pgTable("level_unlock_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  knowledgeClassId: varchar("knowledge_class_id").notNull().references(() => knowledgeClasses.id),
+  levelReached: integer("level_reached").notNull(),
+  unlockType: varchar("unlock_type").notNull(),
+  unlockName: varchar("unlock_name").notNull(),
+  unlockedAt: timestamp("unlocked_at").defaultNow(),
+});
+
+export type LevelUnlockEvent = typeof levelUnlockEvents.$inferSelect;
+
 // Messages (player communications, battle reports, espionage reports)
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
