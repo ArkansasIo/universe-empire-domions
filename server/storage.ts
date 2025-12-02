@@ -34,7 +34,9 @@ import {
   type MiningOperation,
   type EquipmentDurability,
   type FleetDurability,
-  type BuildingDurability
+  type BuildingDurability,
+  type AdminUser,
+  adminUsers
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, asc, sql } from "drizzle-orm";
@@ -114,6 +116,9 @@ export interface IStorage {
   getEquipmentDurability(userId: string, equipmentId: string): Promise<EquipmentDurability | undefined>;
   getFleetDurability(userId: string, fleetId: string): Promise<FleetDurability | undefined>;
   getBuildingDurability(userId: string, buildingId: string): Promise<BuildingDurability | undefined>;
+  
+  // Admin operations
+  getAdminUser(userId: string): Promise<AdminUser | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -482,6 +487,15 @@ export class DatabaseStorage implements IStorage {
       .from(buildingDurability)
       .where(and(eq(buildingDurability.playerId, userId), eq(buildingDurability.buildingId, buildingId)));
     return durability;
+  }
+  
+  // Admin operations
+  async getAdminUser(userId: string): Promise<AdminUser | undefined> {
+    const [adminUser] = await db
+      .select()
+      .from(adminUsers)
+      .where(eq(adminUsers.userId, userId));
+    return adminUser;
   }
 }
 

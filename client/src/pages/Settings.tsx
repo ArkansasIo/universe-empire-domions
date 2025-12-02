@@ -11,7 +11,7 @@ import { Settings as SettingsIcon, Server, Shield, Monitor, Database, Power, Sav
 import { Badge } from "@/components/ui/badge";
 
 export default function Settings() {
-  const { config, updateConfig, cronJobs, toggleCronJob, runCronJob, isAdmin, toggleAdmin } = useGame();
+  const { config, updateConfig, cronJobs, toggleCronJob, runCronJob, isAdmin, isActualAdmin, adminRole, toggleAdmin } = useGame();
 
   return (
     <GameLayout>
@@ -21,16 +21,20 @@ export default function Settings() {
              <h2 className="text-3xl font-orbitron font-bold text-slate-900">System Configuration</h2>
              <p className="text-muted-foreground font-rajdhani text-lg">Manage server parameters, game rules, and account settings.</p>
            </div>
-           <div className="flex items-center gap-2">
-              {isAdmin && <Badge variant="destructive" className="animate-pulse">ADMIN MODE ACTIVE</Badge>}
-              <Button 
-                 variant={isAdmin ? "destructive" : "outline"} 
-                 size="sm"
-                 onClick={toggleAdmin}
-              >
-                 {isAdmin ? "Disable Admin Mode" : "Enable Admin Mode"}
-              </Button>
-           </div>
+           {isActualAdmin && (
+             <div className="flex items-center gap-2">
+                {isAdmin && <Badge variant="destructive" className="animate-pulse">ADMIN MODE</Badge>}
+                {!isAdmin && <Badge variant="secondary">USER VIEW</Badge>}
+                <Button 
+                   variant={isAdmin ? "destructive" : "outline"} 
+                   size="sm"
+                   onClick={toggleAdmin}
+                   data-testid="button-toggle-admin-mode"
+                >
+                   {isAdmin ? "Switch to User View" : "Switch to Admin Mode"}
+                </Button>
+             </div>
+           )}
         </div>
 
         <Tabs defaultValue="game" className="w-full">
@@ -236,13 +240,52 @@ export default function Settings() {
 
            {/* ACCOUNT TAB */}
            <TabsContent value="account" className="mt-6">
-              <Card className="bg-white border-slate-200">
-                 <CardContent className="p-8 text-center text-slate-500">
-                    <SettingsIcon className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                    <p>Account management settings would go here.</p>
-                    <p className="text-xs">(Email, Password, 2FA, API Keys)</p>
-                 </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <Card className="bg-white border-slate-200">
+                    <CardHeader>
+                       <CardTitle className="flex items-center gap-2 text-slate-900">
+                          <SettingsIcon className="w-5 h-5 text-slate-600" /> Account Settings
+                       </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                       <p className="text-sm text-slate-500">Account management settings.</p>
+                       <p className="text-xs text-slate-400">(Email, Password, 2FA, API Keys)</p>
+                    </CardContent>
+                 </Card>
+
+                 {isActualAdmin && (
+                    <Card className="bg-white border-slate-200 border-l-4 border-l-red-500">
+                       <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-slate-900">
+                             <Shield className="w-5 h-5 text-red-600" /> Administrator Access
+                          </CardTitle>
+                          <CardDescription>
+                             You have admin privileges. Role: <span className="font-semibold text-red-600 uppercase">{adminRole || 'admin'}</span>
+                          </CardDescription>
+                       </CardHeader>
+                       <CardContent className="space-y-4">
+                          <div className="flex items-center justify-between bg-slate-50 p-4 rounded border border-slate-100">
+                             <div>
+                                <div className="font-bold text-slate-900">Admin Mode</div>
+                                <div className="text-xs text-slate-500">
+                                   {isAdmin 
+                                      ? "Currently viewing as admin with full access" 
+                                      : "Currently viewing as a regular user"}
+                                </div>
+                             </div>
+                             <Switch 
+                                checked={isAdmin}
+                                onCheckedChange={toggleAdmin}
+                                data-testid="switch-admin-mode"
+                             />
+                          </div>
+                          <div className="text-xs text-slate-400">
+                             Toggle between admin mode (full access, admin tools visible) and user view (see the game as players do).
+                          </div>
+                       </CardContent>
+                    </Card>
+                 )}
+              </div>
            </TabsContent>
 
         </Tabs>

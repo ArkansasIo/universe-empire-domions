@@ -83,7 +83,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = getUserId(req);
       const user = await storage.getUser(userId);
-      res.json(user);
+      const adminUser = await storage.getAdminUser(userId);
+      res.json({
+        ...user,
+        isAdmin: !!(adminUser && adminUser.isActive),
+        adminRole: adminUser?.role || null
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

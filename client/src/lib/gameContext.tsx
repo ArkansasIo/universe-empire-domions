@@ -144,6 +144,8 @@ interface GameState {
   cronJobs: CronJob[];
   coordinates: string;
   isAdmin: boolean;
+  isActualAdmin: boolean;
+  adminRole: string | null;
   isLoggedIn: boolean;
   needsSetup: boolean;
   username: string;
@@ -352,6 +354,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [planetName, setPlanetName] = useState("Homeworld");
   const [coordinates, setCoordinates] = useState("1:102:8");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isActualAdmin, setIsActualAdmin] = useState(false);
+  const [adminRole, setAdminRole] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [username, setUsername] = useState("");
@@ -473,11 +477,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (state.cronJobs) setCronJobs(state.cronJobs);
       setPlanetName(state.planetName || "Homeworld");
       setCoordinates(state.coordinates || "1:1:1");
-      setUsername(authUser.firstName || authUser.email?.split('@')[0] || 'Commander');
+      setUsername(authUser.firstName || authUser.email?.split('@')[0] || authUser.username || 'Commander');
       setTotalTurns(state.totalTurns || 0);
       setCurrentTurns(state.currentTurns || 0);
       setIsLoggedIn(true);
       setNeedsSetup(!state.setupComplete);
+      setIsActualAdmin(authUser.isAdmin || false);
+      setAdminRole(authUser.adminRole || null);
       setIsInitialized(true);
     }
   }, [authUser, serverGameState, isInitialized]);
@@ -1087,11 +1093,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleAdmin = () => {
+    if (!isActualAdmin) {
+       addEvent("Access Denied", "You do not have administrator privileges.", "danger");
+       return;
+    }
     setIsAdmin(prev => !prev);
     if (!isAdmin) {
-       addEvent("System Access", "Administrator privileges granted.", "warning");
+       addEvent("System Access", "Administrator mode activated.", "warning");
     } else {
-       addEvent("System Access", "Administrator privileges revoked.", "info");
+       addEvent("System Access", "Switched to user view mode.", "info");
     }
   };
 
@@ -1138,6 +1148,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        artifacts,
        cronJobs,
        isAdmin,
+       isActualAdmin,
+       adminRole,
        isLoggedIn,
        needsSetup,
        isLoading,
