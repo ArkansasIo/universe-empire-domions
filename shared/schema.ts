@@ -1130,19 +1130,6 @@ export const playerColonies = pgTable("player_colonies", {
 
 export type PlayerColony = typeof playerColonies.$inferSelect;
 
-export const miningOperations = pgTable("mining_operations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  fieldId: varchar("field_id").notNull().references(() => resourceFields.id, { onDelete: "cascade" }),
-  extractionUnits: integer("extraction_units").notNull(),
-  startedAt: timestamp("started_at").defaultNow(),
-  totalExtracted: jsonb("total_extracted").default({ metal: 0, crystal: 0, deuterium: 0 }),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export type MiningOperation = typeof miningOperations.$inferSelect;
-
 // Durability System - Equipment, Ships, Buildings, Resource Depletion
 export const equipmentDurability = pgTable("equipment_durability", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
