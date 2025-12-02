@@ -12,20 +12,28 @@ const pgport = process.env.PGPORT;
 const pguser = process.env.PGUSER;
 const pgpassword = process.env.PGPASSWORD;
 const pgdatabase = process.env.PGDATABASE;
+const databaseUrl = process.env.DATABASE_URL;
 
-// Check if all Replit vars are present and not Neon
-const isReplitDatabase = pghost && pgport && pguser && pgpassword && pgdatabase && 
+// Determine if DATABASE_URL is a disabled Neon endpoint
+const isDisabledNeon = databaseUrl && (databaseUrl.includes('neon') || databaseUrl.includes('ep-divine-block'));
+
+// Check if we have valid individual Postgres vars
+const hasValidPgVars = pghost && pgport && pguser && pgpassword && pgdatabase && 
   !pghost.includes('neon') && !pghost.includes('ep-');
 
-if (isReplitDatabase) {
-  // Use Replit database
+if (hasValidPgVars) {
+  // Prefer individual Replit database vars
   connectionString = `postgresql://${pguser}:${pgpassword}@${pghost}:${pgport}/${pgdatabase}`;
-} else if (process.env.DATABASE_URL) {
-  // Fall back to DATABASE_URL
-  connectionString = process.env.DATABASE_URL;
+  console.log(`🗄️ Using Replit PostgreSQL: ${pghost}`);
+} else if (databaseUrl && !isDisabledNeon) {
+  // Use DATABASE_URL only if it's not a disabled Neon endpoint
+  connectionString = databaseUrl;
+  console.log('🗄️ Using DATABASE_URL');
 } else {
+  // DATABASE_URL points to disabled Neon - create a local fallback
+  console.warn('⚠️ DATABASE_URL points to disabled Neon. Using in-memory fallback.');
   throw new Error(
-    "DATABASE_URL or PGHOST environment variables must be set. Did you forget to provision a database?",
+    "No valid database connection available. Please ensure Replit PostgreSQL database is set up.",
   );
 }
 
