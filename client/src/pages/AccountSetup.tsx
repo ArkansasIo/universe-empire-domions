@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useGame } from "@/lib/gameContext";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +11,7 @@ import { GOVERNMENTS, GovernmentId } from "@/lib/governmentData";
 
 export default function AccountSetup() {
   const { completeSetup, isLoading, commander, government } = useGame();
+  const [, setLocation] = useLocation();
   const [selectedRace, setSelectedRace] = useState<RaceId>("terran");
   const [selectedGovernment, setSelectedGovernment] = useState<GovernmentId>("democracy");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +72,7 @@ export default function AccountSetup() {
     
     try {
       await completeSetup(updatedCommander, updatedGovernment);
+      setLocation("/");
     } catch (err) {
       setError("Failed to save your selections. Please try again.");
       setIsSubmitting(false);
