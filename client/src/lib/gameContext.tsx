@@ -81,9 +81,11 @@ export interface GameEvent {
 export interface QueueItem {
   id: string;
   name: string;
+  startTime: number;
   endTime: number;
   type: "building" | "research" | "unit";
   amount?: number;
+  itemId?: string;
 }
 
 export interface Mission {
@@ -792,12 +794,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         metal: prev.metal - costMetal,
         crystal: prev.crystal - costCrystal
       }));
-      const adjustedTime = time / config.gameSpeed;
+      const adjustedTime = (time * Math.pow(1.15, buildings[building])) / config.gameSpeed;
+      const now = Date.now();
       setQueue(prev => [...prev, {
         id: building,
         name: name,
-        endTime: Date.now() + adjustedTime,
-        type: "building"
+        startTime: now,
+        endTime: now + adjustedTime,
+        type: "building",
+        itemId: building
       }]);
     } else {
       setCurrentTurns(prev => prev + turnCost);
@@ -809,12 +814,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
      const turnCost = 3; // 3 turns per research
      if (!spendTurns(turnCost)) return;
      
-     const adjustedTime = time / config.gameSpeed;
+     const currentLevel = research[tech] || 0;
+     const adjustedTime = (time * Math.pow(1.2, currentLevel)) / config.gameSpeed;
+     const now = Date.now();
      setQueue(prev => [...prev, {
         id: tech,
         name: name,
-        endTime: Date.now() + adjustedTime,
-        type: "research"
+        startTime: now,
+        endTime: now + adjustedTime,
+        type: "research",
+        itemId: tech
       }]);
   };
 
@@ -822,13 +831,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const turnCost = amount; // 1 turn per unit
     if (!spendTurns(turnCost)) return;
     
-    const adjustedTime = time / config.gameSpeed;
+    const adjustedTime = (time * amount) / config.gameSpeed;
+    const now = Date.now();
     setQueue(prev => [...prev, {
       id: unitId,
       name: name,
-      endTime: Date.now() + (adjustedTime * amount),
+      startTime: now,
+      endTime: now + adjustedTime,
       type: "unit",
-      amount
+      amount,
+      itemId: unitId
     }]);
   };
 
