@@ -125,6 +125,13 @@ export interface IStorage {
   
   // Admin operations
   getAdminUser(userId: string): Promise<AdminUser | undefined>;
+  
+  // Research operations
+  getResearchAreas(): Promise<any[]>;
+  getResearchSubcategories(areaId: string): Promise<any[]>;
+  getResearchTechnologies(subcategoryIds: string[]): Promise<any[]>;
+  getPlayerResearchProgress(userId: string): Promise<any[]>;
+  upsertPlayerResearch(userId: string, technologyId: string, status: string, progress: number): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -502,6 +509,36 @@ export class DatabaseStorage implements IStorage {
       .from(adminUsers)
       .where(eq(adminUsers.userId, userId));
     return adminUser;
+  }
+
+  // Research operations
+  async getResearchAreas(): Promise<any[]> {
+    return await db.select().from(researchAreas);
+  }
+
+  async getResearchSubcategories(areaId: string): Promise<any[]> {
+    return await db.select().from(researchSubcategories).where(eq(researchSubcategories.areaId, areaId));
+  }
+
+  async getResearchTechnologies(subcategoryIds: string[]): Promise<any[]> {
+    if (subcategoryIds.length === 0) return [];
+    return await db.select().from(researchTechnologies).where(inArray(researchTechnologies.subcategoryId, subcategoryIds));
+  }
+
+  async getPlayerResearchProgress(userId: string): Promise<any[]> {
+    return await db.select().from(playerResearchProgress).where(eq(playerResearchProgress.playerId, userId));
+  }
+
+  async upsertPlayerResearch(userId: string, technologyId: string, status: string, progress: number): Promise<any> {
+    const [result] = await db
+      .insert(playerResearchProgress)
+      .values({ playerId: userId, technologyId, status, progress, startedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [playerResearchProgress.playerId, playerResearchProgress.technologyId],
+        set: { status, progress, updatedAt: new Date() }
+      })
+      .returning();
+    return result;
   }
 }
 
