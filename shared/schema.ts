@@ -77,6 +77,10 @@ export const playerStates = pgTable("player_states", {
   // Cron jobs
   cronJobs: jsonb("cron_jobs").notNull().default([]),
   
+  // Empire progression
+  empireLevel: integer("empire_level").notNull().default(1),
+  kardashevProgress: jsonb("kardashev_progress").notNull().default({ metal: 0, crystal: 0, deuterium: 0, research: 0 }),
+  
   // Last resource update timestamp
   lastResourceUpdate: timestamp("last_resource_update").defaultNow(),
   
