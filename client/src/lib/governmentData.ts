@@ -1,6 +1,6 @@
 import { GameEvent } from "./gameContext";
 
-export type GovernmentId = "democracy" | "monarchy" | "technocracy" | "junta" | "corporate" | "theocracy";
+export type GovernmentId = "democracy" | "monarchy" | "technocracy" | "junta" | "corporate" | "theocracy" | "anarchy" | "oligarchy" | "federation" | "dictatorship";
 
 export interface GovernmentPolicy {
   id: string;
@@ -77,7 +77,7 @@ export const GOVERNMENTS: Record<GovernmentId, GovernmentType> = {
   corporate: {
     id: "corporate",
     name: "Mega-Corporation",
-    description: " The state is run as a business with shareholders.",
+    description: "The state is run as a business with shareholders.",
     rulerTitle: "CEO",
     bonuses: ["+30% Resource Production", "+20% Trade Revenue"],
     penalties: ["-10% Military Morale", "High Corruption"],
@@ -91,6 +91,42 @@ export const GOVERNMENTS: Record<GovernmentId, GovernmentType> = {
     bonuses: ["+20% Stability (Faith)", "+10% Defense Strength (Fanaticism)"],
     penalties: ["-30% Research Speed", "Xenophobic Relations"],
     baseStats: { stability: 90, efficiency: 40, military: 50 }
+  },
+  anarchy: {
+    id: "anarchy",
+    name: "Anarchist Collective",
+    description: "No formal government. Cells operate independently with shared values.",
+    rulerTitle: "Chief Coordinator",
+    bonuses: ["+40% Individual Initiative", "+20% Rebellion Efficiency"],
+    penalties: ["-50% Coordination Penalty", "-30% Stability"],
+    baseStats: { stability: 20, efficiency: 40, military: 30 }
+  },
+  oligarchy: {
+    id: "oligarchy",
+    name: "Oligarchic Council",
+    description: "Power held by a small group of wealthy families or entities.",
+    rulerTitle: "Council Head",
+    bonuses: ["+15% Economic Growth", "+10% Fleet Favors"],
+    penalties: ["-15% Public Happiness", "-10% Research"],
+    baseStats: { stability: 65, efficiency: 60, military: 55 }
+  },
+  federation: {
+    id: "federation",
+    name: "Interstellar Federation",
+    description: "Loose alliance of independent systems maintaining autonomy.",
+    rulerTitle: "Federal President",
+    bonuses: ["+20% Alliance Bonuses", "+15% Trade Network"],
+    penalties: ["-10% Central Authority", "-5% Decision Speed"],
+    baseStats: { stability: 70, efficiency: 55, military: 65 }
+  },
+  dictatorship: {
+    id: "dictatorship",
+    name: "Authoritarian Dictatorship",
+    description: "Single leader with absolute power and no checks on authority.",
+    rulerTitle: "Dictator",
+    bonuses: ["+30% Decision Speed", "+25% Military Loyalty"],
+    penalties: ["-40% Public Support", "-20% Scientific Innovation"],
+    baseStats: { stability: 40, efficiency: 75, military: 90 }
   }
 };
 
