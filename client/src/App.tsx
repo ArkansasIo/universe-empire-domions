@@ -14,6 +14,7 @@ import Shipyard from "@/pages/Shipyard";
 import Fleet from "@/pages/Fleet";
 import Galaxy from "@/pages/Galaxy";
 import Universe from "@/pages/Universe";
+import UniverseGenerator from "@/pages/UniverseGenerator";
 import Commander from "@/pages/Commander";
 import Government from "@/pages/Government";
 import Settings from "@/pages/Settings";
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/interstellar" component={Interstellar} />
       <Route path="/galaxy" component={Galaxy} />
       <Route path="/universe" component={Universe} />
+      <Route path="/universe-generator" component={UniverseGenerator} />
       <Route path="/commander" component={Commander} />
       <Route path="/government" component={Government} />
       <Route path="/alliance" component={Alliance} />
