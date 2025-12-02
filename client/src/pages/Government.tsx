@@ -16,6 +16,11 @@ import { cn } from "@/lib/utils";
 
 export default function Government() {
   const { government, setGovernmentType, togglePolicy, setTaxRate } = useGame();
+
+  if (!government?.stats || !government?.type) {
+    return <GameLayout><div className="text-center py-12">Loading government data...</div></GameLayout>;
+  }
+
   const activeGov = GOVERNMENTS[government.type];
 
   return (
@@ -48,7 +53,7 @@ export default function Government() {
                     </div>
                     <div className="text-right">
                        <div className="text-sm uppercase font-bold text-muted-foreground mb-1">Tax Rate</div>
-                       <div className="text-3xl font-mono font-bold text-primary">{government.taxRate}%</div>
+                       <div className="text-3xl font-mono font-bold text-primary">{government?.taxRate || 0}%</div>
                     </div>
                  </div>
 
@@ -58,17 +63,17 @@ export default function Government() {
                        <div>
                           <div className="flex justify-between text-sm font-bold text-slate-700 mb-1">
                              <span className="flex items-center gap-2"><Scale className="w-4 h-4 text-blue-500" /> Stability</span>
-                             <span>{government.stats.stability}%</span>
+                             <span>{government?.stats?.stability || 50}%</span>
                           </div>
-                          <Progress value={government.stats.stability} className="h-2 bg-slate-100" />
+                          <Progress value={government?.stats?.stability || 50} className="h-2 bg-slate-100" />
                           <p className="text-xs text-slate-500 mt-1">Affects overall resource production.</p>
                        </div>
                        <div>
                           <div className="flex justify-between text-sm font-bold text-slate-700 mb-1">
                              <span className="flex items-center gap-2"><Users className="w-4 h-4 text-green-500" /> Public Support</span>
-                             <span>{government.stats.publicSupport}%</span>
+                             <span>{government?.stats?.publicSupport || 60}%</span>
                           </div>
-                          <Progress value={government.stats.publicSupport} className="h-2 bg-slate-100" />
+                          <Progress value={government?.stats?.publicSupport || 60} className="h-2 bg-slate-100" />
                           <p className="text-xs text-slate-500 mt-1">Prevents riots and rebellions.</p>
                        </div>
                     </div>
@@ -76,17 +81,17 @@ export default function Government() {
                        <div>
                           <div className="flex justify-between text-sm font-bold text-slate-700 mb-1">
                              <span className="flex items-center gap-2"><Building2 className="w-4 h-4 text-orange-500" /> Bureaucracy Efficiency</span>
-                             <span>{government.stats.efficiency}%</span>
+                             <span>{government?.stats?.efficiency || 70}%</span>
                           </div>
-                          <Progress value={government.stats.efficiency} className="h-2 bg-slate-100" />
+                          <Progress value={government?.stats?.efficiency || 70} className="h-2 bg-slate-100" />
                           <p className="text-xs text-slate-500 mt-1">Impacts construction speed.</p>
                        </div>
                        <div>
                           <div className="flex justify-between text-sm font-bold text-slate-700 mb-1">
                              <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-red-500" /> Military Readiness</span>
-                             <span>{government.stats.militaryReadiness}%</span>
+                             <span>{government?.stats?.militaryReadiness || 50}%</span>
                           </div>
-                          <Progress value={government.stats.militaryReadiness} className="h-2 bg-slate-100" />
+                          <Progress value={government?.stats?.militaryReadiness || 50} className="h-2 bg-slate-100" />
                           <p className="text-xs text-slate-500 mt-1">Impacts fleet build speed & effectiveness.</p>
                        </div>
                     </div>
@@ -101,7 +106,7 @@ export default function Government() {
                        <span className="text-sm text-muted-foreground">Higher taxes reduce public support.</span>
                     </div>
                     <Slider 
-                       value={[government.taxRate]} 
+                       value={[government?.taxRate || 0]} 
                        max={100} 
                        step={1} 
                        onValueChange={(v) => setTaxRate(v[0])}

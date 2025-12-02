@@ -1315,3 +1315,57 @@ export const queueItems = pgTable("queue_items", {
 export const insertQueueItemSchema = createInsertSchema(queueItems).omit({ id: true, createdAt: true });
 export type InsertQueueItem = z.infer<typeof insertQueueItemSchema>;
 export type QueueItem = typeof queueItems.$inferSelect;
+
+// Battle/Combat records
+export const battles = pgTable("battles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  attackerId: varchar("attacker_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  defenderId: varchar("defender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  type: varchar("type").notNull(), // "raid", "attack", "spy", "sabotage"
+  status: varchar("status").notNull().default("completed"), // "pending", "completed", "failed"
+  
+  attackerCoordinates: varchar("attacker_coordinates").notNull(),
+  defenderCoordinates: varchar("defender_coordinates").notNull(),
+  
+  winner: varchar("winner"), // "attacker", "defender", "draw", "spy_success", "spy_failed"
+  
+  attackerFleet: jsonb("attacker_fleet").notNull(),
+  defenderFleet: jsonb("defender_fleet").notNull(),
+  
+  attackerLosses: jsonb("attacker_losses"), // { unitId: count }
+  defenderLosses: jsonb("defender_losses"),
+  
+  loot: jsonb("loot"), // { metal, crystal, deuterium }
+  debris: jsonb("debris"), // { metal, crystal }
+  
+  rounds: integer("rounds").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertBattleSchema = createInsertSchema(battles).omit({ id: true, createdAt: true, completedAt: true });
+export type InsertBattle = z.infer<typeof insertBattleSchema>;
+export type Battle = typeof battles.$inferSelect;
+
+// Battle logs (detailed combat round data)
+export const battleLogs = pgTable("battle_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  battleId: varchar("battle_id").notNull().references(() => battles.id, { onDelete: "cascade" }),
+  
+  round: integer("round").notNull(),
+  
+  attackerDamageDealt: integer("attacker_damage_dealt").default(0),
+  defenderDamageDealt: integer("defender_damage_dealt").default(0),
+  
+  unitsDestroyed: jsonb("units_destroyed"), // { side: "attacker"|"defender", unitId: count, damage: number }
+  
+  log: text("log"), // Narrative description of round
+  
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const insertBattleLogSchema = createInsertSchema(battleLogs).omit({ id: true, timestamp: true });
+export type InsertBattleLog = z.infer<typeof insertBattleLogSchema>;
+export type BattleLog = typeof battleLogs.$inferSelect;
