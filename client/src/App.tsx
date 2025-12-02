@@ -35,6 +35,7 @@ import Privacy from "@/pages/Privacy";
 import ServerConsole from "@/pages/ServerConsole";
 import Exploration from "@/pages/Exploration";
 import Colonies from "@/pages/Colonies";
+import TechTree from "@/pages/TechTree";
 import { useGame } from "@/lib/gameContext";
 
 function LoadingSplash() {
@@ -125,6 +126,7 @@ function RouterContent() {
       <Route path="/battle-logs" component={BattleLogs} />
       <Route path="/exploration" component={Exploration} />
       <Route path="/colonies" component={Colonies} />
+      <Route path="/tech-tree" component={TechTree} />
       <Route path="/settings" component={Settings} />
       <Route path="/admin" component={Admin} />
       <Route path="/console" component={ServerConsole} />
