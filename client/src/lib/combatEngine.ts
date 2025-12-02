@@ -169,7 +169,7 @@ export class CombatEngine {
     // Evasion check
     const evasionChance = Math.random() * 100;
     if (evasionChance < defender.evasion) {
-      return { shieldDamage: 0, armorDamage: 0, hulkDamage: 0 };
+      return { shieldDamage: 0, armorDamage: 0, hullDamage: 0 };
     }
 
     // Base damage with accuracy
@@ -206,7 +206,8 @@ export class CombatEngine {
     let bestTarget = availableTargets[0];
     let bestThreat = 0;
 
-    for (const id of availableTargets) {
+    for (let i = 0; i < availableTargets.length; i++) {
+      const id = availableTargets[i];
       const ship = this.ships.get(id)!;
       const threat = ship.attack * (ship.health / ship.maxHealth);
       if (threat > bestThreat) {
@@ -225,7 +226,9 @@ export class CombatEngine {
     const actions: ShipAction[] = [];
 
     // Attackers attack
-    for (const attackerId of this.attackerFleet) {
+    const attackerArray = Array.from(this.attackerFleet);
+    for (let i = 0; i < attackerArray.length; i++) {
+      const attackerId = attackerArray[i];
       const attacker = this.ships.get(attackerId);
       if (!attacker || attacker.health <= 0) continue;
 
@@ -252,7 +255,9 @@ export class CombatEngine {
     }
 
     // Defenders attack
-    for (const defenderId of this.defenderFleet) {
+    const defenderArray = Array.from(this.defenderFleet);
+    for (let i = 0; i < defenderArray.length; i++) {
+      const defenderId = defenderArray[i];
       const defender = this.ships.get(defenderId);
       if (!defender || defender.health <= 0) continue;
 
@@ -277,7 +282,9 @@ export class CombatEngine {
     }
 
     // Remove destroyed ships
-    for (const [id, ship] of this.ships.entries()) {
+    const shipsArray = Array.from(this.ships.entries());
+    for (let i = 0; i < shipsArray.length; i++) {
+      const [id, ship] = shipsArray[i];
       if (ship.health <= 0) {
         this.attackerFleet.delete(id);
         this.defenderFleet.delete(id);
@@ -311,7 +318,9 @@ export class CombatEngine {
     let metalWorth = 0;
     let crewLoss = 0;
 
-    for (const id of fleet) {
+    const fleetArray = Array.from(fleet);
+    for (let i = 0; i < fleetArray.length; i++) {
+      const id = fleetArray[i];
       const ship = this.ships.get(id);
       if (ship && ship.health <= 0) {
         ships++;
