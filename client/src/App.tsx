@@ -181,6 +181,7 @@ function RouterContent() {
       <Route path="/technology-tree" component={TechnologyTree} />
       <Route path="/expeditions" component={Expeditions} />
       <Route path="/blueprints" component={Blueprints} />
+      <Route path="/megastructures" component={MegaStructures} />
       <Route path="/settings" component={Settings} />
       <Route path="/admin" component={Admin} />
       <Route path="/console" component={ServerConsole} />

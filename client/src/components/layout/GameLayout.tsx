@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useGame } from "@/lib/gameContext";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { 
   LayoutDashboard, 
   Pickaxe, 
@@ -25,23 +26,87 @@ import {
   ShoppingBag,
   Orbit,
   Clock,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  Swords,
+  Users,
+  Map,
+  Building2,
+  Sparkles,
+  CircleDot,
+  GraduationCap,
+  Compass,
+  Home,
+  FileText
 } from "lucide-react";
 
-const SidebarItem = ({ href, icon: Icon, label, active, className }: { href: string, icon: any, label: string, active: boolean, className?: string }) => (
+const SidebarItem = ({ href, icon: Icon, label, active, className, indent = false }: { href: string, icon: any, label: string, active: boolean, className?: string, indent?: boolean }) => (
   <Link href={href}>
     <div className={cn(
-      "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-200 border-l-2",
+      "flex items-center gap-3 cursor-pointer transition-all duration-200 border-l-2",
+      indent ? "px-6 py-2 text-xs" : "px-4 py-3",
       active 
         ? "bg-primary/10 border-primary text-primary font-bold" 
         : "border-transparent hover:bg-slate-200 hover:text-primary hover:border-primary/50 text-muted-foreground",
       className
     )}>
-      <Icon className="w-5 h-5" />
-      <span className="font-rajdhani font-semibold tracking-wider uppercase text-sm">{label}</span>
+      <Icon className={indent ? "w-4 h-4" : "w-5 h-5"} />
+      <span className={cn("font-rajdhani font-semibold tracking-wider uppercase", indent ? "text-xs" : "text-sm")}>{label}</span>
     </div>
   </Link>
 );
+
+interface MenuSection {
+  title: string;
+  icon: any;
+  items: { href: string; icon: any; label: string }[];
+}
+
+const CollapsibleMenu = ({ title, icon: Icon, items, location, defaultOpen = false }: { 
+  title: string; 
+  icon: any; 
+  items: { href: string; icon: any; label: string }[];
+  location: string;
+  defaultOpen?: boolean;
+}) => {
+  const hasActiveChild = items.some(item => location === item.href);
+  const [isOpen, setIsOpen] = useState(defaultOpen || hasActiveChild);
+  
+  return (
+    <div className="mb-1">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full flex items-center justify-between px-4 py-2.5 cursor-pointer transition-all duration-200 border-l-2",
+          hasActiveChild 
+            ? "bg-primary/5 border-primary/50 text-primary" 
+            : "border-transparent hover:bg-slate-100 text-muted-foreground hover:text-slate-700"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="w-5 h-5" />
+          <span className="font-rajdhani font-semibold tracking-wider uppercase text-sm">{title}</span>
+        </div>
+        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+      </button>
+      {isOpen && (
+        <div className="bg-slate-50/50">
+          {items.map(item => (
+            <SidebarItem 
+              key={item.href}
+              href={item.href} 
+              icon={item.icon} 
+              label={item.label} 
+              active={location === item.href}
+              indent
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ResourceDisplay = ({ icon: Icon, label, value, colorClass }: { icon: any, label: string, value: number, colorClass: string }) => (
   <div className="flex items-center gap-3 bg-white border border-slate-200 px-4 py-2 rounded shadow-sm min-w-[140px]">
@@ -135,31 +200,93 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           <nav className="flex-1 py-2">
-            <div className="px-4 mb-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">Development</div>
+            {/* Main Overview */}
             <SidebarItem href="/" icon={LayoutDashboard} label="Overview" active={location === "/"} />
-            <SidebarItem href="/resources" icon={Pickaxe} label="Resources" active={location === "/resources"} />
-            <SidebarItem href="/facilities" icon={Factory} label="Facilities" active={location === "/facilities"} />
-            <SidebarItem href="/research" icon={FlaskConical} label="Research" active={location === "/research"} />
-            <SidebarItem href="/artifacts" icon={Hexagon} label="Artifacts" active={location === "/artifacts"} />
-            <SidebarItem href="/shipyard" icon={Rocket} label="Shipyard" active={location === "/shipyard"} />
-            <SidebarItem href="/commander" icon={User} label="Commander" active={location === "/commander"} />
-            <SidebarItem href="/government" icon={Landmark} label="Government" active={location === "/government"} />
-            <SidebarItem href="/alliance" icon={Shield} label="Alliance" active={location === "/alliance"} />
-            <SidebarItem href="/market" icon={ShoppingBag} label="Market" active={location === "/market"} />
-            <SidebarItem href="/messages" icon={Mail} label="Messages" active={location === "/messages"} />
             
-            <div className="px-4 mt-6 mb-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">Navigation</div>
-            <SidebarItem href="/fleet" icon={Send} label="Fleet" active={location === "/fleet"} />
-            <SidebarItem href="/interstellar" icon={Rocket} label="Interstellar" active={location === "/interstellar"} />
-            <SidebarItem href="/galaxy" icon={Globe} label="Galaxy" active={location === "/galaxy"} />
-            <SidebarItem href="/universe" icon={Orbit} label="Universe" active={location === "/universe"} />
+            {/* Empire Development Menu */}
+            <CollapsibleMenu 
+              title="Empire" 
+              icon={Building2} 
+              location={location}
+              defaultOpen
+              items={[
+                { href: "/resources", icon: Pickaxe, label: "Resources" },
+                { href: "/facilities", icon: Factory, label: "Facilities" },
+                { href: "/megastructures", icon: CircleDot, label: "Megastructures" },
+                { href: "/colonies", icon: Home, label: "Colonies" },
+              ]}
+            />
             
-            <div className="px-4 mt-6 mb-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">System</div>
+            {/* Research & Technology Menu */}
+            <CollapsibleMenu 
+              title="Research" 
+              icon={FlaskConical} 
+              location={location}
+              items={[
+                { href: "/research", icon: FlaskConical, label: "Research Lab" },
+                { href: "/technology-tree", icon: GraduationCap, label: "Tech Tree" },
+                { href: "/blueprints", icon: FileText, label: "Blueprints" },
+                { href: "/artifacts", icon: Hexagon, label: "Artifacts" },
+              ]}
+            />
+            
+            {/* Military Menu */}
+            <CollapsibleMenu 
+              title="Military" 
+              icon={Swords} 
+              location={location}
+              items={[
+                { href: "/shipyard", icon: Rocket, label: "Shipyard" },
+                { href: "/fleet", icon: Send, label: "Fleet Command" },
+                { href: "/army", icon: Users, label: "Army" },
+                { href: "/expeditions", icon: Compass, label: "Expeditions" },
+                { href: "/combat", icon: Swords, label: "Combat" },
+              ]}
+            />
+            
+            {/* Exploration Menu */}
+            <CollapsibleMenu 
+              title="Exploration" 
+              icon={Map} 
+              location={location}
+              items={[
+                { href: "/interstellar", icon: Sparkles, label: "Interstellar" },
+                { href: "/galaxy", icon: Globe, label: "Galaxy Map" },
+                { href: "/universe", icon: Orbit, label: "Universe" },
+                { href: "/exploration", icon: Compass, label: "Exploration" },
+              ]}
+            />
+            
+            {/* Diplomacy & Social Menu */}
+            <CollapsibleMenu 
+              title="Diplomacy" 
+              icon={Shield} 
+              location={location}
+              items={[
+                { href: "/commander", icon: User, label: "Commander" },
+                { href: "/government", icon: Landmark, label: "Government" },
+                { href: "/alliance", icon: Shield, label: "Alliance" },
+                { href: "/messages", icon: Mail, label: "Messages" },
+              ]}
+            />
+            
+            {/* Economy Menu */}
+            <CollapsibleMenu 
+              title="Economy" 
+              icon={ShoppingBag} 
+              location={location}
+              items={[
+                { href: "/market", icon: ShoppingBag, label: "Market" },
+              ]}
+            />
+            
+            {/* System */}
+            <div className="px-4 mt-4 mb-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">System</div>
             <SidebarItem href="/settings" icon={Settings} label="Settings" active={location === "/settings"} />
             
             {isAdmin && (
                <>
-                  <div className="px-4 mt-6 mb-2 text-xs font-bold text-red-600 uppercase tracking-widest flex items-center gap-2">
+                  <div className="px-4 mt-4 mb-2 text-xs font-bold text-red-600 uppercase tracking-widest flex items-center gap-2">
                      <ShieldAlert className="w-3 h-3" /> Administration
                   </div>
                   <SidebarItem href="/admin" icon={ShieldAlert} label="Control Panel" active={location === "/admin"} className="text-red-600 hover:bg-red-50 hover:text-red-700" />
