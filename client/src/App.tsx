@@ -40,6 +40,7 @@ import Blueprints from "@/pages/Blueprints";
 import TechnologyTree from "@/pages/TechnologyTree";
 import Expeditions from "@/pages/Expeditions";
 import Army from "@/pages/Army";
+import MegaStructures from "@/pages/MegaStructures";
 import { useGame } from "@/lib/gameContext";
 
 function LoadingSplash() {
