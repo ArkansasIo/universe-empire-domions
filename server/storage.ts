@@ -42,14 +42,18 @@ export interface IStorage {
   getActiveMissions(userId: string): Promise<Mission[]>;
   createMission(mission: InsertMission): Promise<Mission>;
   updateMission(id: string, updates: Partial<Mission>): Promise<Mission>;
+  updateMissionByUser(userId: string, id: string, updates: Partial<Mission>): Promise<Mission | null>;
   deleteMission(id: string): Promise<void>;
+  deleteMissionByUser(userId: string, id: string): Promise<boolean>;
   
   // Message operations
   getMessagesByUser(userId: string, limit?: number): Promise<Message[]>;
   getUnreadCount(userId: string): Promise<number>;
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(id: string): Promise<void>;
+  markMessageAsReadByUser(userId: string, id: string): Promise<boolean>;
   deleteMessage(id: string): Promise<void>;
+  deleteMessageByUser(userId: string, id: string): Promise<boolean>;
   
   // Alliance operations
   getAllianceById(id: string): Promise<Alliance | undefined>;
@@ -71,6 +75,7 @@ export interface IStorage {
   createMarketOrder(order: InsertMarketOrder): Promise<MarketOrder>;
   updateMarketOrder(id: string, updates: Partial<MarketOrder>): Promise<MarketOrder>;
   deleteMarketOrder(id: string): Promise<void>;
+  deleteMarketOrderByUser(userId: string, id: string): Promise<boolean>;
   
   // Queue operations
   getUserQueue(userId: string): Promise<QueueItem[]>;
@@ -156,8 +161,25 @@ export class DatabaseStorage implements IStorage {
     return mission;
   }
 
+  async updateMissionByUser(userId: string, id: string, updates: Partial<Mission>): Promise<Mission | null> {
+    const [mission] = await db
+      .update(missions)
+      .set(updates)
+      .where(and(eq(missions.id, id), eq(missions.userId, userId)))
+      .returning();
+    return mission || null;
+  }
+
   async deleteMission(id: string): Promise<void> {
     await db.delete(missions).where(eq(missions.id, id));
+  }
+
+  async deleteMissionByUser(userId: string, id: string): Promise<boolean> {
+    const result = await db
+      .delete(missions)
+      .where(and(eq(missions.id, id), eq(missions.userId, userId)))
+      .returning({ id: missions.id });
+    return result.length > 0;
   }
 
   // Message operations
@@ -185,8 +207,25 @@ export class DatabaseStorage implements IStorage {
     await db.update(messages).set({ read: true }).where(eq(messages.id, id));
   }
 
+  async markMessageAsReadByUser(userId: string, id: string): Promise<boolean> {
+    const result = await db
+      .update(messages)
+      .set({ read: true })
+      .where(and(eq(messages.id, id), eq(messages.toUserId, userId)))
+      .returning({ id: messages.id });
+    return result.length > 0;
+  }
+
   async deleteMessage(id: string): Promise<void> {
     await db.delete(messages).where(eq(messages.id, id));
+  }
+
+  async deleteMessageByUser(userId: string, id: string): Promise<boolean> {
+    const result = await db
+      .delete(messages)
+      .where(and(eq(messages.id, id), eq(messages.toUserId, userId)))
+      .returning({ id: messages.id });
+    return result.length > 0;
   }
 
   // Alliance operations
@@ -291,6 +330,14 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMarketOrder(id: string): Promise<void> {
     await db.delete(marketOrders).where(eq(marketOrders.id, id));
+  }
+
+  async deleteMarketOrderByUser(userId: string, id: string): Promise<boolean> {
+    const result = await db
+      .delete(marketOrders)
+      .where(and(eq(marketOrders.id, id), eq(marketOrders.userId, userId)))
+      .returning({ id: marketOrders.id });
+    return result.length > 0;
   }
 
   // Queue operations

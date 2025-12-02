@@ -1,10 +1,25 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { CommanderState, Item, RaceId, ClassId, SubClassId, RACES, CLASSES, SUBCLASSES } from './commanderTypes';
 import { GovernmentState, GOVERNMENTS, GovernmentId, POLICIES } from './governmentData';
 import { Alliance, AllianceMember, MOCK_ALLIANCES } from './allianceData';
 import { Artifact, ARTIFACTS } from './artifactData';
 import { simulateCombat, simulateEspionage, simulateSabotage, BattleReport, EspionageReport } from './gameLogic';
 import { CronJob, DEFAULT_CRON_JOBS } from './cronData';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+async function apiRequest(method: string, url: string, data?: any) {
+  const res = await fetch(url, {
+    method,
+    headers: data ? { 'Content-Type': 'application/json' } : {},
+    body: data ? JSON.stringify(data) : undefined,
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error);
+  }
+  return res.json();
+}
 
 interface Resources {
   metal: number;
@@ -129,8 +144,9 @@ interface GameState {
   isAdmin: boolean;
   isLoggedIn: boolean;
   username: string;
-  login: (username: string) => void;
+  login: () => void;
   logout: () => void;
+  isLoading: boolean;
   toggleAdmin: () => void;
   updateBuilding: (building: keyof Buildings | string, name: string, time: number) => void;
   updateResearch: (tech: string, name: string, time: number) => void;
@@ -327,6 +343,199 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
+  const [isInitialized, setIsInitialized] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { data: authUser, isLoading: authLoading } = useQuery({
+    queryKey: ['/api/auth/user'],
+    queryFn: async () => {
+      try {
+        const res = await fetch('/api/auth/user', { credentials: 'include' });
+        if (!res.ok) return null;
+        return res.json();
+      } catch {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 60000
+  });
+
+  const { data: serverGameState, isLoading: gameStateLoading, refetch: refetchGameState } = useQuery({
+    queryKey: ['/api/game/state'],
+    queryFn: () => apiRequest('GET', '/api/game/state'),
+    enabled: !!authUser,
+    staleTime: 30000
+  });
+
+  const { data: serverMissions, refetch: refetchMissions } = useQuery({
+    queryKey: ['/api/missions/active'],
+    queryFn: () => apiRequest('GET', '/api/missions/active'),
+    enabled: !!authUser,
+    staleTime: 5000
+  });
+
+  const createMissionMutation = useMutation({
+    mutationFn: (mission: any) => apiRequest('POST', '/api/missions', mission),
+    onSuccess: () => refetchMissions()
+  });
+
+  const updateMissionMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string, updates: any }) => apiRequest('PATCH', `/api/missions/${id}`, updates)
+  });
+
+  const { data: serverMessages, refetch: refetchMessages } = useQuery({
+    queryKey: ['/api/messages'],
+    queryFn: () => apiRequest('GET', '/api/messages?limit=50'),
+    enabled: !!authUser,
+    staleTime: 10000
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: (msg: any) => apiRequest('POST', '/api/messages', msg),
+    onSuccess: () => refetchMessages()
+  });
+
+  const markMessageReadMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('PATCH', `/api/messages/${id}/read`, {})
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/messages/${id}`)
+  });
+
+  const { data: serverAlliance, refetch: refetchAlliance } = useQuery({
+    queryKey: ['/api/alliances/mine'],
+    queryFn: () => apiRequest('GET', '/api/alliances/mine'),
+    enabled: !!authUser,
+    staleTime: 30000
+  });
+
+  const createAllianceMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('POST', '/api/alliances', data),
+    onSuccess: () => refetchAlliance()
+  });
+
+  const joinAllianceMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('POST', `/api/alliances/${id}/join`, {}),
+    onSuccess: () => refetchAlliance()
+  });
+
+  const leaveAllianceMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('POST', `/api/alliances/${id}/leave`, {}),
+    onSuccess: () => refetchAlliance()
+  });
+
+  const saveGameStateMutation = useMutation({
+    mutationFn: (updates: any) => apiRequest('PATCH', '/api/game/state', updates)
+  });
+
+  const debouncedSave = useCallback((updates: any) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      saveGameStateMutation.mutate(updates);
+    }, 2000);
+  }, []);
+
+  useEffect(() => {
+    if (authUser && serverGameState && !isInitialized) {
+      const state = serverGameState;
+      setResources(state.resources || { metal: 1000, crystal: 500, deuterium: 0, energy: 0 });
+      setBuildings({
+        metalMine: state.buildings?.metalMine || 1,
+        crystalMine: state.buildings?.crystalMine || 1,
+        deuteriumSynthesizer: state.buildings?.deuteriumSynthesizer || 0,
+        solarPlant: state.buildings?.solarPlant || 1,
+        roboticsFactory: state.buildings?.roboticsFactory || 0,
+        shipyard: state.buildings?.shipyard || 0,
+        researchLab: state.buildings?.researchLab || 0,
+      });
+      setOrbitalBuildings(state.orbitalBuildings || {});
+      setResearch(state.research || {});
+      setUnits(state.units || {});
+      if (state.commander) setCommander(state.commander);
+      if (state.government) setGovernment(state.government);
+      if (state.artifacts) setArtifacts(state.artifacts);
+      if (state.cronJobs) setCronJobs(state.cronJobs);
+      setPlanetName(state.planetName || "Homeworld");
+      setCoordinates(state.coordinates || "1:1:1");
+      setUsername(authUser.firstName || authUser.email?.split('@')[0] || 'Commander');
+      setIsLoggedIn(true);
+      setIsInitialized(true);
+    }
+  }, [authUser, serverGameState, isInitialized]);
+
+  useEffect(() => {
+    if (serverMissions && Array.isArray(serverMissions)) {
+      const formattedMissions = serverMissions.map((m: any) => ({
+        id: m.id,
+        type: m.type,
+        target: m.target,
+        units: m.units || {},
+        arrivalTime: new Date(m.arrivalTime).getTime(),
+        returnTime: m.returnTime ? new Date(m.returnTime).getTime() : 0,
+        status: m.status,
+        processed: m.processed
+      }));
+      setActiveMissions(formattedMissions);
+    }
+  }, [serverMissions]);
+
+  useEffect(() => {
+    if (serverMessages && Array.isArray(serverMessages)) {
+      const formattedMessages = serverMessages.map((m: any) => ({
+        id: m.id,
+        from: m.from,
+        to: m.to,
+        subject: m.subject,
+        body: m.body,
+        timestamp: new Date(m.timestamp).getTime(),
+        read: m.read,
+        type: m.type,
+        battleReport: m.battleReport,
+        espionageReport: m.espionageReport
+      }));
+      setMessages(formattedMessages);
+    }
+  }, [serverMessages]);
+
+  useEffect(() => {
+    if (serverAlliance) {
+      const allianceData = serverAlliance.alliance;
+      if (allianceData) {
+        setAlliance({
+          id: allianceData.id,
+          name: allianceData.name,
+          tag: allianceData.tag,
+          description: allianceData.description || "A new alliance rises.",
+          announcement: allianceData.announcement || "Welcome to the alliance.",
+          members: [],
+          applications: [],
+          resources: allianceData.resources || { metal: 0, crystal: 0, deuterium: 0 }
+        });
+      }
+    }
+  }, [serverAlliance]);
+
+  useEffect(() => {
+    if (isInitialized && isLoggedIn) {
+      debouncedSave({
+        resources,
+        buildings,
+        orbitalBuildings,
+        research,
+        units,
+        commander,
+        government,
+        artifacts,
+        cronJobs,
+        planetName,
+        coordinates
+      });
+    }
+  }, [resources, buildings, orbitalBuildings, research, units, commander, government, artifacts, cronJobs, planetName, coordinates, isInitialized, isLoggedIn, debouncedSave]);
 
   // Calculate production
   const getProduction = () => {
@@ -688,20 +897,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const dispatchFleet = (missionData: Omit<Mission, "id" | "status" | "returnTime">) => {
-     const flightTime = missionData.arrivalTime / config.fleetSpeed; // Apply fleet speed config
+     const flightTime = missionData.arrivalTime / config.fleetSpeed;
      const now = Date.now();
      
-     const mission: Mission = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...missionData,
-        arrivalTime: now + flightTime,
-        returnTime: now + (flightTime * 2),
+     const arrivalTime = new Date(now + flightTime);
+     const returnTime = new Date(now + (flightTime * 2));
+     
+     const backendMission = {
+        type: missionData.type,
+        target: missionData.target,
+        origin: coordinates,
+        units: missionData.units,
+        departureTime: new Date(now),
+        arrivalTime: arrivalTime,
+        returnTime: returnTime,
         status: "outbound"
      };
 
-     setActiveMissions(prev => [...prev, mission]);
+     createMissionMutation.mutate(backendMission);
      
-     // Deduct units
      setUnits(prev => {
         const newUnits = {...prev};
         Object.entries(missionData.units).forEach(([id, count]) => {
@@ -719,75 +933,40 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendMessage = (to: string, subject: string, body: string) => {
-     const newMsg: Message = {
-        id: Math.random().toString(36).substr(2, 9),
-        from: "Commander",
-        to,
-        subject,
-        body,
-        timestamp: Date.now(),
-        read: true,
-        type: "player"
-     };
-     setMessages(prev => [newMsg, ...prev]);
+     sendMessageMutation.mutate({
+       toUserId: to,
+       to: to,
+       subject,
+       body,
+       type: "player"
+     });
      addEvent("Message Sent", `Communique dispatched to ${to}.`, "success");
   };
 
   const markMessageRead = (id: string) => {
+     markMessageReadMutation.mutate(id);
      setMessages(prev => prev.map(m => m.id === id ? { ...m, read: true } : m));
   };
 
   const deleteMessage = (id: string) => {
+     deleteMessageMutation.mutate(id);
      setMessages(prev => prev.filter(m => m.id !== id));
   };
 
   const createAlliance = (name: string, tag: string) => {
-     const newAlliance: Alliance = {
-        id: Math.random().toString(36).substr(2, 9),
-        name,
-        tag,
-        description: "A new power rises.",
-        announcement: "Welcome to the alliance.",
-        members: [{
-           id: "player",
-           name: "Commander",
-           rank: "leader",
-           points: 1000,
-           status: "online",
-           lastActive: Date.now()
-        }],
-        applications: [],
-        resources: { metal: 0, crystal: 0, deuterium: 0 }
-     };
-     setAlliance(newAlliance);
+     createAllianceMutation.mutate({ name, tag, description: "A new power rises." });
      addEvent("Alliance Formed", `You have founded the ${name} [${tag}].`, "success");
   };
 
   const joinAlliance = (id: string) => {
-     const mockAlliance = MOCK_ALLIANCES.find(a => a.id === id);
-     if (mockAlliance) {
-        setAlliance({
-           id: mockAlliance.id!,
-           name: mockAlliance.name!,
-           tag: mockAlliance.tag!,
-           description: mockAlliance.description!,
-           announcement: "Welcome new recruit.",
-           members: [{
-              id: "player",
-              name: "Commander",
-              rank: "recruit",
-              points: 1000,
-              status: "online",
-              lastActive: Date.now()
-           }],
-           applications: [],
-           resources: { metal: 0, crystal: 0, deuterium: 0 }
-        });
-        addEvent("Alliance Joined", `You have joined ${mockAlliance.name}.`, "success");
-     }
+     joinAllianceMutation.mutate(id);
+     addEvent("Alliance Joined", `You have joined an alliance.`, "success");
   };
 
   const leaveAlliance = () => {
+     if (alliance?.id) {
+       leaveAllianceMutation.mutate(alliance.id);
+     }
      setAlliance(null);
      addEvent("Alliance Left", "You have left your alliance.", "warning");
   };
@@ -822,17 +1001,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setCronJobs(prev => prev.map(j => j.id === id ? { ...j, enabled: !j.enabled } : j));
   };
 
-  const login = (user: string) => {
-    setIsLoggedIn(true);
-    setUsername(user);
-    setCommander(prev => ({ ...prev, name: user }));
-    addEvent("System Access", `Welcome back, Commander ${user}.`, "success");
+  const login = async () => {
+    window.location.href = '/api/login';
   };
 
-  const logout = () => {
+  const logout = async () => {
     setIsLoggedIn(false);
     setUsername("");
-    addEvent("System Access", "Session terminated.", "info");
+    setIsInitialized(false);
+    window.location.href = '/api/logout';
   };
 
   const toggleAdmin = () => {
@@ -863,6 +1040,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isLoading = authLoading || gameStateLoading;
+
   return (
     <GameContext.Provider value={{ 
        resources, 
@@ -886,6 +1065,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        cronJobs,
        isAdmin,
        isLoggedIn,
+       isLoading,
        username,
        login,
        logout,

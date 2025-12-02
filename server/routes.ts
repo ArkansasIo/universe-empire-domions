@@ -3,11 +3,75 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
+import { 
+  insertMissionSchema, 
+  insertMessageSchema, 
+  insertAllianceSchema,
+  insertMarketOrderSchema
+} from "@shared/schema";
 
 // Helper to get user ID from authenticated request
 function getUserId(req: any): string {
   return req.user?.claims?.sub;
 }
+
+// Validation schemas
+const updateGameStateSchema = z.object({
+  planetName: z.string().min(1).max(50).optional(),
+  coordinates: z.string().optional(),
+  resources: z.object({
+    metal: z.number().min(0),
+    crystal: z.number().min(0),
+    deuterium: z.number().min(0),
+    energy: z.number()
+  }).optional(),
+  buildings: z.record(z.string(), z.number().min(0)).optional(),
+  orbitalBuildings: z.record(z.string(), z.number().min(0)).optional(),
+  research: z.record(z.string(), z.number().min(0)).optional(),
+  units: z.record(z.string(), z.number().min(0)).optional(),
+  commander: z.any().optional(),
+  government: z.any().optional(),
+  artifacts: z.array(z.any()).optional(),
+  cronJobs: z.array(z.any()).optional()
+});
+
+const createMissionSchema = z.object({
+  type: z.enum(["attack", "transport", "espionage", "sabotage", "colonize", "deploy"]),
+  target: z.string().min(1).max(50),
+  origin: z.string().min(1).max(50),
+  units: z.record(z.string(), z.number().min(0)),
+  cargo: z.record(z.string(), z.number().min(0)).optional(),
+  departureTime: z.string().or(z.date()),
+  arrivalTime: z.string().or(z.date()),
+  returnTime: z.string().or(z.date()).optional(),
+  status: z.enum(["outbound", "return", "completed"]).default("outbound")
+});
+
+const sendMessageSchema = z.object({
+  toUserId: z.string().min(1),
+  to: z.string().min(1),
+  subject: z.string().min(1).max(200),
+  body: z.string().min(1).max(10000),
+  type: z.enum(["player", "system", "alliance", "combat", "espionage"]).default("player")
+});
+
+const createAllianceSchema = z.object({
+  name: z.string().min(3).max(50),
+  tag: z.string().min(2).max(10),
+  description: z.string().max(1000).optional()
+});
+
+const createMarketOrderSchema = z.object({
+  type: z.enum(["buy", "sell"]),
+  resource: z.enum(["metal", "crystal", "deuterium"]),
+  amount: z.number().int().min(1).max(1000000000),
+  pricePerUnit: z.number().min(0.001).max(1000)
+});
+
+const updateMissionSchema = z.object({
+  status: z.enum(["outbound", "return", "completed"]).optional(),
+  processed: z.boolean().optional()
+}).strict();
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   // Auth middleware
@@ -80,9 +144,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/game/state", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
-      const updates = req.body;
+      const validated = updateGameStateSchema.safeParse(req.body);
       
-      const state = await storage.updatePlayerState(userId, updates);
+      if (!validated.success) {
+        return res.status(400).json({ message: "Invalid data", errors: validated.error.errors });
+      }
+      
+      const state = await storage.updatePlayerState(userId, validated.data);
       res.json(state);
     } catch (error) {
       console.error("Error updating player state:", error);
@@ -120,7 +188,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/missions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
-      const missionData = { ...req.body, userId };
+      const validated = createMissionSchema.safeParse(req.body);
+      
+      if (!validated.success) {
+        return res.status(400).json({ message: "Invalid mission data", errors: validated.error.errors });
+      }
+      
+      const missionData = {
+        ...validated.data,
+        userId,
+        departureTime: new Date(validated.data.departureTime),
+        arrivalTime: new Date(validated.data.arrivalTime),
+        returnTime: validated.data.returnTime ? new Date(validated.data.returnTime) : null
+      };
       
       const mission = await storage.createMission(missionData);
       res.json(mission);
@@ -130,13 +210,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
   
-  // Update mission
+  // Update mission (with validation and atomic ownership check)
   app.patch("/api/missions/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
       const { id } = req.params;
-      const updates = req.body;
       
-      const mission = await storage.updateMission(id, updates);
+      const validated = updateMissionSchema.safeParse(req.body);
+      if (!validated.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: validated.error.errors });
+      }
+      
+      // Atomic update with userId scope in storage layer
+      const mission = await storage.updateMissionByUser(userId, id, validated.data);
+      if (!mission) {
+        return res.status(403).json({ message: "Mission not found or you don't have permission to update it" });
+      }
+      
       res.json(mission);
     } catch (error) {
       console.error("Error updating mission:", error);
@@ -144,11 +234,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
   
-  // Delete mission
+  // Delete mission (with atomic ownership check)
   app.delete("/api/missions/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
       const { id } = req.params;
-      await storage.deleteMission(id);
+      
+      // Atomic delete with userId scope
+      const deleted = await storage.deleteMissionByUser(userId, id);
+      if (!deleted) {
+        return res.status(403).json({ message: "Mission not found or you don't have permission to delete it" });
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting mission:", error);
@@ -188,11 +285,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/messages", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
+      const validated = sendMessageSchema.safeParse(req.body);
+      
+      if (!validated.success) {
+        return res.status(400).json({ message: "Invalid message data", errors: validated.error.errors });
+      }
+      
       const user = await storage.getUser(userId);
       const displayName = user?.firstName || user?.email?.split('@')[0] || 'Commander';
       
       const messageData = {
-        ...req.body,
+        ...validated.data,
         fromUserId: userId,
         from: displayName
       };
@@ -205,11 +308,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
   
-  // Mark message as read
+  // Mark message as read (with atomic ownership check)
   app.patch("/api/messages/:id/read", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
       const { id } = req.params;
-      await storage.markMessageAsRead(id);
+      
+      // Atomic mark as read with userId scope
+      const updated = await storage.markMessageAsReadByUser(userId, id);
+      if (!updated) {
+        return res.status(403).json({ message: "Message not found or you don't have permission to modify it" });
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error marking message as read:", error);
@@ -217,11 +327,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
   
-  // Delete message
+  // Delete message (with atomic ownership check)
   app.delete("/api/messages/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
       const { id } = req.params;
-      await storage.deleteMessage(id);
+      
+      // Atomic delete with userId scope
+      const deleted = await storage.deleteMessageByUser(userId, id);
+      if (!deleted) {
+        return res.status(403).json({ message: "Message not found or you don't have permission to delete it" });
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting message:", error);
@@ -270,11 +387,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/alliances", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
-      const user = await storage.getUser(userId);
-      const displayName = user?.firstName || user?.email?.split('@')[0] || 'Commander';
+      const validated = createAllianceSchema.safeParse(req.body);
+      
+      if (!validated.success) {
+        return res.status(400).json({ message: "Invalid alliance data", errors: validated.error.errors });
+      }
+      
+      // Check if user already in an alliance
+      const existingAlliance = await storage.getUserAlliance(userId);
+      if (existingAlliance) {
+        return res.status(400).json({ message: "You must leave your current alliance before creating a new one" });
+      }
+      
+      // Check if tag is already taken
+      const existingByTag = await storage.getAllianceByTag(validated.data.tag);
+      if (existingByTag) {
+        return res.status(400).json({ message: "Alliance tag is already taken" });
+      }
       
       // Create alliance
-      const alliance = await storage.createAlliance(req.body);
+      const alliance = await storage.createAlliance(validated.data);
       
       // Add creator as leader
       await storage.addAllianceMember({
@@ -296,6 +428,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = getUserId(req);
       const { id } = req.params;
+      
+      // Check if user already in an alliance
+      const existingAlliance = await storage.getUserAlliance(userId);
+      if (existingAlliance) {
+        return res.status(400).json({ message: "You must leave your current alliance before joining another" });
+      }
+      
+      // Check if alliance exists
+      const alliance = await storage.getAllianceById(id);
+      if (!alliance) {
+        return res.status(404).json({ message: "Alliance not found" });
+      }
       
       const member = await storage.addAllianceMember({
         allianceId: id,
@@ -355,7 +499,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/market/orders", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
-      const orderData = { ...req.body, userId };
+      const validated = createMarketOrderSchema.safeParse(req.body);
+      
+      if (!validated.success) {
+        return res.status(400).json({ message: "Invalid order data", errors: validated.error.errors });
+      }
+      
+      const orderData = { ...validated.data, userId, status: "active" };
       
       const order = await storage.createMarketOrder(orderData);
       res.json(order);
@@ -365,11 +515,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
   
-  // Cancel market order
+  // Cancel market order (with atomic ownership check)
   app.delete("/api/market/orders/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
       const { id } = req.params;
-      await storage.deleteMarketOrder(id);
+      
+      // Atomic delete with userId scope
+      const deleted = await storage.deleteMarketOrderByUser(userId, id);
+      if (!deleted) {
+        return res.status(403).json({ message: "Order not found or you don't have permission to cancel it" });
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error canceling market order:", error);
