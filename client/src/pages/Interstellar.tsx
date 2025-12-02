@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Rocket, Disc, CircleDot, Zap, MapPin, Navigation, AlertTriangle, Orbit, Database } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { DESTINATIONS, Destination } from "@/lib/interstellarData";
 import { cn } from "@/lib/utils";
 
 export default function Interstellar() {
+  const [, setLocation] = useLocation();
   const { coordinates, resources, travelTo } = useGame();
   const [selectedDest, setSelectedDest] = useState<string>("");
   const [stargateAddress, setStargateAddress] = useState("");
@@ -46,6 +48,11 @@ export default function Interstellar() {
      }, 3000);
   };
 
+  const handleVisitDestination = (dest: Destination) => {
+     travelTo(dest.name, dest.coordinates, { deuterium: 0 });
+     setTimeout(() => setLocation("/"), 100);
+  };
+
   return (
     <GameLayout>
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -71,8 +78,11 @@ export default function Interstellar() {
            </div>
         </div>
 
-        <Tabs defaultValue="hyperspace" className="w-full">
-           <TabsList className="grid w-full grid-cols-3 bg-white border border-slate-200 h-16">
+        <Tabs defaultValue="gallery" className="w-full">
+           <TabsList className="grid w-full grid-cols-4 bg-white border border-slate-200 h-16">
+              <TabsTrigger value="gallery" className="font-orbitron flex flex-col items-center justify-center h-full gap-1">
+                 <Disc className="w-4 h-4" /> Gallery
+              </TabsTrigger>
               <TabsTrigger value="hyperspace" className="font-orbitron flex flex-col items-center justify-center h-full gap-1">
                  <Rocket className="w-4 h-4" /> Hyperspace
               </TabsTrigger>
@@ -83,6 +93,45 @@ export default function Interstellar() {
                  <CircleDot className="w-4 h-4" /> Stargate
               </TabsTrigger>
            </TabsList>
+
+           {/* Gallery Tab - Clickable Destinations */}
+           <TabsContent value="gallery" className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 {DESTINATIONS.map(dest => (
+                    <Card 
+                       key={dest.id} 
+                       className="bg-white border-slate-200 cursor-pointer transition-all hover:shadow-lg hover:border-primary"
+                       onClick={() => handleVisitDestination(dest)}
+                       data-testid={`destination-card-${dest.id}`}
+                    >
+                       <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                             <div>
+                                <div className="font-orbitron text-lg font-bold text-slate-900">{dest.name}</div>
+                                <div className="text-xs text-slate-500 font-mono">{dest.coordinates}</div>
+                             </div>
+                             <Disc className={cn("w-6 h-6", dest.type === "planet" ? "text-blue-500" : dest.type === "asteroid" ? "text-yellow-500" : dest.type === "nebula" ? "text-purple-500" : dest.type === "blackhole" ? "text-red-500" : "text-slate-400")} />
+                          </div>
+                          <div className="space-y-2 text-xs">
+                             <div className="flex justify-between">
+                                <span className="text-slate-500">Distance:</span>
+                                <span className="font-mono">{dest.distance} ly</span>
+                             </div>
+                             <div className="flex justify-between">
+                                <span className="text-slate-500">Type:</span>
+                                <span className="capitalize font-bold">{dest.type}</span>
+                             </div>
+                             <div className="flex justify-between">
+                                <span className="text-slate-500">Danger:</span>
+                                <span className={cn("font-bold uppercase", dest.dangerLevel === "low" ? "text-green-600" : dest.dangerLevel === "medium" ? "text-yellow-600" : dest.dangerLevel === "high" ? "text-red-600" : "text-red-700")}>{dest.dangerLevel}</span>
+                             </div>
+                          </div>
+                          <div className="mt-4 text-xs text-slate-500">Click to visit →</div>
+                       </CardContent>
+                    </Card>
+                 ))}
+              </div>
+           </TabsContent>
 
            {/* Hyperspace Tab */}
            <TabsContent value="hyperspace" className="mt-6">

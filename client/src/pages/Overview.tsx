@@ -8,8 +8,12 @@ import { Activity, Thermometer, Ruler, User, Shield, Crosshair, Send, AlertTrian
 import { getPlanetDetails } from "@/lib/planetUtils";
 
 export default function Overview() {
-  const { planetName, resources, buildings, events } = useGame();
-  const planetInfo = getPlanetDetails(1);
+  const { planetName, resources, buildings, events, coordinates } = useGame();
+  
+  // Parse coordinates to get a seed for planet generation
+  const coordParts = coordinates.split(':').map(p => parseInt(p) || 0);
+  const planetSeed = (coordParts[0] || 1) * 1000 + (coordParts[1] || 102) * 100 + (coordParts[2] || 8);
+  const planetInfo = getPlanetDetails(planetSeed);
 
   return (
     <GameLayout>
@@ -18,7 +22,7 @@ export default function Overview() {
         <div className="flex justify-between items-end border-b border-slate-200 pb-4">
           <div>
             <h2 className="text-3xl font-orbitron font-bold text-slate-900">Command Center</h2>
-            <p className="text-muted-foreground font-rajdhani text-lg">Welcome back, Commander.</p>
+            <p className="text-muted-foreground font-rajdhani text-lg">{planetName} • {coordinates}</p>
           </div>
           <div className="text-right">
              <div className="text-sm text-primary font-mono">SERVER TIME</div>
