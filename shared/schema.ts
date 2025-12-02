@@ -1143,6 +1143,94 @@ export const miningOperations = pgTable("mining_operations", {
 
 export type MiningOperation = typeof miningOperations.$inferSelect;
 
+// Durability System - Equipment, Ships, Buildings, Resource Depletion
+export const equipmentDurability = pgTable("equipment_durability", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  equipmentId: varchar("equipment_id").notNull(),
+  equipmentType: varchar("equipment_type").notNull(),
+  currentDurability: real("current_durability").notNull().default(100),
+  maxDurability: real("max_durability").notNull().default(100),
+  durabilityPercent: integer("durability_percent").default(100),
+  degradationRate: real("degradation_rate").default(0.5),
+  isBroken: boolean("is_broken").default(false),
+  repairCostGold: real("repair_cost_gold").default(0),
+  repairCostPlatinum: real("repair_cost_platinum").default(0),
+  repairCostResources: jsonb("repair_cost_resources"),
+  lastRepairedAt: timestamp("last_repaired_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type EquipmentDurability = typeof equipmentDurability.$inferSelect;
+
+export const fleetDurability = pgTable("fleet_durability", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fleetId: varchar("fleet_id").notNull(),
+  shipType: varchar("ship_type").notNull(),
+  shipCount: integer("ship_count").notNull(),
+  currentDurability: real("current_durability").notNull().default(100),
+  maxDurability: real("max_durability").notNull().default(100),
+  durabilityPercent: integer("durability_percent").default(100),
+  healthStatus: varchar("health_status").default("optimal"),
+  battleDamage: real("battle_damage").default(0),
+  lastRepairedAt: timestamp("last_repaired_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type FleetDurability = typeof fleetDurability.$inferSelect;
+
+export const buildingDurability = pgTable("building_durability", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  buildingId: varchar("building_id").notNull(),
+  buildingType: varchar("building_type").notNull(),
+  buildingLevel: integer("building_level").notNull(),
+  currentDurability: real("current_durability").notNull().default(100),
+  maxDurability: real("max_durability").notNull().default(100),
+  durabilityPercent: integer("durability_percent").default(100),
+  structuralIntegrity: varchar("structural_integrity").default("intact"),
+  damageFromAttack: real("damage_from_attack").default(0),
+  lastRepairedAt: timestamp("last_repaired_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type BuildingDurability = typeof buildingDurability.$inferSelect;
+
+export const repairHistory = pgTable("repair_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  itemType: varchar("item_type").notNull(),
+  itemId: varchar("item_id").notNull(),
+  durabilityBefore: real("durability_before").notNull(),
+  durabilityAfter: real("durability_after").notNull(),
+  repairCostGold: real("repair_cost_gold").default(0),
+  repairCostPlatinum: real("repair_cost_platinum").default(0),
+  repairType: varchar("repair_type").notNull(),
+  repairedAt: timestamp("repaired_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type RepairHistory = typeof repairHistory.$inferSelect;
+
+export const durabilityDegradationLog = pgTable("durability_degradation_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  itemType: varchar("item_type").notNull(),
+  itemId: varchar("item_id").notNull(),
+  degradationAmount: real("degradation_amount").notNull(),
+  degradationSource: varchar("degradation_source").notNull(),
+  durabilityBefore: real("durability_before").notNull(),
+  durabilityAfter: real("durability_after").notNull(),
+  loggedAt: timestamp("logged_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type DurabilityDegradationLog = typeof durabilityDegradationLog.$inferSelect;
+
 // Messages (player communications, battle reports, espionage reports)
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
