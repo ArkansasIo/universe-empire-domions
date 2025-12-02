@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Activity, Thermometer, Ruler, User, Shield, Crosshair, Send, AlertTriangle, Info, CheckCircle, AlertCircle } from "lucide-react";
 import { getPlanetDetails } from "@/lib/planetUtils";
+import Navigation from "./Navigation";
 
 export default function Overview() {
   const { planetName, resources, buildings, events, coordinates } = useGame();
@@ -19,6 +20,8 @@ export default function Overview() {
     <GameLayout>
       <div className="space-y-8 animate-in fade-in duration-500">
         
+        <Navigation />
+
         <div className="flex justify-between items-end border-b border-slate-200 pb-4">
           <div>
             <h2 className="text-3xl font-orbitron font-bold text-slate-900">Command Center</h2>

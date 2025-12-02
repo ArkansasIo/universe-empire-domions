@@ -110,7 +110,7 @@ export default function Interstellar() {
                                 <div className="font-orbitron text-lg font-bold text-slate-900">{dest.name}</div>
                                 <div className="text-xs text-slate-500 font-mono">{dest.coordinates}</div>
                              </div>
-                             <Disc className={cn("w-6 h-6", dest.type === "planet" ? "text-blue-500" : dest.type === "asteroid" ? "text-yellow-500" : dest.type === "nebula" ? "text-purple-500" : dest.type === "blackhole" ? "text-red-500" : "text-slate-400")} />
+                             <Disc className={cn("w-6 h-6", dest.type === "colony" ? "text-blue-500" : dest.type === "asteroid" ? "text-yellow-500" : dest.type === "nebula" ? "text-purple-500" : dest.type === "blackhole" ? "text-red-500" : "text-slate-400")} />
                           </div>
                           <div className="space-y-2 text-xs">
                              <div className="flex justify-between">
