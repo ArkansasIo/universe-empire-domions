@@ -686,3 +686,57 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   return httpServer;
 }
+
+// Research Technology Tree Routes
+app.get("/api/research/areas", async (req: Request, res: any) => {
+  try {
+    const areas = await db.select().from(researchAreas);
+    res.json(areas);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/research/subcategories", async (req: Request, res: any) => {
+  try {
+    const { areaId } = req.query;
+    const subs = await db
+      .select()
+      .from(researchSubcategories)
+      .where(eq(researchSubcategories.areaId, areaId as string));
+    res.json(subs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/research/technologies", async (req: Request, res: any) => {
+  try {
+    const { subcategoryIds } = req.query;
+    const ids = (subcategoryIds as string).split(",");
+    const techs = await db
+      .select()
+      .from(researchTechnologies)
+      .where(inArray(researchTechnologies.subcategoryId, ids));
+    res.json(techs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/research/progress", isAuthenticated, async (req: Request, res: any) => {
+  try {
+    const userId = getUserId(req);
+    const progress = await db
+      .select()
+      .from(playerResearchProgress)
+      .where(eq(playerResearchProgress.playerId, userId));
+    
+    const progressMap = Object.fromEntries(
+      progress.map(p => [p.technologyId, { status: p.status, progress: p.progress, startedAt: p.startedAt, completedAt: p.completedAt }])
+    );
+    res.json(progressMap);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});

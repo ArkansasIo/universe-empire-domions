@@ -769,6 +769,63 @@ export const levelUnlockEvents = pgTable("level_unlock_events", {
 
 export type LevelUnlockEvent = typeof levelUnlockEvents.$inferSelect;
 
+// Research Technology Tree System
+export const researchAreas = pgTable("research_areas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  areaKey: varchar("area_key").unique().notNull(),
+  areaName: varchar("area_name").notNull(),
+  description: text("description"),
+  color: varchar("color").default("slate"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type ResearchArea = typeof researchAreas.$inferSelect;
+
+export const researchSubcategories = pgTable("research_subcategories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  areaId: varchar("area_id").notNull().references(() => researchAreas.id, { onDelete: "cascade" }),
+  categoryKey: varchar("category_key").notNull(),
+  categoryName: varchar("category_name").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type ResearchSubcategory = typeof researchSubcategories.$inferSelect;
+
+export const researchTechnologies = pgTable("research_technologies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subcategoryId: varchar("subcategory_id").notNull().references(() => researchSubcategories.id, { onDelete: "cascade" }),
+  techKey: varchar("tech_key").unique().notNull(),
+  techName: varchar("tech_name").notNull(),
+  description: text("description"),
+  tier: integer("tier").default(1),
+  researchTime: integer("research_time").default(3600),
+  cost: jsonb("cost").default({ energy: 100, credits: 50 }),
+  prerequisites: jsonb("prerequisites").default([]),
+  unlocks: jsonb("unlocks").default([]),
+  bonuses: jsonb("bonuses").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type ResearchTechnology = typeof researchTechnologies.$inferSelect;
+
+export const playerResearchProgress = pgTable("player_research_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  technologyId: varchar("technology_id").notNull().references(() => researchTechnologies.id, { onDelete: "cascade" }),
+  status: varchar("status").default("locked"),
+  progress: real("progress").default(0),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type PlayerResearchProgress = typeof playerResearchProgress.$inferSelect;
+
+export const insertPlayerResearchProgressSchema = createInsertSchema(playerResearchProgress).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPlayerResearchProgress = z.infer<typeof insertPlayerResearchProgressSchema>;
+
 // User Accounts System (Regular Player Account Management)
 export const userProfiles = pgTable("user_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
