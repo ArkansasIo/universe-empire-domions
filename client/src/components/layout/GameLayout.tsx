@@ -21,7 +21,8 @@ import {
   Hexagon,
   ShieldAlert,
   LogOut,
-  ShoppingBag
+  ShoppingBag,
+  Orbit
 } from "lucide-react";
 
 const SidebarItem = ({ href, icon: Icon, label, active, className }: { href: string, icon: any, label: string, active: boolean, className?: string }) => (
@@ -112,6 +113,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
             <SidebarItem href="/fleet" icon={Send} label="Fleet" active={location === "/fleet"} />
             <SidebarItem href="/interstellar" icon={Rocket} label="Interstellar" active={location === "/interstellar"} />
             <SidebarItem href="/galaxy" icon={Globe} label="Galaxy" active={location === "/galaxy"} />
+            <SidebarItem href="/universe" icon={Orbit} label="Universe" active={location === "/universe"} />
             
             <div className="px-4 mt-6 mb-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">System</div>
             <SidebarItem href="/settings" icon={Settings} label="Settings" active={location === "/settings"} />
