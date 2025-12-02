@@ -101,7 +101,10 @@ export default function Auth() {
 
       console.log(`[AUTH] Response status: ${res.status} ${res.statusText}`);
 
-      if (!res.ok) {
+      if (res.status === 500) {
+        setError("🔧 Server error: Database is temporarily unavailable. Please try again in a moment.");
+        console.error("[AUTH] Server error - likely database connection issue");
+      } else if (!res.ok) {
         const data = await res.json();
         const errorMsg = data.message || "Authentication failed";
         console.error(`[AUTH] ${isLogin ? 'LOGIN' : 'REGISTER'} failed:`, { status: res.status, message: errorMsg });
