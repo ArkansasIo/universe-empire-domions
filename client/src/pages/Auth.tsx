@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Rocket, Shield, Info, Loader2 } from "lucide-react";
+import { Rocket, Shield, Info, Loader2, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Auth() {
@@ -48,6 +48,16 @@ export default function Auth() {
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-5 pointer-events-none"></div>
       <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-white pointer-events-none"></div>
+      
+      <Button 
+        variant="ghost" 
+        className="absolute top-4 left-4 text-slate-600 hover:text-slate-900 z-20"
+        data-testid="button-back-to-title"
+        onClick={() => window.location.reload()}
+      >
+        <ArrowLeft className="w-5 h-5 mr-2" />
+        Back
+      </Button>
       
       <Card className="w-full max-w-md bg-white/95 backdrop-blur border-slate-200 text-slate-900 relative z-10 shadow-2xl">
         <CardHeader className="text-center pb-2">

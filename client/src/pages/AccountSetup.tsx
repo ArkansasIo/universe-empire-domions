@@ -4,17 +4,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Rocket, Users, Landmark, Loader2, Sparkles } from "lucide-react";
+import { Rocket, Users, Landmark, Loader2, Sparkles, ArrowLeft } from "lucide-react";
 import { RACES, RaceId, CLASSES } from "@/lib/commanderTypes";
 import { GOVERNMENTS, GovernmentId } from "@/lib/governmentData";
 
 export default function AccountSetup() {
-  const { completeSetup, isLoading, commander, government } = useGame();
+  const { completeSetup, isLoading, commander, government, logout } = useGame();
   const [selectedRace, setSelectedRace] = useState<RaceId>("terran");
   const [selectedGovernment, setSelectedGovernment] = useState<GovernmentId>("democracy");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+
+  const handleBack = async () => {
+    await logout();
+    window.location.href = "/";
+  };
 
   const isDataLoaded = commander && government && commander.race && government.type;
 
@@ -76,6 +81,16 @@ export default function AccountSetup() {
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-5 pointer-events-none"></div>
       <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-white pointer-events-none"></div>
+      
+      <Button 
+        variant="ghost" 
+        className="absolute top-4 left-4 text-slate-600 hover:text-slate-900 z-20"
+        data-testid="button-back-from-setup"
+        onClick={handleBack}
+      >
+        <ArrowLeft className="w-5 h-5 mr-2" />
+        Back
+      </Button>
       
       <Card className="w-full max-w-lg bg-white/95 backdrop-blur border-slate-200 text-slate-900 relative z-10 shadow-2xl">
         <CardHeader className="text-center pb-2">
