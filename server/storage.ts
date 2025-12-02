@@ -451,7 +451,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(miningOperations)
-      .where(and(eq(miningOperations.playerId, userId), eq(miningOperations.isActive, true)));
+      .where(eq(miningOperations.playerId, userId));
   }
   
   async createMiningOperation(op: any): Promise<MiningOperation> {
