@@ -78,8 +78,21 @@ export const playerStates = pgTable("player_states", {
   // Cron jobs
   cronJobs: jsonb("cron_jobs").notNull().default([]),
   
-  // Empire progression
+  // Empire progression (1-999 levels)
   empireLevel: integer("empire_level").notNull().default(1),
+  empireExperience: bigint("empire_experience").notNull().default(0),
+  
+  // Tier system (1-21 tiers)
+  tier: integer("tier").notNull().default(1),
+  tierExperience: bigint("tier_experience").notNull().default(0),
+  
+  // Prestige system
+  prestigeLevel: integer("prestige_level").notNull().default(0),
+  prestigeBonus: jsonb("prestige_bonus").notNull().default({ resourceMultiplier: 1.0, experienceMultiplier: 1.0, researchMultiplier: 1.0 }),
+  
+  // Tier bonuses
+  tierBonuses: jsonb("tier_bonuses").notNull().default({}),
+  
   kardashevProgress: jsonb("kardashev_progress").notNull().default({ metal: 0, crystal: 0, deuterium: 0, research: 0 }),
   
   // Turn system (3-5 turns per minute)
