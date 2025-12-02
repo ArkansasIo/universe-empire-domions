@@ -45,10 +45,12 @@ export default function Expeditions() {
   const [newExpName, setNewExpName] = useState("");
   const [newExpType, setNewExpType] = useState("exploration");
 
-  const { data: expeditions = [], refetch } = useQuery({
+  const { data: expeditionsData = {}, refetch } = useQuery({
     queryKey: ["expeditions"],
-    queryFn: () => fetch("/api/expeditions").then(r => r.json()),
+    queryFn: () => fetch("/api/expeditions").then(r => r.json()).catch(() => ({})),
   });
+  
+  const expeditions = Array.isArray(expeditionsData) ? expeditionsData : expeditionsData.expeditions || [];
 
   const { data: selectedTeam = [] } = useQuery({
     queryKey: ["expedition-team", selectedExpedition],

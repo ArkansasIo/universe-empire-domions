@@ -30,6 +30,7 @@ import {
   moonBases,
   playerProfiles,
   megaStructures,
+  empireDifficulties,
   type User,
   type UpsertUser,
   type PlayerState,
@@ -73,6 +74,8 @@ import {
   type InsertPlayerProfile,
   type MegaStructure,
   type InsertMegaStructure,
+  type EmpireDifficulty,
+  type InsertEmpireDifficulty,
   adminUsers
 } from "@shared/schema";
 import { db } from "./db/index";
@@ -169,6 +172,12 @@ export interface IStorage {
   createMegaStructure(structure: InsertMegaStructure): Promise<MegaStructure>;
   updateMegaStructure(id: string, updates: Partial<MegaStructure>): Promise<MegaStructure>;
   deleteMegaStructure(id: string): Promise<void>;
+  
+  // Empire Difficulty operations
+  getEmpireDifficulty(userId: string): Promise<EmpireDifficulty | undefined>;
+  createEmpireDifficulty(difficulty: InsertEmpireDifficulty): Promise<EmpireDifficulty>;
+  updateEmpireDifficulty(userId: string, updates: Partial<EmpireDifficulty>): Promise<EmpireDifficulty>;
+  setDifficultyLevel(userId: string, level: number, kardashevLevel?: number): Promise<EmpireDifficulty>;
   
   // Resource field operations
   getFieldsByTerritory(territoryId: string): Promise<ResourceField[]>;
@@ -661,6 +670,44 @@ export class DatabaseStorage implements IStorage {
   
   async deleteMegaStructure(id: string): Promise<void> {
     await db.delete(megaStructures).where(eq(megaStructures.id, id));
+  }
+  
+  // Empire Difficulty operations
+  async getEmpireDifficulty(userId: string): Promise<EmpireDifficulty | undefined> {
+    const [difficulty] = await db.select().from(empireDifficulties).where(eq(empireDifficulties.playerId, userId));
+    return difficulty;
+  }
+  
+  async createEmpireDifficulty(difficulty: InsertEmpireDifficulty): Promise<EmpireDifficulty> {
+    const [newDifficulty] = await db.insert(empireDifficulties).values(difficulty).returning();
+    return newDifficulty;
+  }
+  
+  async updateEmpireDifficulty(userId: string, updates: Partial<EmpireDifficulty>): Promise<EmpireDifficulty> {
+    const [updated] = await db.update(empireDifficulties).set(updates).where(eq(empireDifficulties.playerId, userId)).returning();
+    return updated;
+  }
+  
+  async setDifficultyLevel(userId: string, level: number, kardashevLevel: number = 1): Promise<EmpireDifficulty> {
+    const existing = await this.getEmpireDifficulty(userId);
+    
+    if (existing) {
+      return this.updateEmpireDifficulty(userId, {
+        difficultyLevel: level,
+        kardashevLevel: kardashevLevel
+      });
+    }
+    
+    return this.createEmpireDifficulty({
+      playerId: userId,
+      difficultyLevel: level,
+      kardashevLevel: kardashevLevel,
+      resourceMultiplier: 1.0,
+      researchMultiplier: 1.0,
+      combatMultiplier: 1.0,
+      scalingFactor: 1.0,
+      difficultyMultiplier: 1.0
+    } as InsertEmpireDifficulty);
   }
   
   // Resource field operations

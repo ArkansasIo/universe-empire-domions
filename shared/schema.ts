@@ -1027,6 +1027,58 @@ export type MegaStructure = typeof megaStructures.$inferSelect;
 export const insertMegaStructureSchema = createInsertSchema(megaStructures).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertMegaStructure = z.infer<typeof insertMegaStructureSchema>;
 
+// Empire Difficulty - progression system linked to Kardashev scale
+export const empireDifficulties = pgTable("empire_difficulties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  profileId: varchar("profile_id").references(() => playerProfiles.id, { onDelete: "cascade" }),
+  
+  // Difficulty level (0-5: Peaceful to Impossible)
+  difficultyLevel: integer("difficulty_level").notNull().default(2), // 0=Peaceful, 2=Normal, 5=Impossible
+  
+  // Kardashev scale link
+  kardashevLevel: integer("kardashev_level").notNull().default(1),
+  kardashevProgress: integer("kardashev_progress").default(0), // 0-100%
+  
+  // Resource multipliers based on difficulty
+  resourceMultiplier: real("resource_multiplier").default(1.0),
+  researchMultiplier: real("research_multiplier").default(1.0),
+  combatMultiplier: real("combat_multiplier").default(1.0),
+  
+  // Scaling factors
+  scalingFactor: real("scaling_factor").default(1.0),
+  difficultyMultiplier: real("difficulty_multiplier").default(1.0),
+  
+  // Stats & progression
+  totalPower: integer("total_power").default(0),
+  empirePower: integer("empire_power").default(0),
+  galaxyPosition: integer("galaxy_position"),
+  
+  // Mechanics
+  npcDifficulty: varchar("npc_difficulty").default("normal"), // npc difficulty scaling
+  enemyStrength: real("enemy_strength").default(1.0),
+  resourceScarcity: real("resource_scarcity").default(1.0), // 1.0 = normal, >1.0 = scarce
+  
+  // Achievements based on difficulty
+  achievementsUnlocked: jsonb("achievements_unlocked").notNull().default([]),
+  bonusesApplied: jsonb("bonuses_applied").notNull().default([]),
+  
+  // Challenge information
+  challengeDescription: text("challenge_description"),
+  challengeRequirements: jsonb("challenge_requirements").notNull().default({}),
+  rewardsForCompletion: jsonb("rewards_for_completion").notNull().default({}),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  startedAt: timestamp("started_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type EmpireDifficulty = typeof empireDifficulties.$inferSelect;
+export const insertEmpireDifficultySchema = createInsertSchema(empireDifficulties).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertEmpireDifficulty = z.infer<typeof insertEmpireDifficultySchema>;
+
 // System Settings table for game configuration
 export const systemSettings = pgTable("system_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

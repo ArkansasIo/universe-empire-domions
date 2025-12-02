@@ -48,7 +48,7 @@ export const GAME_CONFIG = {
     maxCombatTurns: 20,
   },
 
-  // Kardashev scale progression
+  // Kardashev scale progression (18 levels)
   kardashev: {
     levels: 18,
     requirements: {
@@ -56,6 +56,26 @@ export const GAME_CONFIG = {
       crystal: 500000,
       deuterium: 250000,
       research: 100,
+    },
+  },
+
+  // Empire difficulty levels
+  empireDifficulty: {
+    levels: [
+      { id: 0, name: "Peaceful", multiplier: 0.5, resources: 1.5, research: 0.8, combat: 0.3 },
+      { id: 1, name: "Easy", multiplier: 0.75, resources: 1.3, research: 0.9, combat: 0.5 },
+      { id: 2, name: "Normal", multiplier: 1.0, resources: 1.0, research: 1.0, combat: 1.0 },
+      { id: 3, name: "Hard", multiplier: 1.5, resources: 0.8, research: 1.1, combat: 1.5 },
+      { id: 4, name: "Extreme", multiplier: 2.0, resources: 0.6, research: 1.3, combat: 2.0 },
+      { id: 5, name: "Impossible", multiplier: 3.0, resources: 0.4, research: 1.5, combat: 3.0 },
+    ],
+    kardashevMultiplier: {
+      level1to3: 1.0,
+      level4to6: 1.5,
+      level7to9: 2.0,
+      level10to12: 2.5,
+      level13to15: 3.0,
+      level16to18: 4.0,
     },
   },
 
