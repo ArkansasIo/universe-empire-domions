@@ -358,6 +358,198 @@ export const userRateLimits = pgTable("user_rate_limits", {
 
 export type UserRateLimit = typeof userRateLimits.$inferSelect;
 
+// Resources and Equipment System
+export const playerResources = pgTable("player_resources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  resourceType: varchar("resource_type").notNull(),
+  quantity: real("quantity").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PlayerResource = typeof playerResources.$inferSelect;
+
+export const equipment = pgTable("equipment", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  itemKey: varchar("item_key").unique().notNull(),
+  itemName: varchar("item_name").notNull(),
+  itemType: varchar("item_type").notNull(),
+  rarity: varchar("rarity").notNull(),
+  level: integer("level").notNull(),
+  stats: jsonb("stats").notNull().default({}),
+  bonuses: jsonb("bonuses").notNull().default({}),
+  durability: integer("durability"),
+  maxDurability: integer("max_durability"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type Equipment = typeof equipment.$inferSelect;
+
+export const playerInventory = pgTable("player_inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  equipmentId: varchar("equipment_id").notNull().references(() => equipment.id),
+  quantity: integer("quantity").default(1),
+  equipped: boolean("equipped").default(false),
+  durability: integer("durability"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type PlayerInventoryItem = typeof playerInventory.$inferSelect;
+
+export const miningOperations = pgTable("mining_operations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  unitId: varchar("unit_id").references(() => units.id),
+  location: varchar("location").notNull(),
+  resourceType: varchar("resource_type").notNull(),
+  yieldAmount: real("yield_amount").notNull(),
+  durationSeconds: integer("duration_seconds").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type MiningOperation = typeof miningOperations.$inferSelect;
+
+// Units System
+export const units = pgTable("units", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  unitName: varchar("unit_name").notNull(),
+  unitType: varchar("unit_type").notNull(),
+  class: varchar("class").notNull(),
+  job: varchar("job"),
+  rank: varchar("rank").notNull().default("apprentice"),
+  level: integer("level").notNull().default(1),
+  rarity: varchar("rarity").default("common"),
+  status: varchar("status").default("untrained"),
+  
+  // Attributes
+  strength: integer("strength").default(10),
+  constitution: integer("constitution").default(10),
+  dexterity: integer("dexterity").default(10),
+  intelligence: integer("intelligence").default(10),
+  wisdom: integer("wisdom").default(10),
+  charisma: integer("charisma").default(10),
+  
+  // Derived stats
+  health: integer("health"),
+  maxHealth: integer("max_health"),
+  mana: integer("mana"),
+  maxMana: integer("max_mana"),
+  experience: integer("experience").default(0),
+  
+  // Sustenance
+  hungerLevel: real("hunger_level").default(100),
+  thirstLevel: real("thirst_level").default(100),
+  lastFed: timestamp("last_fed"),
+  
+  // Equipment
+  weaponId: varchar("weapon_id").references(() => equipment.id),
+  armorId: varchar("armor_id").references(() => equipment.id),
+  toolId: varchar("tool_id").references(() => equipment.id),
+  
+  // Location and assignment
+  assignedLocation: varchar("assigned_location"),
+  currentTask: varchar("current_task"),
+  taskProgress: real("task_progress").default(0),
+  
+  // Bonuses
+  areaBonuses: jsonb("area_bonuses").default({}),
+  classBonuses: jsonb("class_bonuses").default({}),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type Unit = typeof units.$inferSelect;
+
+export const unitTrainingQueue = pgTable("unit_training_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  unitId: varchar("unit_id").notNull().references(() => units.id, { onDelete: "cascade" }),
+  trainingType: varchar("training_type").notNull(),
+  newLevel: integer("new_level").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  durationSeconds: integer("duration_seconds").notNull(),
+  cost: jsonb("cost").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type UnitTraining = typeof unitTrainingQueue.$inferSelect;
+
+export const unitProgression = pgTable("unit_progression", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  unitId: varchar("unit_id").notNull().references(() => units.id, { onDelete: "cascade" }),
+  skillType: varchar("skill_type").notNull(),
+  skillLevel: integer("skill_level").default(1),
+  skillExperience: integer("skill_experience").default(0),
+  proficiency: real("proficiency").default(0.0),
+  lastPracticed: timestamp("last_practiced"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type UnitProgression = typeof unitProgression.$inferSelect;
+
+export const sustenanceLog = pgTable("sustenance_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  unitId: varchar("unit_id").notNull().references(() => units.id, { onDelete: "cascade" }),
+  resourceType: varchar("resource_type").notNull(),
+  amountConsumed: real("amount_consumed").notNull(),
+  currentLevel: real("current_level").notNull(),
+  consumedAt: timestamp("consumed_at").defaultNow(),
+});
+
+export type SustenanceLog = typeof sustenanceLog.$inferSelect;
+
+export const areaBonuses = pgTable("area_bonuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  areaKey: varchar("area_key").unique().notNull(),
+  areaName: varchar("area_name").notNull(),
+  description: text("description"),
+  bonuses: jsonb("bonuses").notNull().default({}),
+  resources: jsonb("resources").notNull().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AreaBonus = typeof areaBonuses.$inferSelect;
+
+export const unitLoadouts = pgTable("unit_loadouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  unitId: varchar("unit_id").notNull().references(() => units.id, { onDelete: "cascade" }),
+  loadoutName: varchar("loadout_name").notNull(),
+  weaponId: varchar("weapon_id").references(() => equipment.id),
+  armorId: varchar("armor_id").references(() => equipment.id),
+  toolId: varchar("tool_id").references(() => equipment.id),
+  accessory1Id: varchar("accessory_1_id").references(() => equipment.id),
+  accessory2Id: varchar("accessory_2_id").references(() => equipment.id),
+  isActive: boolean("is_active").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type UnitLoadout = typeof unitLoadouts.$inferSelect;
+
+export const unitStatistics = pgTable("unit_statistics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  unitId: varchar("unit_id").notNull().references(() => units.id, { onDelete: "cascade" }),
+  resourceMined: real("resource_mined").default(0),
+  tasksCompleted: integer("tasks_completed").default(0),
+  battlesFought: integer("battles_fought").default(0),
+  enemiesDefeated: integer("enemies_defeated").default(0),
+  totalDamageDealt: real("total_damage_dealt").default(0),
+  totalDamageTaken: real("total_damage_taken").default(0),
+  promotions: integer("promotions").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type UnitStatistics = typeof unitStatistics.$inferSelect;
+
 // Messages (player communications, battle reports, espionage reports)
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
