@@ -183,6 +183,10 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/auth/user", async (req, res) => {
     try {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       let userId = (req.session as any)?.userId;
       
       // Try session auth first
@@ -190,7 +194,7 @@ export async function setupAuth(app: Express) {
         const user = await storage.getUser(userId);
         if (user) {
           logger.info("AUTH", `Session auth successful for userId: ${userId}`);
-          return res.json({ 
+          return res.status(200).json({ 
             id: user.id, 
             username: user.username,
             email: user.email,
@@ -214,7 +218,7 @@ export async function setupAuth(app: Express) {
             if (user && verifyPassword(password, user.passwordHash)) {
               (req.session as any).userId = user.id;
               logger.info("AUTH", `Basic auth successful for user: ${username}`);
-              return res.json({ 
+              return res.status(200).json({ 
                 id: user.id, 
                 username: user.username,
                 email: user.email,
@@ -256,15 +260,12 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   
   // Fallback to basic auth from Authorization header
   const authHeader = req.get('authorization');
-  logger.info("AUTH", `Auth check - header present: ${!!authHeader}`);
   
   if (authHeader && authHeader.startsWith('Basic ')) {
     try {
       const encoded = authHeader.slice(6);
       const decoded = Buffer.from(encoded, 'base64').toString('utf-8');
       const [username, password] = decoded.split(':');
-      
-      logger.info("AUTH", `Basic auth attempt for user: ${username}`);
       
       if (username && password) {
         const user = await storage.getUserByUsername(username);
@@ -274,11 +275,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
             (req.session as any).userId = user.id;
             logger.info("AUTH", `Basic auth successful for user: ${username}`);
             return next();
-          } else {
-            logger.warn("AUTH", `Basic auth password invalid for user: ${username}`);
           }
-        } else {
-          logger.warn("AUTH", `Basic auth user not found or no password hash: ${username}`);
         }
       }
     } catch (err) {

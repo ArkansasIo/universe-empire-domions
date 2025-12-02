@@ -1,7 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
-import passport from "passport";
 import { eq, desc, and, gte, lte, or, asc } from "drizzle-orm";
 import { db } from "./db/index";
+import { storage } from "./storage";
+import { isAuthenticated } from "./basicAuth";
 import {
   users,
   playerStates,
@@ -26,18 +27,9 @@ import {
   expeditionTeams,
   expeditionEncounters,
 } from "@shared/schema";
-import { storage } from "./storage";
 
 function getUserId(req: Request) {
-  const user = req.user as any;
-  return user?.id || "";
-}
-
-function isAuthenticated(req: Request, res: Response, next: NextFunction) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  next();
+  return (req.session as any)?.userId || "";
 }
 
 export function registerRoutes(app: Express) {
