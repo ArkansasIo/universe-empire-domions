@@ -10,15 +10,11 @@ import { Link } from "wouter";
 export default function Auth() {
   const { isLoading, login } = useGame();
   const [isLogin, setIsLogin] = useState(true);
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [forgotUsername, setForgotUsername] = useState("");
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [resetMessage, setResetMessage] = useState("");
 
   // Load saved credentials from localStorage
   useEffect(() => {
@@ -123,47 +119,6 @@ export default function Auth() {
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setResetMessage("");
-    
-    if (!forgotUsername.trim()) {
-      setError("Username is required");
-      return;
-    }
-    if (!forgotEmail.trim()) {
-      setError("Email is required");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: forgotUsername.trim(), email: forgotEmail.trim() }),
-        credentials: "include"
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.message || "Password reset failed");
-        setSubmitting(false);
-        return;
-      }
-
-      const data = await res.json();
-      setResetMessage("Password reset link has been sent to your email. A temporary password is: " + data.temporaryPassword);
-      setForgotUsername("");
-      setForgotEmail("");
-      setSubmitting(false);
-    } catch (err) {
-      setError("Network error. Please try again.");
-      setSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
       <Card className="w-full max-w-md bg-white border border-slate-300 text-slate-900 relative z-10 shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -176,86 +131,12 @@ export default function Auth() {
         </CardHeader>
         
         <CardContent className="space-y-4">
-          {isForgotPassword ? (
-            <>
-              <div className="bg-slate-50 border border-slate-300 p-3 rounded-lg text-xs text-slate-700 flex gap-2 items-start">
-                 <Shield className="w-4 h-4 shrink-0 mt-0.5 text-slate-600" />
-                 <p>Enter your username and email to reset your password.</p>
-              </div>
-              
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div>
-                  <Label htmlFor="forgot-username" className="text-slate-900 text-sm font-semibold">Username</Label>
-                  <Input
-                    id="forgot-username"
-                    type="text"
-                    value={forgotUsername}
-                    onChange={(e) => setForgotUsername(e.target.value)}
-                    placeholder="Enter your username"
-                    className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 mt-1 focus:border-slate-600 focus:ring-slate-600"
-                    data-testid="input-forgot-username"
-                    disabled={submitting}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="forgot-email" className="text-slate-900 text-sm font-semibold">Email</Label>
-                  <Input
-                    id="forgot-email"
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 mt-1 focus:border-slate-600 focus:ring-slate-600"
-                    data-testid="input-forgot-email"
-                    disabled={submitting}
-                    required
-                  />
-                </div>
-                
-                {error && <div className="text-red-700 text-sm bg-red-50 border border-red-300 p-2 rounded">{error}</div>}
-                {resetMessage && <div className="text-green-700 text-sm bg-green-50 border border-green-300 p-2 rounded">{resetMessage}</div>}
-                
-                <Button 
-                  type="submit"
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-orbitron tracking-widest h-12 shadow-lg transition-all hover:shadow-xl"
-                  disabled={submitting}
-                  data-testid="button-reset-password"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      PROCESSING...
-                    </>
-                  ) : (
-                    "RESET PASSWORD"
-                  )}
-                </Button>
-              </form>
-              
-              <button
-                type="button"
-                onClick={() => {
-                  setIsForgotPassword(false);
-                  setError("");
-                  setResetMessage("");
-                }}
-                className="w-full text-sm text-slate-700 hover:text-slate-900 underline transition-colors"
-                disabled={submitting}
-                data-testid="button-back-to-login"
-              >
-                Back to login
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="bg-slate-50 border border-slate-300 p-3 rounded-lg text-xs text-slate-700 flex gap-2 items-start">
-                 <Shield className="w-4 h-4 shrink-0 mt-0.5 text-slate-600" />
-                 <p>{isLogin ? "Enter your credentials to command your fleet." : "Create an account to start your conquest."}</p>
-              </div>
+          <div className="bg-slate-50 border border-slate-300 p-3 rounded-lg text-xs text-slate-700 flex gap-2 items-start">
+             <Shield className="w-4 h-4 shrink-0 mt-0.5 text-slate-600" />
+             <p>{isLogin ? "Enter your credentials to command your fleet." : "Create an account to start your conquest."}</p>
+          </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="username" className="text-slate-900 text-sm font-semibold">Username</Label>
               <Input
@@ -352,6 +233,17 @@ export default function Auth() {
             >
               Clear saved credentials
             </button>
+            {isLogin && (
+              <button
+                type="button"
+                onClick={() => setError("Password reset feature coming soon. Contact support.")}
+                className="w-full text-xs text-slate-500 hover:text-slate-700 underline transition-colors"
+                disabled={submitting}
+                data-testid="button-forgot-password"
+              >
+                Forgot password?
+              </button>
+            )}
           </div>
         </CardContent>
         
