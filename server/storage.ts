@@ -147,6 +147,10 @@ export interface IStorage {
   addTeamMember(expeditionId: string, unitId: string, role: string): Promise<any>;
   getExpeditionEncounters(expeditionId: string): Promise<any[]>;
   addEncounter(expeditionId: string, encounterType: string, description: string, rewards: any): Promise<any>;
+  
+  // Turn operations
+  accrueAndGetTurns(userId: string): Promise<{ currentTurns: number; totalTurns: number; turnsAccrued: number; lastTurnUpdate: Date }>;
+  spendTurns(userId: string, amount: number): Promise<{ success: boolean; currentTurns: number; totalTurns: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -618,6 +622,123 @@ export class DatabaseStorage implements IStorage {
       .values({ expeditionId, encounterType, description, rewards })
       .returning();
     return result;
+  }
+
+  // Turn operations - 6 turns per minute with offline accrual
+  async accrueAndGetTurns(userId: string): Promise<{ currentTurns: number; totalTurns: number; turnsAccrued: number; lastTurnUpdate: Date }> {
+    const TURNS_PER_MINUTE = 6;
+    const MAX_CURRENT_TURNS = 1000;
+    const MAX_OFFLINE_HOURS = 24;
+    const now = new Date();
+    
+    // Get current player state
+    let playerState = await this.getPlayerState(userId);
+    
+    if (!playerState) {
+      // Create new player state with starting turns
+      playerState = await this.createPlayerState({
+        userId,
+        resources: { metal: 1000, crystal: 500, deuterium: 0, energy: 0 },
+        currentTurns: 50,
+        totalTurns: 50,
+        lastTurnUpdate: now
+      });
+      return {
+        currentTurns: 50,
+        totalTurns: 50,
+        turnsAccrued: 0,
+        lastTurnUpdate: now
+      };
+    }
+    
+    const lastUpdate = playerState.lastTurnUpdate || now;
+    const deltaMs = now.getTime() - new Date(lastUpdate).getTime();
+    const deltaMinutes = Math.min(deltaMs / 60000, MAX_OFFLINE_HOURS * 60);
+    
+    // Calculate turns earned (6 per minute)
+    const turnsEarned = Math.floor(deltaMinutes * TURNS_PER_MINUTE);
+    
+    if (turnsEarned > 0) {
+      const currentTurns = playerState.currentTurns || 0;
+      const totalTurns = playerState.totalTurns || 0;
+      
+      // Cap current turns at maximum
+      const newCurrentTurns = Math.min(currentTurns + turnsEarned, MAX_CURRENT_TURNS);
+      const actualAccrued = newCurrentTurns - currentTurns;
+      const newTotalTurns = totalTurns + actualAccrued;
+      
+      // Update player state
+      await this.updatePlayerState(userId, {
+        currentTurns: newCurrentTurns,
+        totalTurns: newTotalTurns,
+        lastTurnUpdate: now
+      });
+      
+      return {
+        currentTurns: newCurrentTurns,
+        totalTurns: newTotalTurns,
+        turnsAccrued: actualAccrued,
+        lastTurnUpdate: now
+      };
+    }
+    
+    return {
+      currentTurns: playerState.currentTurns || 0,
+      totalTurns: playerState.totalTurns || 0,
+      turnsAccrued: 0,
+      lastTurnUpdate: now
+    };
+  }
+
+  async spendTurns(userId: string, amount: number): Promise<{ success: boolean; currentTurns: number; totalTurns: number }> {
+    if (amount <= 0) {
+      const state = await this.getPlayerState(userId);
+      return {
+        success: false,
+        currentTurns: state?.currentTurns || 0,
+        totalTurns: state?.totalTurns || 0
+      };
+    }
+    
+    // First accrue any pending turns
+    const accrued = await this.accrueAndGetTurns(userId);
+    
+    if (accrued.currentTurns < amount) {
+      return {
+        success: false,
+        currentTurns: accrued.currentTurns,
+        totalTurns: accrued.totalTurns
+      };
+    }
+    
+    // Spend the turns atomically
+    const [result] = await db
+      .update(playerStates)
+      .set({
+        currentTurns: sql`${playerStates.currentTurns} - ${amount}`,
+        lastTurnUpdate: new Date()
+      })
+      .where(
+        and(
+          eq(playerStates.userId, userId),
+          sql`${playerStates.currentTurns} >= ${amount}`
+        )
+      )
+      .returning();
+    
+    if (!result) {
+      return {
+        success: false,
+        currentTurns: accrued.currentTurns,
+        totalTurns: accrued.totalTurns
+      };
+    }
+    
+    return {
+      success: true,
+      currentTurns: result.currentTurns || 0,
+      totalTurns: result.totalTurns || 0
+    };
   }
 }
 

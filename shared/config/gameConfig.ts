@@ -102,6 +102,15 @@ export const GAME_CONFIG = {
       energy: 0,
     },
   },
+
+  // Turn system - Players gain turns over time
+  turns: {
+    turnsPerMinute: 6,           // 6 turns gained per minute (1 every 10 seconds)
+    maxCurrentTurns: 1000,       // Maximum turns that can be stored
+    startingTurns: 50,           // New players start with 50 turns
+    offlineAccrual: true,        // Turns accumulate while offline
+    maxOfflineAccrualHours: 24,  // Maximum hours of offline turn accrual
+  },
 };
 
 // Tier-based resource multipliers for different government types

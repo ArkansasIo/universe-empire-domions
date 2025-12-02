@@ -367,4 +367,55 @@ export function registerRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch encounters" });
     }
   });
+
+  // ==== TURN SYSTEM ROUTES ====
+
+  app.get("/api/turns", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const turnData = await storage.accrueAndGetTurns(userId);
+      res.json({
+        currentTurns: turnData.currentTurns,
+        totalTurns: turnData.totalTurns,
+        turnsAccrued: turnData.turnsAccrued,
+        lastTurnUpdate: turnData.lastTurnUpdate,
+        ratePerMinute: 6,
+        maxTurns: 1000
+      });
+    } catch (error: any) {
+      console.error("Error fetching turns:", error);
+      res.status(500).json({ message: "Failed to fetch turns" });
+    }
+  });
+
+  app.post("/api/turns/spend", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const { amount } = req.body;
+      
+      if (typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ message: "Invalid turn amount" });
+      }
+      
+      const result = await storage.spendTurns(userId, amount);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Insufficient turns",
+          currentTurns: result.currentTurns,
+          totalTurns: result.totalTurns
+        });
+      }
+      
+      res.json({
+        success: true,
+        currentTurns: result.currentTurns,
+        totalTurns: result.totalTurns,
+        spent: amount
+      });
+    } catch (error: any) {
+      console.error("Error spending turns:", error);
+      res.status(500).json({ message: "Failed to spend turns" });
+    }
+  });
 }
