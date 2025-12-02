@@ -1,11 +1,48 @@
+import { useState } from "react";
 import { useGame } from "@/lib/gameContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Rocket, Shield, Info, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Auth() {
-  const { login, isLoading } = useGame();
+  const { isLoading, login } = useGame();
+  const [isLogin, setIsLogin] = useState(true);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSubmitting(true);
+
+    try {
+      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+        credentials: "include"
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.message || "Authentication failed");
+        setSubmitting(false);
+        return;
+      }
+
+      // Reload page to trigger game context update
+      window.location.href = "/";
+    } catch (err) {
+      setError("Network error. Please try again.");
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
@@ -21,30 +58,74 @@ export default function Auth() {
           <CardDescription className="text-slate-600 font-rajdhani text-lg font-medium">Command your fleet. Conquer the stars.</CardDescription>
         </CardHeader>
         
-        <CardContent className="space-y-6">
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg text-sm text-slate-600 flex gap-3 items-start">
-             <Shield className="w-5 h-5 shrink-0 mt-0.5 text-slate-900" />
-             <div>
-               <p className="font-semibold text-slate-900 mb-1">New to Stellar Dominion?</p>
-               <p>Sign in with your Replit account to get started. New commanders are granted a starter planet and basic resource production facilities.</p>
-             </div>
+        <CardContent className="space-y-4">
+          <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-xs text-slate-600 flex gap-2 items-start">
+             <Shield className="w-4 h-4 shrink-0 mt-0.5 text-slate-900" />
+             <p>{isLogin ? "Enter your credentials to command your fleet." : "Create an account to start your conquest."}</p>
           </div>
-          
-          <Button 
-             onClick={() => login()} 
-             className="w-full bg-slate-900 hover:bg-slate-800 text-white font-orbitron tracking-widest h-14 text-lg shadow-lg transition-all hover:shadow-xl"
-             disabled={isLoading}
-             data-testid="button-login"
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="username" className="text-slate-900 text-sm font-semibold">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
+                className="bg-white border-slate-300 text-slate-900 mt-1"
+                data-testid="input-username"
+                disabled={submitting}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="password" className="text-slate-900 text-sm font-semibold">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                className="bg-white border-slate-300 text-slate-900 mt-1"
+                data-testid="input-password"
+                disabled={submitting}
+              />
+            </div>
+
+            {error && <div className="text-red-600 text-sm">{error}</div>}
+
+            <Button 
+              type="submit"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-orbitron tracking-widest h-12 shadow-lg transition-all hover:shadow-xl"
+              disabled={submitting}
+              data-testid="button-submit-auth"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  PROCESSING...
+                </>
+              ) : (
+                isLogin ? "ENTER GAME" : "CREATE ACCOUNT"
+              )}
+            </Button>
+          </form>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError("");
+              setUsername("");
+              setPassword("");
+            }}
+            className="w-full text-sm text-slate-600 hover:text-slate-900 underline"
+            disabled={submitting}
+            data-testid="button-toggle-auth"
           >
-             {isLoading ? (
-               <>
-                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                 INITIALIZING...
-               </>
-             ) : (
-               "SIGN IN WITH REPLIT"
-             )}
-          </Button>
+            {isLogin ? "Create new account" : "Already have an account? Sign in"}
+          </button>
         </CardContent>
         
         <CardFooter className="flex flex-col items-center gap-4 pb-6">

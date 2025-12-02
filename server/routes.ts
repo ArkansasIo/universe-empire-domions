@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./basicAuth";
 import { z } from "zod";
 import { 
   insertMissionSchema, 
@@ -12,7 +12,7 @@ import {
 
 // Helper to get user ID from authenticated request
 function getUserId(req: any): string {
-  return req.user?.claims?.sub;
+  return (req.session as any)?.userId;
 }
 
 // Validation schemas
