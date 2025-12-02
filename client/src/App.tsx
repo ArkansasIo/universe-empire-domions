@@ -36,6 +36,7 @@ import ServerConsole from "@/pages/ServerConsole";
 import Exploration from "@/pages/Exploration";
 import Colonies from "@/pages/Colonies";
 import TechTree from "@/pages/TechTree";
+import Blueprints from "@/pages/Blueprints";
 import { useGame } from "@/lib/gameContext";
 
 function LoadingSplash() {
@@ -127,6 +128,7 @@ function RouterContent() {
       <Route path="/exploration" component={Exploration} />
       <Route path="/colonies" component={Colonies} />
       <Route path="/tech-tree" component={TechTree} />
+      <Route path="/blueprints" component={Blueprints} />
       <Route path="/settings" component={Settings} />
       <Route path="/admin" component={Admin} />
       <Route path="/console" component={ServerConsole} />
