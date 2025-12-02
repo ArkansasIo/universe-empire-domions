@@ -10,11 +10,15 @@ import { Link } from "wouter";
 export default function Auth() {
   const { isLoading, login } = useGame();
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotUsername, setForgotUsername] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
 
   // Load saved credentials from localStorage
   useEffect(() => {
