@@ -93,7 +93,7 @@ export async function setupAuth(app: Express) {
           console.error("Session save error:", err);
           return res.status(500).json({ message: "Session creation failed" });
         }
-        res.json({ message: "Account created", user });
+        res.json({ message: "Account created", user: { id: user.id, username: user.username } });
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -139,7 +139,7 @@ export async function setupAuth(app: Express) {
           return res.status(500).json({ message: "Login failed" });
         }
         logger.info("AUTH", `Session saved for user: ${username}`);
-        res.json({ message: "Login successful", user: { id: user.id, username: user.username, email: user.email, firstName: user.firstName } });
+        res.json({ message: "Login successful", user: { id: user.id, username: user.username } });
       });
     } catch (error) {
       logger.error("AUTH", "Login error", {}, error);

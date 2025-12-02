@@ -84,8 +84,26 @@ export default function Auth() {
         return;
       }
 
-      const responseData = await res.json();
-      console.log(`[AUTH] ${isLogin ? 'LOGIN' : 'REGISTER'} successful:`, responseData);
+      let responseData;
+      try {
+        responseData = await res.json();
+        console.log(`[AUTH] ${isLogin ? 'LOGIN' : 'REGISTER'} successful:`, responseData);
+      } catch (parseErr) {
+        console.error("[AUTH] Failed to parse response JSON:", parseErr);
+        setError("Failed to parse authentication response");
+        setSubmitting(false);
+        return;
+      }
+      
+      // Validate response data
+      if (!responseData || typeof responseData !== 'object') {
+        console.error("[AUTH] Invalid response data structure:", responseData);
+        setError("Invalid authentication response");
+        setSubmitting(false);
+        return;
+      }
+      
+      console.log("[AUTH] Response data validated successfully");
       
       // Save credentials on successful login
       saveCredentials(username.trim(), password);
