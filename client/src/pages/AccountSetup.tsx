@@ -77,13 +77,17 @@ export default function AccountSetup() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-5 pointer-events-none"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-white pointer-events-none"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/2 right-1/4 w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+        <div className="absolute -bottom-8 left-1/2 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{animationDelay: '4s'}}></div>
+      </div>
       
       <Button 
         variant="ghost" 
-        className="absolute top-4 left-4 text-slate-600 hover:text-slate-900 z-20"
+        className="absolute top-4 left-4 text-slate-300 hover:text-white z-20 transition-colors"
         data-testid="button-back-from-setup"
         onClick={handleBack}
       >
@@ -91,24 +95,24 @@ export default function AccountSetup() {
         Back
       </Button>
       
-      <Card className="w-full max-w-lg bg-white/95 backdrop-blur border-slate-200 text-slate-900 relative z-10 shadow-2xl">
-        <CardHeader className="text-center pb-2">
-          <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+      <Card className="w-full max-w-lg bg-slate-900/80 backdrop-blur-xl border border-purple-500/50 text-white relative z-10 shadow-2xl hover:shadow-3xl transition-shadow duration-300">
+        <CardHeader className="text-center pb-2 border-b border-purple-500/30">
+          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/50">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-2xl font-orbitron font-bold tracking-wider text-slate-900">EMPIRE SETUP</CardTitle>
-          <CardDescription className="text-slate-600 font-rajdhani text-lg font-medium">Choose your race and government to begin your conquest</CardDescription>
+          <CardTitle className="text-3xl font-orbitron font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300">EMPIRE SETUP</CardTitle>
+          <CardDescription className="text-purple-300 font-rajdhani text-lg font-medium mt-2">✨ Choose your race and government to begin your conquest</CardDescription>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {/* Race Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <Users className="w-4 h-4" />
+            <Label className="text-sm font-semibold text-white flex items-center gap-2">
+              <Users className="w-4 h-4 text-purple-400" />
               Select Your Race
             </Label>
             <Select value={selectedRace} onValueChange={handleRaceChange}>
-              <SelectTrigger className="w-full h-12 bg-white border-slate-300" data-testid="select-race">
+              <SelectTrigger className="w-full h-12 bg-slate-700/50 border-purple-500/30 text-white focus:border-purple-500 focus:ring-purple-500" data-testid="select-race">
                 <SelectValue placeholder="Choose a race" />
               </SelectTrigger>
               <SelectContent>
@@ -121,11 +125,11 @@ export default function AccountSetup() {
             </Select>
             
             {/* Race Details */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-              <p className="text-sm text-slate-600 mb-2">{RACES[selectedRace].description}</p>
+            <div className="bg-purple-900/30 border border-purple-500/30 rounded-lg p-3">
+              <p className="text-sm text-slate-200 mb-2">{RACES[selectedRace].description}</p>
               <div className="space-y-1">
                 {RACES[selectedRace].bonuses.map((bonus, i) => (
-                  <div key={i} className="text-xs text-emerald-600 flex items-center gap-1">
+                  <div key={i} className="text-xs text-emerald-400 flex items-center gap-1">
                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                     {bonus}
                   </div>
@@ -136,12 +140,12 @@ export default function AccountSetup() {
 
           {/* Government Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <Landmark className="w-4 h-4" />
+            <Label className="text-sm font-semibold text-white flex items-center gap-2">
+              <Landmark className="w-4 h-4 text-pink-400" />
               Select Your Government
             </Label>
             <Select value={selectedGovernment} onValueChange={handleGovernmentChange}>
-              <SelectTrigger className="w-full h-12 bg-white border-slate-300" data-testid="select-government">
+              <SelectTrigger className="w-full h-12 bg-slate-700/50 border-purple-500/30 text-white focus:border-purple-500 focus:ring-purple-500" data-testid="select-government">
                 <SelectValue placeholder="Choose a government" />
               </SelectTrigger>
               <SelectContent>
@@ -154,23 +158,23 @@ export default function AccountSetup() {
             </Select>
             
             {/* Government Details */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-              <p className="text-sm text-slate-600 mb-2">{GOVERNMENTS[selectedGovernment].description}</p>
-              <div className="text-xs text-slate-500 mb-2">Ruler Title: {GOVERNMENTS[selectedGovernment].rulerTitle}</div>
+            <div className="bg-purple-900/30 border border-purple-500/30 rounded-lg p-3">
+              <p className="text-sm text-slate-200 mb-2">{GOVERNMENTS[selectedGovernment].description}</p>
+              <div className="text-xs text-slate-300 mb-2">Ruler Title: <span className="text-pink-300 font-semibold">{GOVERNMENTS[selectedGovernment].rulerTitle}</span></div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-slate-700">Bonuses</div>
+                  <div className="text-xs font-medium text-emerald-400">✓ Bonuses</div>
                   {GOVERNMENTS[selectedGovernment].bonuses.map((bonus, i) => (
-                    <div key={i} className="text-xs text-emerald-600 flex items-center gap-1">
+                    <div key={i} className="text-xs text-emerald-400 flex items-center gap-1">
                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                       {bonus}
                     </div>
                   ))}
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-slate-700">Penalties</div>
+                  <div className="text-xs font-medium text-red-400">✗ Penalties</div>
                   {GOVERNMENTS[selectedGovernment].penalties.map((penalty, i) => (
-                    <div key={i} className="text-xs text-red-500 flex items-center gap-1">
+                    <div key={i} className="text-xs text-red-400 flex items-center gap-1">
                       <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
                       {penalty}
                     </div>
@@ -181,14 +185,14 @@ export default function AccountSetup() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm" data-testid="error-message">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-lg text-sm" data-testid="error-message">
               {error}
             </div>
           )}
 
           <Button 
             onClick={handleComplete} 
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-orbitron tracking-widest h-14 text-lg shadow-lg transition-all hover:shadow-xl"
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-orbitron tracking-widest h-14 text-lg shadow-lg shadow-purple-500/30 transition-all hover:shadow-xl hover:shadow-purple-500/50"
             disabled={isLoading || isSubmitting}
             data-testid="button-begin-conquest"
           >
