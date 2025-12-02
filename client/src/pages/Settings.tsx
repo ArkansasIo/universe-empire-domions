@@ -12,7 +12,7 @@ import {
   Settings as SettingsIcon, Server, Shield, Monitor, Database, Power, Save, RefreshCw, 
   Clock, Play, Pause, Bell, Volume2, VolumeX, Eye, EyeOff, Globe, Palette, Moon, Sun,
   Mail, Key, Smartphone, Lock, LogOut, Trash2, Download, Upload, AlertTriangle, CheckCircle,
-  User as UserIcon, Languages, Zap
+  User as UserIcon, Languages, Zap, Users
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
