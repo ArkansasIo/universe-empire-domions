@@ -138,12 +138,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePlayerState(userId: string, updates: Partial<PlayerState>): Promise<PlayerState> {
-    const [state] = await db
+    const result = await db
       .update(playerStates)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ 
+        ...updates, 
+        updatedAt: new Date() 
+      })
       .where(eq(playerStates.userId, userId))
       .returning();
-    return state;
+    
+    if (!result || result.length === 0) {
+      throw new Error(`Failed to update player state for user ${userId}`);
+    }
+    
+    return result[0];
   }
 
   // Mission operations
