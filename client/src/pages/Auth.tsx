@@ -18,6 +18,25 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    
+    // Validate inputs
+    if (!username.trim()) {
+      setError("Username is required");
+      return;
+    }
+    if (username.trim().length < 3) {
+      setError("Username must be at least 3 characters");
+      return;
+    }
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -25,7 +44,7 @@ export default function Auth() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: username.trim(), password }),
         credentials: "include"
       });
 
@@ -69,10 +88,13 @@ export default function Auth() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
+                placeholder="Enter username (min 3 characters)"
                 className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 mt-1 focus:border-slate-600 focus:ring-slate-600"
                 data-testid="input-username"
                 disabled={submitting}
+                required
+                minLength={3}
+                autoComplete="username"
               />
             </div>
 
@@ -83,10 +105,13 @@ export default function Auth() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder="Enter password (min 6 characters)"
                 className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 mt-1 focus:border-slate-600 focus:ring-slate-600"
                 data-testid="input-password"
                 disabled={submitting}
+                required
+                minLength={6}
+                autoComplete={isLogin ? "current-password" : "new-password"}
               />
             </div>
 
