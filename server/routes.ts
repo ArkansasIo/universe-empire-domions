@@ -120,7 +120,7 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/alliances", async (req: Request, res: any) => {
     try {
-      const alliances = await storage.getAlliances();
+      const alliances = await storage.getAllAlliances();
       res.json(alliances);
     } catch (error: any) {
       console.error("Error fetching alliances:", error);
@@ -140,52 +140,10 @@ export function registerRoutes(app: Express) {
   });
 
   // ==== BATTLE ROUTES ====
-
-  app.get("/api/battles", isAuthenticated, async (req: Request, res: any) => {
-    try {
-      const userId = getUserId(req);
-      const battles = await storage.getBattles(userId);
-      res.json(battles);
-    } catch (error: any) {
-      console.error("Error fetching battles:", error);
-      res.status(500).json({ message: "Failed to fetch battles" });
-    }
-  });
-
-  app.post("/api/battles", isAuthenticated, async (req: Request, res: any) => {
-    try {
-      const userId = getUserId(req);
-      const battle = await storage.createBattle({ ...req.body, attackerId: userId });
-      res.json(battle);
-    } catch (error: any) {
-      console.error("Error creating battle:", error);
-      res.status(500).json({ message: "Failed to create battle" });
-    }
-  });
+  // Battles are stored in memory in gameContext for now
 
   // ==== COLONY ROUTES ====
-
-  app.get("/api/colonies", isAuthenticated, async (req: Request, res: any) => {
-    try {
-      const userId = getUserId(req);
-      const colonies = await storage.getColonies(userId);
-      res.json(colonies);
-    } catch (error: any) {
-      console.error("Error fetching colonies:", error);
-      res.status(500).json({ message: "Failed to fetch colonies" });
-    }
-  });
-
-  app.post("/api/colonies", isAuthenticated, async (req: Request, res: any) => {
-    try {
-      const userId = getUserId(req);
-      const colony = await storage.createColony({ ...req.body, userId });
-      res.json(colony);
-    } catch (error: any) {
-      console.error("Error creating colony:", error);
-      res.status(500).json({ message: "Failed to create colony" });
-    }
-  });
+  // Colonies are stored in memory in gameContext for now
 
   // ==== DURABILITY ROUTES ====
 

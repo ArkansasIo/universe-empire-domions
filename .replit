@@ -47,5 +47,22 @@ task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Server configuration"
+mode = "sequential"
+author = 19430532
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mom run db:push"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mom run build"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mom run check"
+
 [agent]
 mockupState = "FULLSTACK"

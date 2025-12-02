@@ -246,9 +246,9 @@ export class CombatEngine {
       // Shield recharges 10% per turn
       target.shield = Math.min(target.shield + target.maxShield * 0.1, target.maxShield);
 
-      const totalDamage = damage.shieldDamage + damage.armorDamage + damage.hulkDamage;
+      const totalDamage = damage.shieldDamage + damage.armorDamage + damage.hullDamage;
       log.push(
-        `${attacker.type.toUpperCase()} attacks ${target.type.toUpperCase()}: ${Math.round(totalDamage)} damage (S:${Math.round(damage.shieldDamage)}, A:${Math.round(damage.armorDamage)}, H:${Math.round(damage.hulkDamage)})`
+        `${attacker.type.toUpperCase()} attacks ${target.type.toUpperCase()}: ${Math.round(totalDamage)} damage (S:${Math.round(damage.shieldDamage)}, A:${Math.round(damage.armorDamage)}, H:${Math.round(damage.hullDamage)})`
       );
 
       actions.push({ shipId: attackerId, action: "attack", targetId, effectiveness: Math.min(100, (totalDamage / attacker.attack) * 100) });

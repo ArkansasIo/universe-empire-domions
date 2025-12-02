@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Mail, Send, Trash2, Reply, AlertCircle, User, Shield, Flag, Skull, Crosshair } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useGame } from "@/lib/gameContext";
 
 export default function Messages() {
   const { messages, sendMessage, markMessageRead, deleteMessage } = useGame();
@@ -18,8 +19,8 @@ export default function Messages() {
   const [composeSubject, setComposeSubject] = useState("");
   const [composeBody, setComposeBody] = useState("");
 
-  const inbox = messages.filter(m => m.to === "Commander");
-  const sent = messages.filter(m => m.from === "Commander");
+  const inbox = messages.filter((m: any) => m.to === "Commander");
+  const sent = messages.filter((m: any) => m.from === "Commander");
 
   const activeMessage = messages.find(m => m.id === selectedMsg);
 
@@ -32,7 +33,6 @@ export default function Messages() {
      setComposeTo("");
      setComposeSubject("");
      setComposeBody("");
-     // Switch to sent tab or show success?
   };
 
   return (

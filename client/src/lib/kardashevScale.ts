@@ -456,7 +456,7 @@ export function getKardashevTier(level: KardashevLevel): KardashevTier {
 
 export function calculateProgressToNext(current: KardashevLevel, metal: number, crystal: number, deuterium: number): number {
   if (current === 18) return 100;
-  const nextLevel = current + 1;
+  const nextLevel = (current + 1) as KardashevLevel;
   const requirements = KARDASHEV_SCALE[nextLevel];
   const metalProgress = Math.min(metal / requirements.requirementsMetal, 1);
   const crystalProgress = Math.min(crystal / requirements.requirementsCrystal, 1);
