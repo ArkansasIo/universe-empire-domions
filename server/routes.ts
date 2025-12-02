@@ -32,7 +32,8 @@ const updateGameStateSchema = z.object({
   commander: z.any().optional(),
   government: z.any().optional(),
   artifacts: z.array(z.any()).optional(),
-  cronJobs: z.array(z.any()).optional()
+  cronJobs: z.array(z.any()).optional(),
+  setupComplete: z.boolean().optional()
 });
 
 const createMissionSchema = z.object({
