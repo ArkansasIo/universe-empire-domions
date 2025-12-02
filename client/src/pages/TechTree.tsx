@@ -1,16 +1,15 @@
 import GameLayout from "@/components/layout/GameLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Building, Package, Zap, Rocket } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Building, Package, Zap, Search } from "lucide-react";
 import { useState } from "react";
 import { OGAME_BUILDINGS } from "@/lib/ogameBuildings";
 import { OGAME_SHIPS } from "@/lib/ogameShips";
 import { OGAME_RESEARCH } from "@/lib/ogameResearch";
 import { cn } from "@/lib/utils";
-import Navigation from "./Navigation";
 
 export default function TechTree() {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -46,157 +45,305 @@ export default function TechTree() {
 
   return (
     <GameLayout>
-      <div className="space-y-6 animate-in fade-in duration-500">
-        <Navigation />
-
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Header */}
         <div>
           <h2 className="text-3xl font-orbitron font-bold text-slate-900">Technology & Blueprint Tree</h2>
-          <p className="text-muted-foreground font-rajdhani text-lg">OGame Complete: {OGAME_BUILDINGS.length} Buildings, {OGAME_SHIPS.length} Ships, {OGAME_RESEARCH.length} Research Technologies</p>
+          <p className="text-muted-foreground font-rajdhani text-lg">Complete tech database: {OGAME_BUILDINGS.length} Buildings, {OGAME_SHIPS.length} Ships, {OGAME_RESEARCH.length} Technologies</p>
         </div>
 
+        {/* Search Bar */}
+        <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm">
+          <div className="flex gap-2">
+            <Search className="w-5 h-5 text-slate-400 self-center" />
+            <Input
+              type="text"
+              placeholder="Search buildings, ships, or research..."
+              className="bg-white border-slate-200 text-slate-900 placeholder-slate-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              data-testid="search-tech-tree"
+            />
+          </div>
+        </div>
+
+        {/* Tabs */}
         <Tabs defaultValue="buildings" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white border border-slate-200 h-16">
-            <TabsTrigger value="buildings" className="font-orbitron flex flex-col items-center justify-center h-full gap-1">
-              <Building className="w-4 h-4" /> Buildings ({OGAME_BUILDINGS.length})
+          <TabsList className="grid w-full grid-cols-3 bg-white border border-slate-200 h-14 shadow-sm">
+            <TabsTrigger value="buildings" className="font-orbitron text-sm flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Building className="w-4 h-4" />
+              Buildings ({OGAME_BUILDINGS.length})
             </TabsTrigger>
-            <TabsTrigger value="ships" className="font-orbitron flex flex-col items-center justify-center h-full gap-1">
-              <Package className="w-4 h-4" /> Ships ({OGAME_SHIPS.length})
+            <TabsTrigger value="ships" className="font-orbitron text-sm flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Package className="w-4 h-4" />
+              Ships ({OGAME_SHIPS.length})
             </TabsTrigger>
-            <TabsTrigger value="research" className="font-orbitron flex flex-col items-center justify-center h-full gap-1">
-              <Zap className="w-4 h-4" /> Research ({OGAME_RESEARCH.length})
+            <TabsTrigger value="research" className="font-orbitron text-sm flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Zap className="w-4 h-4" />
+              Research ({OGAME_RESEARCH.length})
             </TabsTrigger>
           </TabsList>
 
-          {/* Buildings */}
-          <TabsContent value="buildings" className="mt-6 space-y-4">
-            <input
-              type="text"
-              placeholder="Search buildings..."
-              className="w-full px-4 py-2 border border-slate-300 rounded bg-white text-slate-900"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              data-testid="search-buildings"
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filterBySearch(OGAME_BUILDINGS).map(building => (
-                <Card
-                  key={building.id}
-                  className={cn("cursor-pointer border-slate-200 transition-all", selectedItem === building.id ? "border-primary shadow-lg" : "hover:shadow-md")}
-                  onClick={() => setSelectedItem(building.id)}
-                  data-testid={`building-card-${building.id}`}
-                >
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="font-orbitron font-bold text-slate-900">{building.name}</div>
-                        <div className="text-xs text-slate-600">{building.description}</div>
-                      </div>
-                      <Badge className={categoryColors[building.category] || "bg-slate-100"}>
-                        {building.category}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 text-[10px]">
-                      <div><span className="font-bold text-amber-600">{building.cost.metal}</span> Metal</div>
-                      <div><span className="font-bold text-blue-600">{building.cost.crystal}</span> Crystal</div>
-                      <div><span className="font-bold text-green-600">{building.cost.deuterium}</span> Deut</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          {/* Buildings Tab */}
+          <TabsContent value="buildings" className="mt-6">
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 border-slate-200 hover:bg-slate-50">
+                    <TableHead className="text-slate-700 font-bold">Name</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Category</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Metal</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Crystal</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Deuterium</TableHead>
+                    <TableHead className="text-right text-slate-700 font-bold">Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filterBySearch(OGAME_BUILDINGS).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No buildings found matching "{searchTerm}"
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filterBySearch(OGAME_BUILDINGS).map(building => (
+                      <TableRow
+                        key={building.id}
+                        className="border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
+                        onClick={() => setSelectedItem(building.id)}
+                        data-testid={`building-row-${building.id}`}
+                      >
+                        <TableCell className="font-semibold text-slate-900">{building.name}</TableCell>
+                        <TableCell>
+                          <Badge className={categoryColors[building.category] || "bg-slate-100"}>
+                            {building.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-amber-600 font-bold">{building.cost.metal}</TableCell>
+                        <TableCell className="font-mono text-blue-600 font-bold">{building.cost.crystal}</TableCell>
+                        <TableCell className="font-mono text-green-600 font-bold">{building.cost.deuterium}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs border-primary/30 text-primary hover:bg-primary/10"
+                            data-testid={`button-view-building-${building.id}`}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </TabsContent>
 
-          {/* Ships */}
-          <TabsContent value="ships" className="mt-6 space-y-4">
-            <input
-              type="text"
-              placeholder="Search ships..."
-              className="w-full px-4 py-2 border border-slate-300 rounded bg-white text-slate-900"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              data-testid="search-ships"
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filterBySearch(OGAME_SHIPS).map(ship => (
-                <Card
-                  key={ship.id}
-                  className={cn("cursor-pointer border-slate-200 transition-all", selectedItem === ship.id ? "border-primary shadow-lg" : "hover:shadow-md")}
-                  onClick={() => setSelectedItem(ship.id)}
-                  data-testid={`ship-card-${ship.id}`}
-                >
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="font-orbitron font-bold text-slate-900">{ship.name}</div>
-                        <div className="text-xs text-slate-600">{ship.description}</div>
-                      </div>
-                      <Badge className={categoryColors[ship.type] || "bg-slate-100"}>
-                        {ship.type}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 text-[10px]">
-                      <div><span className="font-bold text-red-600">{ship.attack}</span> Atk</div>
-                      <div><span className="font-bold text-blue-600">{ship.defense}</span> Def</div>
-                      <div><span className="font-bold text-green-600">{ship.speed}</span> Spd</div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 text-[10px] pt-1 border-t border-slate-200">
-                      <div><span className="font-bold text-amber-600">{ship.cost.metal}</span> M</div>
-                      <div><span className="font-bold text-blue-600">{ship.cost.crystal}</span> C</div>
-                      <div><span className="font-bold text-green-600">{ship.cost.deuterium}</span> D</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          {/* Ships Tab */}
+          <TabsContent value="ships" className="mt-6">
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 border-slate-200 hover:bg-slate-50">
+                    <TableHead className="text-slate-700 font-bold">Name</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Type</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Attack</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Defense</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Speed</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Cost</TableHead>
+                    <TableHead className="text-right text-slate-700 font-bold">Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filterBySearch(OGAME_SHIPS).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No ships found matching "{searchTerm}"
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filterBySearch(OGAME_SHIPS).map(ship => (
+                      <TableRow
+                        key={ship.id}
+                        className="border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
+                        onClick={() => setSelectedItem(ship.id)}
+                        data-testid={`ship-row-${ship.id}`}
+                      >
+                        <TableCell className="font-semibold text-slate-900">{ship.name}</TableCell>
+                        <TableCell>
+                          <Badge className={categoryColors[ship.type] || "bg-slate-100"}>
+                            {ship.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-red-600 font-bold">{ship.attack}</TableCell>
+                        <TableCell className="font-mono text-blue-600 font-bold">{ship.defense}</TableCell>
+                        <TableCell className="font-mono text-green-600 font-bold">{ship.speed}</TableCell>
+                        <TableCell className="text-sm">
+                          <span className="text-amber-600 font-bold">{ship.cost.metal}</span>
+                          <span className="text-slate-400">/</span>
+                          <span className="text-blue-600 font-bold">{ship.cost.crystal}</span>
+                          <span className="text-slate-400">/</span>
+                          <span className="text-green-600 font-bold">{ship.cost.deuterium}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs border-primary/30 text-primary hover:bg-primary/10"
+                            data-testid={`button-view-ship-${ship.id}`}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </TabsContent>
 
-          {/* Research */}
-          <TabsContent value="research" className="mt-6 space-y-4">
-            <input
-              type="text"
-              placeholder="Search research..."
-              className="w-full px-4 py-2 border border-slate-300 rounded bg-white text-slate-900"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              data-testid="search-research"
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filterBySearch(OGAME_RESEARCH).map(research => (
-                <Card
-                  key={research.id}
-                  className={cn("cursor-pointer border-slate-200 transition-all", selectedItem === research.id ? "border-primary shadow-lg" : "hover:shadow-md")}
-                  onClick={() => setSelectedItem(research.id)}
-                  data-testid={`research-card-${research.id}`}
-                >
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="font-orbitron font-bold text-slate-900">{research.name}</div>
-                        <div className="text-xs text-slate-600">{research.description}</div>
-                      </div>
-                      <Badge className={categoryColors[research.category] || "bg-slate-100"}>
-                        {research.category}
-                      </Badge>
-                    </div>
-                    {research.prerequisites && Object.keys(research.prerequisites).length > 0 && (
-                      <div className="text-xs text-slate-600">Requires: {Object.keys(research.prerequisites).join(", ")}</div>
-                    )}
-                    <div className="grid grid-cols-3 gap-1 text-[10px]">
-                      <div><span className="font-bold text-amber-600">{research.cost.metal}</span> M</div>
-                      <div><span className="font-bold text-blue-600">{research.cost.crystal}</span> C</div>
-                      <div><span className="font-bold text-green-600">{research.cost.deuterium}</span> D</div>
-                    </div>
-                    {research.bonus && (
-                      <div className="text-[10px] bg-slate-50 p-1 rounded italic text-slate-700">
-                        Bonus: {Object.values(research.bonus).join(", ")}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+          {/* Research Tab */}
+          <TabsContent value="research" className="mt-6">
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 border-slate-200 hover:bg-slate-50">
+                    <TableHead className="text-slate-700 font-bold">Name</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Category</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Metal</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Crystal</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Deuterium</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Energy</TableHead>
+                    <TableHead className="text-right text-slate-700 font-bold">Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filterBySearch(OGAME_RESEARCH).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No research found matching "{searchTerm}"
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filterBySearch(OGAME_RESEARCH).map(research => (
+                      <TableRow
+                        key={research.id}
+                        className="border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
+                        onClick={() => setSelectedItem(research.id)}
+                        data-testid={`research-row-${research.id}`}
+                      >
+                        <TableCell className="font-semibold text-slate-900">{research.name}</TableCell>
+                        <TableCell>
+                          <Badge className={categoryColors[research.category] || "bg-slate-100"}>
+                            {research.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-amber-600 font-bold">{research.cost.metal}</TableCell>
+                        <TableCell className="font-mono text-blue-600 font-bold">{research.cost.crystal}</TableCell>
+                        <TableCell className="font-mono text-green-600 font-bold">{research.cost.deuterium}</TableCell>
+                        <TableCell className="font-mono text-yellow-600 font-bold">{research.cost.energy || 0}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs border-primary/30 text-primary hover:bg-primary/10"
+                            data-testid={`button-view-research-${research.id}`}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Item Details Panel */}
+        {selectedItem && (
+          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+            <div className="space-y-4">
+              <div className="flex justify-between items-start">
+                <h3 className="text-xl font-bold text-slate-900">Item Details</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedItem(null)}
+                  className="border-slate-200 text-slate-600"
+                >
+                  Close
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {(() => {
+                  const building = OGAME_BUILDINGS.find(b => b.id === selectedItem);
+                  const ship = OGAME_SHIPS.find(s => s.id === selectedItem);
+                  const research = OGAME_RESEARCH.find(r => r.id === selectedItem);
+                  
+                  const item = building || ship || research;
+                  
+                  return item ? (
+                    <>
+                      <div className="md:col-span-3 bg-slate-50 p-4 rounded border border-slate-200">
+                        <p className="text-sm text-slate-600">{item.description}</p>
+                      </div>
+                      
+                      {(building || research) && (
+                        <>
+                          <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Metal Cost</p>
+                            <p className="text-2xl font-bold text-amber-600">{(item as any).cost.metal}</p>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Crystal Cost</p>
+                            <p className="text-2xl font-bold text-blue-600">{(item as any).cost.crystal}</p>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Deuterium Cost</p>
+                            <p className="text-2xl font-bold text-green-600">{(item as any).cost.deuterium}</p>
+                          </div>
+                        </>
+                      )}
+                      
+                      {ship && (
+                        <>
+                          <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Attack Power</p>
+                            <p className="text-2xl font-bold text-red-600">{(item as any).attack}</p>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Defense Value</p>
+                            <p className="text-2xl font-bold text-blue-600">{(item as any).defense}</p>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Speed</p>
+                            <p className="text-2xl font-bold text-green-600">{(item as any).speed}</p>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Metal Cost</p>
+                            <p className="text-2xl font-bold text-amber-600">{(item as any).cost.metal}</p>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Crystal Cost</p>
+                            <p className="text-2xl font-bold text-blue-600">{(item as any).cost.crystal}</p>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Deuterium Cost</p>
+                            <p className="text-2xl font-bold text-green-600">{(item as any).cost.deuterium}</p>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : null;
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </GameLayout>
   );
