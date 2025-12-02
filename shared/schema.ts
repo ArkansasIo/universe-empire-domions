@@ -294,18 +294,6 @@ export const userAccountStatus = pgTable("user_account_status", {
 
 export type UserAccountStatus = typeof userAccountStatus.$inferSelect;
 
-export const userBadges = pgTable("user_badges", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  badgeKey: varchar("badge_key").notNull(),
-  badgeName: varchar("badge_name").notNull(),
-  badgeDescription: text("badge_description"),
-  earnedAt: timestamp("earned_at").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export type UserBadge = typeof userBadges.$inferSelect;
-
 export const userPermissions = pgTable("user_permissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
