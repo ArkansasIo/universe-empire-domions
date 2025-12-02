@@ -16,6 +16,7 @@ A comprehensive 4X space strategy game built with React, Express, and PostgreSQL
 - [Architecture](#architecture)
 - [Development](#development)
 - [Documentation](#documentation)
+- [License](#license)
 
 ---
 
