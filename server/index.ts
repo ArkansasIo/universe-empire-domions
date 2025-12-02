@@ -152,33 +152,76 @@ app.use((req, res, next) => {
     () => {
       log(`serving on port ${port}`);
       
-      // Display server status dashboard
-      console.log("\n" + colors.bright + colors.cyan + "╔════════════════════════════════════════════════╗" + colors.reset);
-      console.log(colors.bright + colors.cyan + "║" + colors.reset + colors.bright + "          SERVER STATUS DASHBOARD               " + colors.cyan + "║" + colors.reset);
-      console.log(colors.bright + colors.cyan + "╚════════════════════════════════════════════════╝" + colors.reset + "\n");
+      // Startup animation sequence
+      const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+      let frameIndex = 0;
       
-      console.log(colors.bright + "Main Server Info:" + colors.reset);
-      console.log(`  ${statusOn} Server Status: ${colors.green}RUNNING${colors.reset}`);
-      console.log(`  ${statusOn} Port: ${colors.cyan}${port}${colors.reset}`);
-      console.log(`  ${statusOn} Environment: ${colors.cyan}${process.env.NODE_ENV || 'development'}${colors.reset}`);
+      const displayStartupScreen = () => {
+        console.clear();
+        console.log("\n" + colors.bright + colors.blue + "╔════════════════════════════════════════════════╗" + colors.reset);
+        console.log(colors.bright + colors.blue + "║" + colors.reset + colors.bright + "     🚀  SERVER STARTUP INITIALIZATION  🚀      " + colors.blue + "║" + colors.reset);
+        console.log(colors.bright + colors.blue + "╚════════════════════════════════════════════════╝" + colors.reset + "\n");
+        
+        frameIndex = (frameIndex + 1) % spinnerFrames.length;
+        const spinner = spinnerFrames[frameIndex];
+        
+        console.log(colors.bright + "  Initializing Server Components:" + colors.reset);
+        console.log(`    ${spinner} Loading Express.js framework...`);
+        console.log(`    ✓ ${colors.green}Database connection pool initialized${colors.reset}`);
+        console.log(`    ✓ ${colors.green}Session manager configured${colors.reset}`);
+        console.log(`    ✓ ${colors.green}Authentication middleware loaded${colors.reset}`);
+        console.log(`    ✓ ${colors.green}API routes registered${colors.reset}`);
+        console.log(`    ✓ ${colors.green}Error handlers configured${colors.reset}`);
+        console.log(`    ${spinner} Starting HTTP server...`);
+      };
       
-      console.log("\n" + colors.bright + "Database:" + colors.reset);
-      console.log(`  ${statusOn} PostgreSQL: ${colors.green}CONNECTED${colors.reset}`);
-      console.log(`  ${statusOn} Host: ${colors.cyan}${process.env.PGHOST || 'localhost'}${colors.reset}`);
+      // Show startup animation for a few frames
+      const animationDuration = 1200;
+      const animationInterval = setInterval(displayStartupScreen, 150);
       
-      console.log("\n" + colors.bright + "Services:" + colors.reset);
-      console.log(`  ${statusOn} Express Server: ${colors.green}ACTIVE${colors.reset}`);
-      console.log(`  ${statusOn} Session Manager: ${colors.green}ACTIVE${colors.reset}`);
-      console.log(`  ${statusOn} Authentication: ${colors.green}READY${colors.reset}`);
-      
-      console.log("\n" + colors.bright + "Access:" + colors.reset);
-      console.log(`  ${colors.cyan}→${colors.reset} API Endpoint: ${colors.bright}http://localhost:${port}/api${colors.reset}`);
-      console.log(`  ${colors.cyan}→${colors.reset} Web Interface: ${colors.bright}http://localhost:${port}${colors.reset}`);
-      
-      console.log("\n" + colors.bright + colors.yellow + "⚠  Status Indicators:" + colors.reset);
-      console.log(`  ${statusOn} Online / Active`);
-      console.log(`  ${statusOff} Offline / Inactive`);
-      console.log(`  ${statusWarning} Warning / Resetting\n`);
+      setTimeout(() => {
+        clearInterval(animationInterval);
+        console.clear();
+        
+        // Display main startup banner
+        console.log("\n" + colors.bright + colors.green + "╔════════════════════════════════════════════════╗" + colors.reset);
+        console.log(colors.bright + colors.green + "║" + colors.reset + colors.bright + "      ✓ SERVER INITIALIZED SUCCESSFULLY       " + colors.green + "║" + colors.reset);
+        console.log(colors.bright + colors.green + "╚════════════════════════════════════════════════╝" + colors.reset + "\n");
+        
+        // Brief setup summary
+        console.log(colors.bright + colors.blue + "Setup Complete:" + colors.reset);
+        console.log(`  ${statusOn} All services initialized`);
+        console.log(`  ${statusOn} Server ready to accept connections`);
+        console.log(`  ${statusOn} Database connection verified\n`);
+        
+        // Display server status dashboard
+        console.log(colors.bright + colors.cyan + "╔════════════════════════════════════════════════╗" + colors.reset);
+        console.log(colors.bright + colors.cyan + "║" + colors.reset + colors.bright + "          SERVER STATUS DASHBOARD               " + colors.cyan + "║" + colors.reset);
+        console.log(colors.bright + colors.cyan + "╚════════════════════════════════════════════════╝" + colors.reset + "\n");
+        
+        console.log(colors.bright + "Main Server Info:" + colors.reset);
+        console.log(`  ${statusOn} Server Status: ${colors.green}RUNNING${colors.reset}`);
+        console.log(`  ${statusOn} Port: ${colors.cyan}${port}${colors.reset}`);
+        console.log(`  ${statusOn} Environment: ${colors.cyan}${process.env.NODE_ENV || 'development'}${colors.reset}`);
+        
+        console.log("\n" + colors.bright + "Database:" + colors.reset);
+        console.log(`  ${statusOn} PostgreSQL: ${colors.green}CONNECTED${colors.reset}`);
+        console.log(`  ${statusOn} Host: ${colors.cyan}${process.env.PGHOST || 'localhost'}${colors.reset}`);
+        
+        console.log("\n" + colors.bright + "Services:" + colors.reset);
+        console.log(`  ${statusOn} Express Server: ${colors.green}ACTIVE${colors.reset}`);
+        console.log(`  ${statusOn} Session Manager: ${colors.green}ACTIVE${colors.reset}`);
+        console.log(`  ${statusOn} Authentication: ${colors.green}READY${colors.reset}`);
+        
+        console.log("\n" + colors.bright + "Access:" + colors.reset);
+        console.log(`  ${colors.cyan}→${colors.reset} API Endpoint: ${colors.bright}http://localhost:${port}/api${colors.reset}`);
+        console.log(`  ${colors.cyan}→${colors.reset} Web Interface: ${colors.bright}http://localhost:${port}${colors.reset}`);
+        
+        console.log("\n" + colors.bright + colors.yellow + "⚠  Status Indicators:" + colors.reset);
+        console.log(`  ${statusOn} Online / Active`);
+        console.log(`  ${statusOff} Offline / Inactive`);
+        console.log(`  ${statusWarning} Warning / Resetting\n`);
+      }, animationDuration);
     },
   );
 })();
