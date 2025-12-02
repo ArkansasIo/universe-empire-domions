@@ -1,7 +1,7 @@
 import { 
   Zap, Atom, Cpu, Eye, Rocket, Shield, Swords, Radio, Crosshair, Globe, 
   Database, Activity, Layers, Server, Wind, Flame, Disc, Microscope, 
-  Dna, Briefcase, Cog, Hammer, Anchor 
+  Dna, Briefcase, Cog, Hammer, Anchor, Hexagon, Box, Infinity 
 } from "lucide-react";
 
 export type TechArea = "physics" | "society" | "engineering";
@@ -35,9 +35,9 @@ export const TECHS: TechItem[] = [
   // --- PHYSICS ---
   {
     id: "energyTech",
-    name: "Fusion Power",
+    name: "Zero-Point Power",
     originalName: "Energy Technology",
-    description: "Harnessing the power of the stars themselves to power our empire.",
+    description: "Extracting vacuum energy from the fabric of space-time itself to fuel our empire.",
     area: "physics",
     category: "particles",
     tier: 1,
@@ -51,9 +51,9 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "laserTech",
-    name: "Blue Lasers",
+    name: "Gamma Lasers",
     originalName: "Laser Technology",
-    description: "High-frequency laser emitters capable of piercing standard hull plating.",
+    description: "High-frequency coherent light emitters capable of stripping electrons from target hulls.",
     area: "physics",
     category: "particles",
     tier: 1,
@@ -67,9 +67,9 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "shieldingTech",
-    name: "Deflectors",
+    name: "Deflector Barriers",
     originalName: "Shielding Technology",
-    description: "Energy fields that disperse kinetic and thermal impacts.",
+    description: "Projected magnetic fields that disperse kinetic impact and plasma dispersal.",
     area: "physics",
     category: "field_manipulation",
     tier: 2,
@@ -83,9 +83,9 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "hyperspaceTech",
-    name: "Hyperspace Theory",
+    name: "Subspace Theory",
     originalName: "Hyperspace Technology",
-    description: "Understanding the underlying fabric of subspace allows for faster-than-light communications and travel.",
+    description: "Understanding the underlying 11-dimensional manifold of subspace allows for FTL communications.",
     area: "physics",
     category: "field_manipulation",
     tier: 3,
@@ -99,9 +99,9 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "plasmaTech",
-    name: "Plasma Throwers",
+    name: "Plasma Dynamics",
     originalName: "Plasma Technology",
-    description: "Superheated ionized gas used as a devastating weapon and industrial tool.",
+    description: "Control of superheated ionized matter for industrial cutting and devastating weaponry.",
     area: "physics",
     category: "particles",
     tier: 4,
@@ -115,9 +115,9 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "computerTech",
-    name: "Administrative AI",
+    name: "Positronic Computing",
     originalName: "Computer Technology",
-    description: "Advanced algorithms to manage the complex logistics of an interstellar empire.",
+    description: "Advanced neural net algorithms to manage the complex logistics of an interstellar empire.",
     area: "physics",
     category: "computing",
     tier: 1,
@@ -131,9 +131,9 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "aiTech",
-    name: "Positronic AI",
+    name: "Sentient AI",
     originalName: "Artificial Intelligence",
-    description: "Self-improving neural networks capable of managing entire planetary economies.",
+    description: "Self-aware synthetic intelligences capable of managing entire planetary economies.",
     area: "physics",
     category: "computing",
     tier: 5,
@@ -147,7 +147,7 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "gravitonTech",
-    name: "Anti-Gravity Engineering",
+    name: "Unified Field Theory",
     originalName: "Graviton Technology",
     description: "Manipulation of gravitons allows for artificial gravity wells and the construction of colossi.",
     area: "physics",
@@ -163,13 +163,13 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "quantumTech",
-    name: "Quantum Computing",
+    name: "Quantum Entanglement",
     originalName: "Quantum Computing",
-    description: "Using quantum superposition for instantaneous calculation.",
+    description: "Using quantum superposition for instantaneous calculation and communication across parsecs.",
     area: "physics",
     category: "computing",
     tier: 6,
-    icon: Layers,
+    icon: Infinity,
     baseCost: { metal: 100000, crystal: 200000, deuterium: 150000 },
     costFactor: 2,
     effects: [
@@ -181,9 +181,9 @@ export const TECHS: TechItem[] = [
   // --- SOCIETY ---
   {
     id: "espionageTech",
-    name: "Encryption",
+    name: "Quantum Encryption",
     originalName: "Espionage Technology",
-    description: "Advanced cryptography and spycraft to protect state secrets and uncover those of enemies.",
+    description: "Unbreakable ciphers and spycraft to protect state secrets and uncover those of enemies.",
     area: "society",
     category: "statecraft",
     tier: 1,
@@ -197,11 +197,11 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "astrophysics",
-    name: "New Worlds Protocol",
+    name: "Exoplanetary Studies",
     originalName: "Astrophysics",
     description: "Protocols for identifying and colonizing habitable worlds in the goldilocks zone.",
     area: "society",
-    category: "statecraft", // Or Biology/New Worlds
+    category: "statecraft",
     tier: 3,
     icon: Globe,
     baseCost: { metal: 4000, crystal: 8000, deuterium: 4000 },
@@ -213,7 +213,7 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "intergalacticResearchNetwork",
-    name: "Scientific Consensus",
+    name: "Neural Link Network",
     originalName: "Intergalactic Research Network",
     description: "Unifying the scientific community across all colonies to share breakthroughs instantly.",
     area: "society",
@@ -231,9 +231,9 @@ export const TECHS: TechItem[] = [
   // --- ENGINEERING ---
   {
     id: "combustionDrive",
-    name: "Chemical Thrusters",
+    name: "Fusion Thrusters",
     originalName: "Combustion Drive",
-    description: "Standard chemical rockets for sub-light propulsion.",
+    description: "High-efficiency fusion rockets for sub-light propulsion.",
     area: "engineering",
     category: "propulsion",
     tier: 1,
@@ -247,9 +247,9 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "impulseDrive",
-    name: "Ion Thrusters",
+    name: "Ion Propulsion",
     originalName: "Impulse Drive",
-    description: "Efficient electric propulsion using ionized particles.",
+    description: "Efficient electric propulsion using ionized xenon gas.",
     area: "engineering",
     category: "propulsion",
     tier: 2,
@@ -263,9 +263,9 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "hyperspaceDrive",
-    name: "Hyper Drive",
+    name: "Warp Drive",
     originalName: "Hyperspace Drive",
-    description: "Engines capable of breaching the hyperspace barrier.",
+    description: "Engines capable of bending space-time to exceed the speed of light.",
     area: "engineering",
     category: "propulsion",
     tier: 3,
@@ -279,11 +279,11 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "weaponsTech",
-    name: "Mass Drivers",
+    name: "Kinetic Artillery",
     originalName: "Weapons Technology",
-    description: "Electromagnetic accelerators that launch projectiles at significant fractions of light speed.",
+    description: "Electromagnetic accelerators that launch projectiles at relativistic speeds.",
     area: "engineering",
-    category: "materials", // Or Propulsion/Voidcraft
+    category: "materials", 
     tier: 2,
     icon: Swords,
     baseCost: { metal: 800, crystal: 200, deuterium: 0 },
@@ -295,7 +295,7 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "armourTech",
-    name: "Nanocomposite Armor",
+    name: "Nanocomposite Plating",
     originalName: "Armour Technology",
     description: "Hull plating reinforced with carbon nanotubes and diamond lattice.",
     area: "engineering",
@@ -311,9 +311,9 @@ export const TECHS: TechItem[] = [
   },
   {
     id: "ionTech",
-    name: "Ion Disrupters",
+    name: "EMP Weaponry",
     originalName: "Ion Technology",
-    description: "Weapons designed to overload enemy electrical systems.",
+    description: "Weapons designed to overload enemy electrical systems and shields.",
     area: "engineering",
     category: "voidcraft",
     tier: 2,
@@ -323,6 +323,22 @@ export const TECHS: TechItem[] = [
     effects: [
       { name: "Deconstruction", value: "Salvage Speed", perLevel: "+4%" },
       { name: "Unlock", value: "Cruiser", perLevel: "" }
+    ]
+  },
+  {
+    id: "titanConstruction",
+    name: "Megastructure Engineering",
+    originalName: "Titan Tech",
+    description: "The pinnacle of engineering, allowing the construction of moon-sized warships and titans.",
+    area: "engineering",
+    category: "voidcraft",
+    tier: 6,
+    icon: Anchor,
+    baseCost: { metal: 5000000, crystal: 2500000, deuterium: 1000000 },
+    costFactor: 2,
+    effects: [
+        { name: "Unlock", value: "Titan Class Ships", perLevel: "" },
+        { name: "Construction", value: "Capital Build Speed", perLevel: "+5%" }
     ]
   }
 ];

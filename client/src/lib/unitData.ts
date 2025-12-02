@@ -1,10 +1,10 @@
 import { 
   Rocket, Shield, Swords, Box, Crosshair, Zap, 
   Skull, Anchor, Users, Truck, Eye, Disc, 
-  Activity, Target, Cpu, Globe
+  Activity, Target, Cpu, Globe, Hexagon, Pyramid
 } from "lucide-react";
 
-export type UnitClass = "fighter" | "capital" | "civilian" | "defense" | "troop" | "vehicle" | "super";
+export type UnitClass = "fighter" | "capital" | "civilian" | "defense" | "troop" | "vehicle" | "super" | "titan";
 
 export interface UnitItem {
   id: string;
@@ -31,7 +31,7 @@ export const unitData: UnitItem[] = [
   // --- FIGHTERS ---
   {
     id: "lightFighter",
-    name: "Light Fighter",
+    name: "Viper",
     description: "The agile light fighter is the basic unit of any fleet.",
     class: "fighter",
     icon: Swords,
@@ -40,7 +40,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "heavyFighter",
-    name: "Heavy Fighter",
+    name: "Cobra",
     description: "Stronger armour and shields make it a threat to light fighters.",
     class: "fighter",
     icon: Shield,
@@ -49,7 +49,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "interceptor",
-    name: "Interceptor",
+    name: "Wraith",
     description: "Advanced fighter craft designed for space superiority.",
     class: "fighter",
     icon: Rocket,
@@ -60,7 +60,7 @@ export const unitData: UnitItem[] = [
   // --- CAPITAL SHIPS ---
   {
     id: "cruiser",
-    name: "Cruiser",
+    name: "Hammerhead",
     description: "Fast heavily armed ship, excellent against fighter swarms.",
     class: "capital",
     icon: Crosshair,
@@ -69,7 +69,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "battleship",
-    name: "Battleship",
+    name: "Leviathan",
     description: "The backbone of any fleet. Heavy weapons and strong shields.",
     class: "capital",
     icon: Target,
@@ -78,8 +78,8 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "battlecruiser",
-    name: "Battlecruiser",
-    description: "Specialized in hunting other capital ships.",
+    name: "Reaper",
+    description: "Specialized in hunting other capital ships with focused ion beams.",
     class: "capital",
     icon: Zap,
     cost: { metal: 30000, crystal: 40000, deuterium: 15000 },
@@ -87,7 +87,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "destroyer",
-    name: "Destroyer",
+    name: "Obliterator",
     description: "Massive warship designed to destroy light ships and defenses.",
     class: "capital",
     icon: Anchor,
@@ -96,8 +96,8 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "bomber",
-    name: "Bomber",
-    description: "Designed to destroy planetary defenses.",
+    name: "Devastator",
+    description: "Designed to destroy planetary defenses with plasma bombs.",
     class: "capital",
     icon: Disc,
     cost: { metal: 50000, crystal: 25000, deuterium: 15000 },
@@ -116,7 +116,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "deathstar",
-    name: "Death Star",
+    name: "Planet Killer",
     description: "A moon-sized station with a graviton cannon capable of destroying moons.",
     class: "super",
     icon: Skull,
@@ -124,10 +124,39 @@ export const unitData: UnitItem[] = [
     stats: { structure: 9000000, shield: 50000, attack: 200000, cargo: 1000000, speed: 100 }
   },
 
+  // --- TITANS ---
+  {
+    id: "titanPrometheus",
+    name: "Avatar",
+    description: "A massive Titan-class vessel utilizing ancient Terran design. Features a spinal mounted Doomsday Device.",
+    class: "titan",
+    icon: Hexagon,
+    cost: { metal: 10000000, crystal: 8000000, deuterium: 5000000 },
+    stats: { structure: 25000000, shield: 1000000, attack: 5000000, cargo: 500000, speed: 50 }
+  },
+  {
+    id: "titanAtlas",
+    name: "Erebus",
+    description: "The Erebus specializes in fleet support and armor tanking. Its presence boosts fleet morale.",
+    class: "titan",
+    icon: Shield,
+    cost: { metal: 12000000, crystal: 10000000, deuterium: 4000000 },
+    stats: { structure: 40000000, shield: 2000000, attack: 3000000, cargo: 800000, speed: 40 }
+  },
+  {
+    id: "titanHyperion",
+    name: "Ragnarok",
+    description: "A projectile-based Titan platform. Launches MAC rounds the size of skyscrapers.",
+    class: "titan",
+    icon: Pyramid,
+    cost: { metal: 9000000, crystal: 7000000, deuterium: 3000000 },
+    stats: { structure: 20000000, shield: 500000, attack: 8000000, cargo: 200000, speed: 60 }
+  },
+
   // --- CIVILIAN ---
   {
     id: "smallCargo",
-    name: "Small Cargo",
+    name: "Hermes",
     description: "Agile transport ship for small amounts of resources.",
     class: "civilian",
     icon: Box,
@@ -136,7 +165,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "largeCargo",
-    name: "Large Cargo",
+    name: "Hercules",
     description: "Heavy transport ship with massive cargo capacity.",
     class: "civilian",
     icon: Box,
@@ -145,7 +174,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "colonyShip",
-    name: "Colony Ship",
+    name: "Exodus",
     description: "Used to colonize empty planets.",
     class: "civilian",
     icon: Globe,
@@ -154,7 +183,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "recycler",
-    name: "Recycler",
+    name: "Scavenger",
     description: "Harvests resources from debris fields.",
     class: "civilian",
     icon: Truck,
@@ -163,7 +192,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "espionageProbe",
-    name: "Espionage Probe",
+    name: "Seeker Drone",
     description: "Small drone to spy on other planets.",
     class: "civilian",
     icon: Eye,
@@ -212,7 +241,7 @@ export const unitData: UnitItem[] = [
   },
   {
     id: "battleMech",
-    name: "Battle Mech",
+    name: "Titan Mech",
     description: "Heavy assault walker for ground supremacy.",
     class: "vehicle",
     icon: Cpu,

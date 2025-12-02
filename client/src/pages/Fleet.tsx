@@ -115,7 +115,7 @@ export default function Fleet() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {["fighter", "capital", "super", "civilian", "troop", "vehicle"].map(cls => {
+                        {["fighter", "capital", "super", "titan", "civilian", "troop", "vehicle"].map(cls => {
                            const classUnits = Object.keys(units).filter(id => getUnitClass(id) === cls && units[id] > 0);
                            if (classUnits.length === 0) return null;
 

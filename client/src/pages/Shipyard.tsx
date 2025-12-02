@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Box, Gem, Database, Plus, Info, Shield, Sword, Zap, User, Truck, Clock, Hammer } from "lucide-react";
+import { Box, Gem, Database, Plus, Info, Shield, Sword, Zap, User, Truck, Clock, Hammer, Skull, Hexagon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { unitData, UnitItem } from "@/lib/unitData";
 
@@ -126,6 +126,7 @@ export default function Shipyard() {
   const troops = unitData.filter(u => u.class === "troop");
   const vehicles = unitData.filter(u => u.class === "vehicle");
   const supers = unitData.filter(u => u.class === "super");
+  const titans = unitData.filter(u => u.class === "titan");
 
   // Filter queue for units
   const unitQueue = queue.filter(q => q.type === "unit");
@@ -177,6 +178,7 @@ export default function Shipyard() {
             <TabsTrigger value="troops" className="font-orbitron"><User className="w-4 h-4 mr-2" /> Personnel</TabsTrigger>
             <TabsTrigger value="vehicles" className="font-orbitron"><Truck className="w-4 h-4 mr-2" /> Vehicles</TabsTrigger>
             <TabsTrigger value="super" className="font-orbitron text-purple-600"><Zap className="w-4 h-4 mr-2" /> Super Capital</TabsTrigger>
+            <TabsTrigger value="titan" className="font-orbitron text-red-600 font-bold border-red-200 bg-red-50"><Hexagon className="w-4 h-4 mr-2" /> TITANS</TabsTrigger>
           </TabsList>
 
           <div className="mt-6">
@@ -215,6 +217,14 @@ export default function Shipyard() {
              <TabsContent value="super" className="mt-0">
                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                  {supers.map(item => (
+                    <UnitCard key={item.id} item={item} count={units[item.id] || 0} onBuild={buildUnit} resources={resources} />
+                 ))}
+               </div>
+             </TabsContent>
+
+             <TabsContent value="titan" className="mt-0">
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 {titans.map(item => (
                     <UnitCard key={item.id} item={item} count={units[item.id] || 0} onBuild={buildUnit} resources={resources} />
                  ))}
                </div>
