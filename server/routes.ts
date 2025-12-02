@@ -33,6 +33,39 @@ function getUserId(req: Request) {
 }
 
 export function registerRoutes(app: Express) {
+  // ==== GAME STATE ROUTES (aliases for player state) ====
+  
+  app.get("/api/game/state", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const playerState = await storage.getPlayerState(userId);
+      res.json(playerState || { resources: { metal: 1000, crystal: 500, deuterium: 0, energy: 0 }, lastUpdated: new Date() });
+    } catch (error: any) {
+      console.error("Error fetching game state:", error);
+      res.status(500).json({ message: "Failed to fetch game state" });
+    }
+  });
+
+  app.patch("/api/game/state", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const updates = req.body;
+      
+      // Check if player state exists, create if not
+      let playerState = await storage.getPlayerState(userId);
+      if (!playerState) {
+        playerState = await storage.createPlayerState({ userId, resources: updates.resources || {}, ...updates });
+        return res.json(playerState);
+      }
+      
+      const updatedState = await storage.updatePlayerState(userId, updates);
+      res.json(updatedState);
+    } catch (error: any) {
+      console.error("Error updating game state:", error);
+      res.status(500).json({ message: "Failed to update game state" });
+    }
+  });
+
   // ==== PLAYER STATE ROUTES ====
 
   app.get("/api/player/state", isAuthenticated, async (req: Request, res: any) => {
@@ -68,6 +101,18 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error fetching missions:", error);
       res.status(500).json({ message: "Failed to fetch missions" });
+    }
+  });
+
+  app.get("/api/missions/active", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const missions = await storage.getMissionsByUser(userId);
+      const activeMissions = missions.filter((m: any) => m.status === 'active' || m.status === 'in_progress');
+      res.json(activeMissions);
+    } catch (error: any) {
+      console.error("Error fetching active missions:", error);
+      res.status(500).json({ message: "Failed to fetch active missions" });
     }
   });
 
@@ -116,6 +161,18 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error fetching alliances:", error);
       res.status(500).json({ message: "Failed to fetch alliances" });
+    }
+  });
+
+  app.get("/api/alliances/mine", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const allAlliances = await storage.getAllAlliances();
+      const myAlliance = allAlliances.find((a: any) => a.leaderId === userId);
+      res.json(myAlliance || null);
+    } catch (error: any) {
+      console.error("Error fetching user alliance:", error);
+      res.status(500).json({ message: "Failed to fetch user alliance" });
     }
   });
 

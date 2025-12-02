@@ -10,11 +10,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 async function apiRequest(method: string, url: string, data?: any) {
   const headers: Record<string, string> = data ? { 'Content-Type': 'application/json' } : {};
   
-  // Add basic auth if credentials are stored
-  const username = localStorage.getItem('stellar_username');
-  const password = localStorage.getItem('stellar_password');
-  if (username && password) {
-    const encoded = btoa(`${username}:${password}`);
+  const storedUser = localStorage.getItem('stellar_username');
+  const storedPass = localStorage.getItem('stellar_password');
+  if (storedUser && storedPass) {
+    const encoded = btoa(`${storedUser}:${storedPass}`);
     headers['Authorization'] = `Basic ${encoded}`;
   }
   
@@ -372,32 +371,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { data: authUser, isLoading: authLoading } = useQuery({
+  const { data: authUser, isLoading: authLoading, error: authError, isSuccess: authSuccess } = useQuery({
     queryKey: ['/api/auth/user'],
     queryFn: async () => {
-      try {
-        const headers: Record<string, string> = {};
-        
-        // Add basic auth if credentials are stored
-        const username = localStorage.getItem('stellar_username');
-        const password = localStorage.getItem('stellar_password');
-        if (username && password) {
-          const encoded = btoa(`${username}:${password}`);
-          headers['Authorization'] = `Basic ${encoded}`;
-        }
-        
-        const res = await fetch('/api/auth/user', { 
-          credentials: 'include',
-          headers 
-        });
-        if (!res.ok) return null;
-        return res.json();
-      } catch {
+      const headers: Record<string, string> = {};
+      
+      // Add basic auth if credentials are stored
+      const storedUsername = localStorage.getItem('stellar_username');
+      const storedPassword = localStorage.getItem('stellar_password');
+      if (storedUsername && storedPassword) {
+        const encoded = btoa(`${storedUsername}:${storedPassword}`);
+        headers['Authorization'] = `Basic ${encoded}`;
+      }
+      
+      const res = await fetch('/api/auth/user', { 
+        credentials: 'include',
+        headers 
+      });
+      
+      if (!res.ok) {
+        // Return null for auth failures instead of throwing
         return null;
       }
+      return res.json();
     },
-    retry: 3,
-    retryDelay: 500,
     staleTime: 60000
   });
 
@@ -1150,8 +1147,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Include initialization phase in loading state to prevent brief flash of Auth page
-  const isLoading = authLoading || gameStateLoading || (authUser && serverGameState && !isInitialized);
+  // Simple loading state: only show loading during initial auth check or when auth succeeded but game state pending
+  const isLoading = authLoading || (authUser && (gameStateLoading || !serverGameState || !isInitialized));
 
   return (
     <GameContext.Provider value={{ 

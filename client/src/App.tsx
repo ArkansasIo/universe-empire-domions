@@ -125,7 +125,6 @@ function LoadingSplash() {
 function RouterContent() {
   const { isLoggedIn, needsSetup, isLoading } = useGame();
 
-  // Show loading splash only while queries are in progress
   if (isLoading) {
     return <LoadingSplash />;
   }
