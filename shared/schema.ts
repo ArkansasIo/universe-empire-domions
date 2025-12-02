@@ -936,7 +936,6 @@ export const userBadges = pgTable("user_badges", {
   badgeName: varchar("badge_name").notNull(),
   badgeDescription: text("badge_description"),
   earnedAt: timestamp("earned_at").defaultNow(),
-  progressPercent: integer("progress_percent").default(100),
   rarity: varchar("rarity"),
 });
 
