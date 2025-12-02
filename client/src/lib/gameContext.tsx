@@ -145,6 +145,9 @@ interface GameState {
   isLoggedIn: boolean;
   needsSetup: boolean;
   username: string;
+  totalTurns: number;
+  currentTurns: number;
+  spendTurns: (amount: number) => boolean;
   login: () => void;
   logout: () => void;
   isLoading: boolean;
@@ -283,6 +286,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        addEvent("Sale Successful", `Sold item ${itemId}`, "success");
     }
   };
+
+  const [totalTurns, setTotalTurns] = useState(0);
+  const [currentTurns, setCurrentTurns] = useState(0);
+  const lastTurnUpdateRef = useRef(Date.now());
 
   const [commander, setCommander] = useState<CommanderState>({
     name: "Commander",
@@ -465,6 +472,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setPlanetName(state.planetName || "Homeworld");
       setCoordinates(state.coordinates || "1:1:1");
       setUsername(authUser.firstName || authUser.email?.split('@')[0] || 'Commander');
+      setTotalTurns(state.totalTurns || 0);
+      setCurrentTurns(state.currentTurns || 0);
       setIsLoggedIn(true);
       setNeedsSetup(!state.setupComplete);
       setIsInitialized(true);
@@ -743,6 +752,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
          addEvent(ev.title, ev.desc, ev.type as any);
       }
 
+      // 6. Turn generation (3-5 turns per minute = 1 turn every 12-20 seconds)
+      const now = Date.now();
+      const timeSinceLastTurn = now - lastTurnUpdateRef.current;
+      const turnInterval = Math.random() * 8000 + 12000; // 12-20 seconds for 3-5 turns per minute
+      
+      if (timeSinceLastTurn >= turnInterval) {
+        setTotalTurns(prev => prev + 1);
+        setCurrentTurns(prev => prev + 1);
+        lastTurnUpdateRef.current = now;
+        addEvent("Turn Generated", "A new turn has arrived!", "info");
+      }
+
     }, 1000);
 
     return () => clearInterval(interval);
@@ -761,6 +782,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const updateBuilding = (building: keyof Buildings, name: string, time: number = 5000) => {
     const costMetal = 100 * Math.pow(2, buildings[building]);
     const costCrystal = 50 * Math.pow(2, buildings[building]);
+    const turnCost = 2; // 2 turns per building
+
+    if (!spendTurns(turnCost)) return;
 
     if (resources.metal >= costMetal && resources.crystal >= costCrystal) {
       setResources(prev => ({
@@ -776,11 +800,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         type: "building"
       }]);
     } else {
+      setCurrentTurns(prev => prev + turnCost);
       alert("Not enough resources!");
     }
   };
 
   const updateResearch = (tech: string, name: string, time: number = 5000) => {
+     const turnCost = 3; // 3 turns per research
+     if (!spendTurns(turnCost)) return;
+     
      const adjustedTime = time / config.gameSpeed;
      setQueue(prev => [...prev, {
         id: tech,
@@ -791,6 +819,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const buildUnit = (unitId: string, amount: number, name: string, time: number = 2000) => {
+    const turnCost = amount; // 1 turn per unit
+    if (!spendTurns(turnCost)) return;
+    
     const adjustedTime = time / config.gameSpeed;
     setQueue(prev => [...prev, {
       id: unitId,
@@ -914,6 +945,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const setTaxRate = (rate: number) => {
      setGovernment(prev => ({ ...prev, taxRate: rate }));
+  };
+
+  const spendTurns = (amount: number): boolean => {
+    if (currentTurns >= amount) {
+      setCurrentTurns(prev => prev - amount);
+      addEvent("Turns Spent", `Used ${amount} turn(s) for action`, "info");
+      return true;
+    } else {
+      addEvent("Insufficient Turns", `Need ${amount} turn(s), have ${currentTurns}`, "warning");
+      return false;
+    }
   };
 
   const dispatchFleet = (missionData: Omit<Mission, "id" | "status" | "returnTime">) => {

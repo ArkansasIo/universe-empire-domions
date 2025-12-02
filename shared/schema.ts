@@ -82,6 +82,11 @@ export const playerStates = pgTable("player_states", {
   empireLevel: integer("empire_level").notNull().default(1),
   kardashevProgress: jsonb("kardashev_progress").notNull().default({ metal: 0, crystal: 0, deuterium: 0, research: 0 }),
   
+  // Turn system (3-5 turns per minute)
+  totalTurns: integer("total_turns").notNull().default(0),
+  currentTurns: integer("current_turns").notNull().default(0),
+  lastTurnUpdate: timestamp("last_turn_update").defaultNow(),
+  
   // Last resource update timestamp
   lastResourceUpdate: timestamp("last_resource_update").defaultNow(),
   
