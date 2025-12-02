@@ -46,3 +46,23 @@ waitForPort = 5000
 [agent]
 mockupState = "FULLSTACK"
 integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:1.0.0"]
+
+
+
+Add inthe .replit files [Start application]
+run = "npm run dev"
+
+[backend-console]
+run = "tsx server/console/index.ts"
+
+[db-monitor]
+run = "tsx server/console/database-monitor.ts"
+
+[auth-monitor]
+run = "tsx server/console/auth-monitor.ts"
+
+[performance-monitor]
+run = "tsx server/console/performance-monitor.ts"
+
+[log-export]
+run = "tsx server/console/log-export.ts"
