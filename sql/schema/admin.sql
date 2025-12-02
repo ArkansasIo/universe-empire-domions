@@ -262,3 +262,119 @@ CREATE INDEX idx_audit_admin ON admin_audit_log(admin_id);
 CREATE INDEX idx_audit_category ON admin_audit_log(action_category);
 CREATE INDEX idx_audit_timestamp ON admin_audit_log(created_at);
 CREATE INDEX idx_audit_target ON admin_audit_log(target_user_id);
+
+-- ========== USER PERMISSION SYSTEM ==========
+
+-- User tiers/levels
+CREATE TABLE IF NOT EXISTS user_tiers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tier_key VARCHAR UNIQUE NOT NULL,
+  tier_name VARCHAR NOT NULL,
+  tier_level INTEGER NOT NULL,
+  description TEXT,
+  permissions JSONB NOT NULL DEFAULT '[]',
+  restrictions JSONB NOT NULL DEFAULT '{}',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_tiers_level ON user_tiers(tier_level);
+CREATE INDEX idx_user_tiers_active ON user_tiers(is_active);
+
+-- User account status and restrictions
+CREATE TABLE IF NOT EXISTS user_account_status (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status VARCHAR DEFAULT 'active',
+  tier_id UUID NOT NULL REFERENCES user_tiers(id),
+  permissions JSONB NOT NULL DEFAULT '[]',
+  restrictions JSONB NOT NULL DEFAULT '{}',
+  flags JSONB DEFAULT '{}',
+  last_status_change TIMESTAMP,
+  status_reason VARCHAR,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_status_status ON user_account_status(status);
+CREATE INDEX idx_user_status_tier ON user_account_status(tier_id);
+
+-- User badges and achievements
+CREATE TABLE IF NOT EXISTS user_badges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  badge_key VARCHAR NOT NULL,
+  badge_name VARCHAR NOT NULL,
+  badge_description TEXT,
+  earned_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_badges_user ON user_badges(user_id);
+CREATE INDEX idx_badges_key ON user_badges(badge_key);
+
+-- User permissions matrix (granular control)
+CREATE TABLE IF NOT EXISTS user_permissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  permission VARCHAR NOT NULL,
+  allowed BOOLEAN DEFAULT true,
+  granted_by_admin_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+  granted_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP,
+  reason VARCHAR,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_permissions_user ON user_permissions(user_id);
+CREATE INDEX idx_permissions_name ON user_permissions(permission);
+CREATE INDEX idx_permissions_expires ON user_permissions(expires_at);
+CREATE UNIQUE INDEX idx_permissions_user_perm ON user_permissions(user_id, permission);
+
+-- User restrictions and cooldowns
+CREATE TABLE IF NOT EXISTS user_restrictions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  restriction_type VARCHAR NOT NULL,
+  reason VARCHAR NOT NULL,
+  severity VARCHAR DEFAULT 'warning',
+  imposed_by_admin_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+  imposed_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP,
+  auto_lift BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_restrictions_user ON user_restrictions(user_id);
+CREATE INDEX idx_restrictions_type ON user_restrictions(restriction_type);
+CREATE INDEX idx_restrictions_active ON user_restrictions(expires_at) WHERE expires_at IS NULL;
+
+-- User activity log (for tracking behavior and progression)
+CREATE TABLE IF NOT EXISTS user_activity_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  activity_type VARCHAR NOT NULL,
+  activity_data JSONB,
+  ip_address VARCHAR,
+  user_agent VARCHAR,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_activity_user ON user_activity_log(user_id);
+CREATE INDEX idx_activity_type ON user_activity_log(activity_type);
+CREATE INDEX idx_activity_timestamp ON user_activity_log(created_at);
+
+-- User rate limits and cooldowns
+CREATE TABLE IF NOT EXISTS user_rate_limits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  limit_type VARCHAR NOT NULL,
+  count INTEGER DEFAULT 0,
+  reset_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_rate_limits_user ON user_rate_limits(user_id);
+CREATE INDEX idx_rate_limits_type ON user_rate_limits(limit_type);
+CREATE INDEX idx_rate_limits_reset ON user_rate_limits(reset_at);

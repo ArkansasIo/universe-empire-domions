@@ -262,6 +262,102 @@ export const supportTickets = pgTable("support_tickets", {
 
 export type SupportTicket = typeof supportTickets.$inferSelect;
 
+// User permission system tables
+export const userTiers = pgTable("user_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tierKey: varchar("tier_key").unique().notNull(),
+  tierName: varchar("tier_name").notNull(),
+  tierLevel: integer("tier_level").notNull(),
+  description: text("description"),
+  permissions: jsonb("permissions").notNull().default([]),
+  restrictions: jsonb("restrictions").notNull().default({}),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type UserTier = typeof userTiers.$inferSelect;
+
+export const userAccountStatus = pgTable("user_account_status", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").unique().references(() => users.id, { onDelete: "cascade" }),
+  status: varchar("status").default("active"), // active, restricted, muted, suspended, banned
+  tierId: varchar("tier_id").notNull().references(() => userTiers.id),
+  permissions: jsonb("permissions").notNull().default([]),
+  restrictions: jsonb("restrictions").notNull().default({}),
+  flags: jsonb("flags").default({}),
+  lastStatusChange: timestamp("last_status_change"),
+  statusReason: varchar("status_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type UserAccountStatus = typeof userAccountStatus.$inferSelect;
+
+export const userBadges = pgTable("user_badges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  badgeKey: varchar("badge_key").notNull(),
+  badgeName: varchar("badge_name").notNull(),
+  badgeDescription: text("badge_description"),
+  earnedAt: timestamp("earned_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type UserBadge = typeof userBadges.$inferSelect;
+
+export const userPermissions = pgTable("user_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  permission: varchar("permission").notNull(),
+  allowed: boolean("allowed").default(true),
+  grantedByAdminId: varchar("granted_by_admin_id").references(() => users.id, { onDelete: "set null" }),
+  grantedAt: timestamp("granted_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  reason: varchar("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type UserPermission = typeof userPermissions.$inferSelect;
+
+export const userRestrictions = pgTable("user_restrictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  restrictionType: varchar("restriction_type").notNull(),
+  reason: varchar("reason").notNull(),
+  severity: varchar("severity").default("warning"), // warning, moderate, severe
+  imposedByAdminId: varchar("imposed_by_admin_id").references(() => users.id, { onDelete: "set null" }),
+  imposedAt: timestamp("imposed_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  autoLift: boolean("auto_lift").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type UserRestriction = typeof userRestrictions.$inferSelect;
+
+export const userActivityLog = pgTable("user_activity_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  activityType: varchar("activity_type").notNull(),
+  activityData: jsonb("activity_data"),
+  ipAddress: varchar("ip_address"),
+  userAgent: varchar("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type UserActivityLog = typeof userActivityLog.$inferSelect;
+
+export const userRateLimits = pgTable("user_rate_limits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  limitType: varchar("limit_type").notNull(),
+  count: integer("count").default(0),
+  resetAt: timestamp("reset_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type UserRateLimit = typeof userRateLimits.$inferSelect;
+
 // Messages (player communications, battle reports, espionage reports)
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
