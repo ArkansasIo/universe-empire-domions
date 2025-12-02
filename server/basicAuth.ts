@@ -147,6 +147,40 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { username, email } = req.body;
+
+      if (!username || !email) {
+        return res.status(400).json({ message: "Username and email required" });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      if (user.email !== email) {
+        return res.status(401).json({ message: "Email does not match account" });
+      }
+
+      const temporaryPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const passwordHash = hashPassword(temporaryPassword);
+      
+      await storage.updateUser(user.id, { passwordHash });
+      
+      logger.info("AUTH", `Password reset requested for user: ${username}`);
+      res.json({ 
+        message: "Password has been reset", 
+        temporaryPassword: temporaryPassword,
+        instructions: "Use the temporary password to login, then change it in your account settings"
+      });
+    } catch (error) {
+      logger.error("AUTH", "Password reset error", {}, error);
+      res.status(500).json({ message: "Password reset failed" });
+    }
+  });
+
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy((err) => {
       if (err) return res.status(500).json({ message: "Logout failed" });

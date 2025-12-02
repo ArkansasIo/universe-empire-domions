@@ -9,12 +9,15 @@ import { getPlanetDetails } from "@/lib/planetUtils";
 import Navigation from "./Navigation";
 
 export default function Overview() {
-  const { planetName, resources, buildings, events, coordinates } = useGame();
+  const { planetName, resources, buildings, events, coordinates, username } = useGame();
   
   // Parse coordinates to get a seed for planet generation
   const coordParts = coordinates.split(':').map(p => parseInt(p) || 0);
   const planetSeed = (coordParts[0] || 1) * 10000 + (coordParts[1] || 1) * 1000 + (coordParts[2] || 100) * 100 + (coordParts[3] || 3);
   const planetInfo = getPlanetDetails(planetSeed);
+  
+  // Get username from localStorage if not in context
+  const displayUsername = username || localStorage.getItem("stellar_username") || "Commander";
 
   return (
     <GameLayout>
@@ -26,6 +29,7 @@ export default function Overview() {
           <div>
             <h2 className="text-3xl font-orbitron font-bold text-slate-900">Command Center</h2>
             <p className="text-muted-foreground font-rajdhani text-lg">{planetName} • {coordinates}</p>
+            <p className="text-sm text-slate-600 mt-1" data-testid="text-commander-name">Commander: {displayUsername}</p>
           </div>
           <div className="text-right">
              <div className="text-sm text-primary font-mono">SERVER TIME</div>
