@@ -1,19 +1,60 @@
 -- Admin System Schema
 -- Tables for administrative control, logging, and configuration
 
--- Admin users with roles and permissions
-CREATE TABLE IF NOT EXISTS admin_users (
+-- Admin ranks (organizational hierarchy)
+CREATE TABLE IF NOT EXISTS admin_ranks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id VARCHAR UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-  role VARCHAR NOT NULL DEFAULT 'moderator',
+  rank_key VARCHAR UNIQUE NOT NULL,
+  rank_name VARCHAR NOT NULL,
+  rank_title VARCHAR NOT NULL,
+  permission_level INTEGER NOT NULL,
+  description TEXT,
   permissions JSONB NOT NULL DEFAULT '[]',
+  inherits_from_level INTEGER,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_admin_users_role ON admin_users(role);
+CREATE INDEX idx_admin_ranks_level ON admin_ranks(permission_level);
+CREATE INDEX idx_admin_ranks_active ON admin_ranks(is_active);
+
+-- Admin departments
+CREATE TABLE IF NOT EXISTS admin_departments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  department_key VARCHAR UNIQUE NOT NULL,
+  department_name VARCHAR NOT NULL,
+  description TEXT,
+  permissions JSONB NOT NULL DEFAULT '[]',
+  department_head_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_departments_key ON admin_departments(department_key);
+
+-- Admin users with ranks and permissions
+CREATE TABLE IF NOT EXISTS admin_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  rank_id UUID NOT NULL REFERENCES admin_ranks(id),
+  department_id UUID REFERENCES admin_departments(id) ON DELETE SET NULL,
+  role VARCHAR NOT NULL DEFAULT 'moderator',
+  permissions JSONB NOT NULL DEFAULT '[]',
+  custom_permissions JSONB NOT NULL DEFAULT '[]',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  join_date TIMESTAMP DEFAULT NOW(),
+  last_active TIMESTAMP,
+  notes TEXT,
+  created_by_admin_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_admin_users_rank ON admin_users(rank_id);
+CREATE INDEX idx_admin_users_department ON admin_users(department_id);
 CREATE INDEX idx_admin_users_active ON admin_users(is_active);
+CREATE INDEX idx_admin_users_user_id ON admin_users(user_id);
 
 -- Admin action logs (audit trail)
 CREATE TABLE IF NOT EXISTS admin_logs (
@@ -158,3 +199,66 @@ CREATE TABLE IF NOT EXISTS support_tickets (
 CREATE INDEX idx_tickets_user_id ON support_tickets(user_id);
 CREATE INDEX idx_tickets_status ON support_tickets(status);
 CREATE INDEX idx_tickets_assigned_admin ON support_tickets(assigned_admin_id);
+
+-- Admin team members with assignment tracking
+CREATE TABLE IF NOT EXISTS admin_team_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  rank_id UUID NOT NULL REFERENCES admin_ranks(id),
+  department_id UUID REFERENCES admin_departments(id) ON DELETE SET NULL,
+  status VARCHAR DEFAULT 'active',
+  assignment_date TIMESTAMP DEFAULT NOW(),
+  promoted_at TIMESTAMP,
+  promoted_by_admin_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+  performance_rating INTEGER,
+  performance_notes TEXT,
+  suspension_until TIMESTAMP,
+  suspension_reason VARCHAR,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_team_members_admin ON admin_team_members(admin_id);
+CREATE INDEX idx_team_members_rank ON admin_team_members(rank_id);
+CREATE INDEX idx_team_members_department ON admin_team_members(department_id);
+CREATE INDEX idx_team_members_status ON admin_team_members(status);
+
+-- Admin access control and permissions matrix
+CREATE TABLE IF NOT EXISTS admin_permissions_matrix (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rank_id UUID NOT NULL REFERENCES admin_ranks(id),
+  permission VARCHAR NOT NULL,
+  allowed BOOLEAN DEFAULT true,
+  restrictions JSONB,
+  granted_at TIMESTAMP DEFAULT NOW(),
+  granted_by_admin_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+  expires_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_permissions_rank ON admin_permissions_matrix(rank_id);
+CREATE INDEX idx_permissions_name ON admin_permissions_matrix(permission);
+CREATE UNIQUE INDEX idx_permissions_rank_perm ON admin_permissions_matrix(rank_id, permission);
+
+-- Admin action audit trail (detailed logging)
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  rank_id UUID REFERENCES admin_ranks(id),
+  action_category VARCHAR NOT NULL,
+  action_type VARCHAR NOT NULL,
+  target_user_id VARCHAR REFERENCES users(id) ON DELETE CASCADE,
+  target_type VARCHAR,
+  description TEXT,
+  changes_made JSONB,
+  result VARCHAR,
+  error_message TEXT,
+  ip_address VARCHAR,
+  user_agent VARCHAR,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_admin ON admin_audit_log(admin_id);
+CREATE INDEX idx_audit_category ON admin_audit_log(action_category);
+CREATE INDEX idx_audit_timestamp ON admin_audit_log(created_at);
+CREATE INDEX idx_audit_target ON admin_audit_log(target_user_id);
