@@ -29,7 +29,7 @@ Preferred communication style: Simple, everyday language.
 - **Primary Database**: PostgreSQL via Neon.
 - **ORM**: Drizzle with Zod for schema validation.
 - **Schema Design**: Heavily denormalized, utilizing JSONB columns for `player_states` to store complete game state (resources, buildings, research, units) as single records with nested objects. This optimizes for read-heavy queries and simplifies API interactions.
-- **Key Tables**: `users`, `player_states`, `missions`, `messages`, `alliances`, `market_orders`, `queue_items`, `sessions`.
+- **Key Tables**: `users`, `player_states`, `missions`, `messages`, `alliances`, `market_orders`, `auction_listings`, `auction_bids`, `queue_items`, `sessions`.
 
 ## Configuration System
 - **Game Configuration**: `shared/config/gameConfig.ts` for resource rates, costs, combat stats, tech progression, market economy, Kardashev scale, and race bonuses.
@@ -62,6 +62,8 @@ Preferred communication style: Simple, everyday language.
 - **Currency System**: Three-tier currency economy (Silver, Gold, Platinum) with conversion rates. 20+ uses including trading, construction acceleration, research speedup, equipment purchase, alliance management, cosmetics, battle pass, premium features, and espionage theft mechanics. Complete transaction logging, wealth tracking, and dynamic market prices.
 - **Empire Progression System**: Comprehensive leveling system (1-999), rank progression (S+ to E), tier system with bonuses, title unlocks, and combat power calculation. Includes prestige system for hard resets with permanent multipliers, technology/research level tracking, milestone achievements, leaderboards, and experience logging.
 - **Universe Structure**: Multi-level galactic hierarchy with Galaxies → Quadrants → Sectors → Systems → Planets. Planets divided into Continents → Countries → Territories, with mineable Resource Fields generating Metal/Crystal/Deuterium. Player Colonies on planets manage populations and resources. Complete mining operations system with extraction units and depletion tracking.
+- **Turn System**: 6 turns per minute with 24-hour offline accumulation cap, max 1000 current turns, server-side accrual with atomic spending operations.
+- **Auction House**: Player-to-player trading system integrated into Galactic Trade Network. Features include item listings with rarity tiers (common to legendary), starting price and optional buyout, bid increments, duration settings (6-72 hours), bid history tracking, search/filter/sort functionality, and real-time auction status.
 
 # External Dependencies
 

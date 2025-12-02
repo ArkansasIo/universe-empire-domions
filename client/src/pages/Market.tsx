@@ -7,13 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { MARKET_ITEMS, VENDORS, MarketItem, Vendor } from "@/lib/marketData";
 import { 
   ShoppingBag, AlertTriangle, Zap, User, Shield, Box, Gem, Database, 
   ArrowRight, ArrowLeft, RefreshCw, TrendingUp, TrendingDown, History,
-  ArrowUpDown, Clock, Coins, BarChart3
+  ArrowUpDown, Clock, Coins, BarChart3, Gavel, Search, Plus, Timer, Tag,
+  Package, Crown, Sparkles, X
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 const ItemCard = ({ 
@@ -115,6 +120,552 @@ const ItemCard = ({
          )}
       </CardFooter>
     </Card>
+  );
+};
+
+// Auction House types
+interface AuctionListing {
+  id: string;
+  sellerId: string;
+  sellerName: string;
+  itemType: string;
+  itemId: string;
+  itemName: string;
+  itemDescription?: string;
+  itemRarity: string;
+  itemData?: any;
+  quantity: number;
+  startingPrice: number;
+  buyoutPrice?: number;
+  currentBid: number;
+  bidIncrement: number;
+  currentBidderId?: string;
+  currentBidderName?: string;
+  bidCount: number;
+  duration: number;
+  expiresAt: string;
+  status: string;
+  createdAt: string;
+}
+
+const RARITY_COLORS: Record<string, string> = {
+  common: "border-slate-300 bg-slate-50",
+  uncommon: "border-green-400 bg-green-50",
+  rare: "border-blue-400 bg-blue-50",
+  epic: "border-purple-400 bg-purple-50",
+  legendary: "border-amber-400 bg-amber-50"
+};
+
+const RARITY_BADGE_COLORS: Record<string, string> = {
+  common: "bg-slate-100 text-slate-700",
+  uncommon: "bg-green-100 text-green-700",
+  rare: "bg-blue-100 text-blue-700",
+  epic: "bg-purple-100 text-purple-700",
+  legendary: "bg-amber-100 text-amber-700"
+};
+
+const formatTimeRemaining = (expiresAt: string) => {
+  const now = new Date();
+  const expires = new Date(expiresAt);
+  const diff = expires.getTime() - now.getTime();
+  
+  if (diff <= 0) return "Expired";
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (hours > 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+  }
+  return `${hours}h ${minutes}m`;
+};
+
+const AuctionCard = ({ 
+  auction, 
+  onBid, 
+  onBuyout,
+  isOwn 
+}: { 
+  auction: AuctionListing;
+  onBid: (id: string, amount: number) => void;
+  onBuyout: (id: string) => void;
+  isOwn: boolean;
+}) => {
+  const [bidAmount, setBidAmount] = useState(
+    (auction.currentBid || auction.startingPrice) + auction.bidIncrement
+  );
+  const currentPrice = auction.currentBid || auction.startingPrice;
+  const timeLeft = formatTimeRemaining(auction.expiresAt);
+  const isExpired = timeLeft === "Expired";
+
+  return (
+    <Card className={cn(
+      "group overflow-hidden transition-all hover:shadow-lg border-2",
+      RARITY_COLORS[auction.itemRarity] || RARITY_COLORS.common
+    )} data-testid={`auction-card-${auction.id}`}>
+      <div className="h-20 relative border-b border-border/10 bg-white/50 flex items-center justify-center">
+        <Package className="w-10 h-10 text-slate-400" />
+        <div className="absolute top-2 right-2">
+          <Badge className={cn("text-[10px]", RARITY_BADGE_COLORS[auction.itemRarity])}>
+            {auction.itemRarity.toUpperCase()}
+          </Badge>
+        </div>
+        {auction.quantity > 1 && (
+          <div className="absolute bottom-2 right-2 text-xs font-mono bg-slate-800 text-white px-2 py-0.5 rounded">
+            x{auction.quantity}
+          </div>
+        )}
+      </div>
+
+      <CardHeader className="pb-1 pt-3">
+        <CardTitle className="text-sm font-orbitron truncate flex items-center gap-2">
+          {auction.itemName}
+          {auction.itemRarity === "legendary" && <Crown className="w-3 h-3 text-amber-500" />}
+        </CardTitle>
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          <span className="uppercase tracking-wide">{auction.itemType}</span>
+          <span>•</span>
+          <span>by {auction.sellerName}</span>
+        </div>
+      </CardHeader>
+
+      <CardContent className="pb-2 text-xs">
+        {auction.itemDescription && (
+          <p className="text-slate-500 line-clamp-2 mb-2">{auction.itemDescription}</p>
+        )}
+        
+        <div className="space-y-1">
+          <div className="flex justify-between">
+            <span className="text-slate-500">Current Bid</span>
+            <span className="font-mono font-bold text-slate-900">{currentPrice.toLocaleString()} <Box className="w-3 h-3 inline text-slate-400" /></span>
+          </div>
+          {auction.buyoutPrice && (
+            <div className="flex justify-between">
+              <span className="text-slate-500">Buyout</span>
+              <span className="font-mono text-amber-600">{auction.buyoutPrice.toLocaleString()} <Box className="w-3 h-3 inline text-amber-400" /></span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-slate-500 flex items-center gap-1"><Timer className="w-3 h-3" /> Time Left</span>
+            <span className={cn("font-mono", isExpired ? "text-red-500" : "text-slate-700")}>{timeLeft}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">Bids</span>
+            <span className="font-mono text-slate-700">{auction.bidCount}</span>
+          </div>
+        </div>
+      </CardContent>
+
+      <CardFooter className="pt-2 pb-3 flex-col gap-2">
+        {!isOwn && !isExpired && (
+          <>
+            <div className="flex gap-2 w-full">
+              <Input
+                type="number"
+                value={bidAmount}
+                onChange={(e) => setBidAmount(Number(e.target.value))}
+                className="h-8 text-xs font-mono flex-1"
+                min={currentPrice + auction.bidIncrement}
+                data-testid={`input-bid-${auction.id}`}
+              />
+              <Button
+                size="sm"
+                className="h-8 text-xs font-orbitron"
+                onClick={() => onBid(auction.id, bidAmount)}
+                data-testid={`button-bid-${auction.id}`}
+              >
+                <Gavel className="w-3 h-3 mr-1" /> BID
+              </Button>
+            </div>
+            {auction.buyoutPrice && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-8 text-xs font-orbitron border-amber-400 text-amber-700 hover:bg-amber-50"
+                onClick={() => onBuyout(auction.id)}
+                data-testid={`button-buyout-${auction.id}`}
+              >
+                <Sparkles className="w-3 h-3 mr-1" /> BUYOUT {auction.buyoutPrice.toLocaleString()}
+              </Button>
+            )}
+          </>
+        )}
+        {isOwn && (
+          <Badge variant="secondary" className="w-full justify-center py-1">Your Listing</Badge>
+        )}
+        {isExpired && !isOwn && (
+          <Badge variant="destructive" className="w-full justify-center py-1">Auction Ended</Badge>
+        )}
+      </CardFooter>
+    </Card>
+  );
+};
+
+const AuctionHouseContent = () => {
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [itemTypeFilter, setItemTypeFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newAuction, setNewAuction] = useState({
+    itemType: "equipment",
+    itemId: "",
+    itemName: "",
+    itemDescription: "",
+    itemRarity: "common",
+    quantity: 1,
+    startingPrice: 100,
+    buyoutPrice: 0,
+    bidIncrement: 10,
+    duration: 24
+  });
+
+  const { data: auctions = [], isLoading } = useQuery({
+    queryKey: ['/api/auctions', itemTypeFilter, searchTerm, sortBy],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (itemTypeFilter !== "all") params.append("itemType", itemTypeFilter);
+      if (searchTerm) params.append("search", searchTerm);
+      if (sortBy) params.append("sortBy", sortBy);
+      const res = await fetch(`/api/auctions?${params}`, { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
+  const { data: myListings = [] } = useQuery({
+    queryKey: ['/api/auctions/user/listings'],
+    queryFn: async () => {
+      const res = await fetch('/api/auctions/user/listings', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
+  const { data: myBids = [] } = useQuery({
+    queryKey: ['/api/auctions/user/bids'],
+    queryFn: async () => {
+      const res = await fetch('/api/auctions/user/bids', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof newAuction) => {
+      const res = await fetch('/api/auctions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create auction');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auctions/user/listings'] });
+      setCreateDialogOpen(false);
+      setNewAuction({
+        itemType: "equipment",
+        itemId: "",
+        itemName: "",
+        itemDescription: "",
+        itemRarity: "common",
+        quantity: 1,
+        startingPrice: 100,
+        buyoutPrice: 0,
+        bidIncrement: 10,
+        duration: 24
+      });
+    }
+  });
+
+  const bidMutation = useMutation({
+    mutationFn: async ({ auctionId, bidAmount }: { auctionId: string; bidAmount: number }) => {
+      const res = await fetch(`/api/auctions/${auctionId}/bid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ bidAmount })
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auctions/user/bids'] });
+    }
+  });
+
+  const buyoutMutation = useMutation({
+    mutationFn: async (auctionId: string) => {
+      const res = await fetch(`/api/auctions/${auctionId}/buyout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
+    }
+  });
+
+  const myListingIds = myListings.map((a: AuctionListing) => a.id);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-lg border border-slate-200">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search auctions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+              data-testid="input-auction-search"
+            />
+          </div>
+          <Select value={itemTypeFilter} onValueChange={setItemTypeFilter}>
+            <SelectTrigger className="w-40" data-testid="select-item-type">
+              <SelectValue placeholder="Item Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="equipment">Equipment</SelectItem>
+              <SelectItem value="material">Materials</SelectItem>
+              <SelectItem value="resource">Resources</SelectItem>
+              <SelectItem value="blueprint">Blueprints</SelectItem>
+              <SelectItem value="artifact">Artifacts</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-40" data-testid="select-sort-by">
+              <SelectValue placeholder="Sort By" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest First</SelectItem>
+              <SelectItem value="ending_soon">Ending Soon</SelectItem>
+              <SelectItem value="price_low">Price: Low to High</SelectItem>
+              <SelectItem value="price_high">Price: High to Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="font-orbitron" data-testid="button-create-auction">
+              <Plus className="w-4 h-4 mr-2" /> Create Auction
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="font-orbitron">Create New Auction</DialogTitle>
+              <DialogDescription>
+                List an item for other players to bid on.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Item Type</Label>
+                  <Select value={newAuction.itemType} onValueChange={(v) => setNewAuction({...newAuction, itemType: v})}>
+                    <SelectTrigger data-testid="select-new-item-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="equipment">Equipment</SelectItem>
+                      <SelectItem value="material">Material</SelectItem>
+                      <SelectItem value="resource">Resource</SelectItem>
+                      <SelectItem value="blueprint">Blueprint</SelectItem>
+                      <SelectItem value="artifact">Artifact</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Rarity</Label>
+                  <Select value={newAuction.itemRarity} onValueChange={(v) => setNewAuction({...newAuction, itemRarity: v})}>
+                    <SelectTrigger data-testid="select-new-rarity">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="common">Common</SelectItem>
+                      <SelectItem value="uncommon">Uncommon</SelectItem>
+                      <SelectItem value="rare">Rare</SelectItem>
+                      <SelectItem value="epic">Epic</SelectItem>
+                      <SelectItem value="legendary">Legendary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Item Name</Label>
+                <Input
+                  value={newAuction.itemName}
+                  onChange={(e) => setNewAuction({...newAuction, itemName: e.target.value, itemId: e.target.value.toLowerCase().replace(/\s+/g, '_')})}
+                  placeholder="e.g. Ancient Plasma Sword"
+                  data-testid="input-new-item-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  value={newAuction.itemDescription}
+                  onChange={(e) => setNewAuction({...newAuction, itemDescription: e.target.value})}
+                  placeholder="Brief description of the item"
+                  data-testid="input-new-description"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Starting Price</Label>
+                  <Input
+                    type="number"
+                    value={newAuction.startingPrice}
+                    onChange={(e) => setNewAuction({...newAuction, startingPrice: Number(e.target.value)})}
+                    min={1}
+                    data-testid="input-new-starting-price"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Buyout Price</Label>
+                  <Input
+                    type="number"
+                    value={newAuction.buyoutPrice}
+                    onChange={(e) => setNewAuction({...newAuction, buyoutPrice: Number(e.target.value)})}
+                    min={0}
+                    placeholder="0 = no buyout"
+                    data-testid="input-new-buyout"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Duration (hrs)</Label>
+                  <Select value={String(newAuction.duration)} onValueChange={(v) => setNewAuction({...newAuction, duration: Number(v)})}>
+                    <SelectTrigger data-testid="select-new-duration">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="6">6 hours</SelectItem>
+                      <SelectItem value="12">12 hours</SelectItem>
+                      <SelectItem value="24">24 hours</SelectItem>
+                      <SelectItem value="48">48 hours</SelectItem>
+                      <SelectItem value="72">72 hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={() => createMutation.mutate(newAuction)}
+                disabled={!newAuction.itemName || newAuction.startingPrice <= 0}
+                data-testid="button-confirm-create"
+              >
+                Create Auction
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Gavel className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-xs text-blue-600 uppercase">Active Auctions</div>
+                <div className="text-xl font-orbitron font-bold text-blue-900">{auctions.length}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                <Tag className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <div className="text-xs text-green-600 uppercase">My Listings</div>
+                <div className="text-xl font-orbitron font-bold text-green-900">{myListings.length}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
+                <Coins className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <div className="text-xs text-purple-600 uppercase">My Active Bids</div>
+                <div className="text-xl font-orbitron font-bold text-purple-900">{myBids.length}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <Timer className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <div className="text-xs text-amber-600 uppercase">Ending Soon</div>
+                <div className="text-xl font-orbitron font-bold text-amber-900">
+                  {auctions.filter((a: AuctionListing) => {
+                    const hoursLeft = (new Date(a.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60);
+                    return hoursLeft > 0 && hoursLeft < 6;
+                  }).length}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-12 text-slate-400">
+          <RefreshCw className="w-8 h-8 mx-auto mb-4 animate-spin" />
+          <p>Loading auctions...</p>
+        </div>
+      ) : auctions.length === 0 ? (
+        <Card className="bg-white border-slate-200">
+          <CardContent className="py-12 text-center text-slate-400">
+            <Gavel className="w-12 h-12 mx-auto mb-4 opacity-30" />
+            <p className="text-lg mb-2">No auctions found</p>
+            <p className="text-sm">Be the first to create an auction!</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {auctions.map((auction: AuctionListing) => (
+            <AuctionCard
+              key={auction.id}
+              auction={auction}
+              isOwn={myListingIds.includes(auction.id)}
+              onBid={(id, amount) => bidMutation.mutate({ auctionId: id, bidAmount: amount })}
+              onBuyout={(id) => buyoutMutation.mutate(id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -262,6 +813,7 @@ export default function Market() {
         <Tabs defaultValue="market" className="w-full">
            <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start">
               <TabsTrigger value="market" className="font-orbitron" data-testid="tab-market"><ShoppingBag className="w-4 h-4 mr-2" /> Marketplace</TabsTrigger>
+              <TabsTrigger value="auction" className="font-orbitron" data-testid="tab-auction"><Gavel className="w-4 h-4 mr-2" /> Auction House</TabsTrigger>
               <TabsTrigger value="exchange" className="font-orbitron" data-testid="tab-exchange"><ArrowUpDown className="w-4 h-4 mr-2" /> Resource Exchange</TabsTrigger>
               <TabsTrigger value="history" className="font-orbitron" data-testid="tab-history"><History className="w-4 h-4 mr-2" /> Trade History</TabsTrigger>
               <TabsTrigger value="prices" className="font-orbitron" data-testid="tab-prices"><BarChart3 className="w-4 h-4 mr-2" /> Price Trends</TabsTrigger>
@@ -350,6 +902,10 @@ export default function Market() {
                     </Card>
                  </div>
               </div>
+           </TabsContent>
+
+           <TabsContent value="auction" className="mt-6">
+              <AuctionHouseContent />
            </TabsContent>
 
            <TabsContent value="exchange" className="mt-6">
