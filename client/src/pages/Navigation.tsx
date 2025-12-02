@@ -16,6 +16,7 @@ const navItems = [
   { href: "/fleet", icon: Send, label: "Fleet" },
   { href: "/combat", icon: Sword, label: "Combat" },
   { href: "/battle-logs", icon: Eye, label: "Battle Logs" },
+  { href: "/exploration", icon: Orbit, label: "Exploration" },
   { href: "/galaxy", icon: Hexagon, label: "Galaxy" },
   { href: "/interstellar", icon: Orbit, label: "Interstellar" },
   { href: "/commander", icon: User, label: "Commander" },

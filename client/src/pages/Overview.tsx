@@ -13,7 +13,7 @@ export default function Overview() {
   
   // Parse coordinates to get a seed for planet generation
   const coordParts = coordinates.split(':').map(p => parseInt(p) || 0);
-  const planetSeed = (coordParts[0] || 1) * 1000 + (coordParts[1] || 102) * 100 + (coordParts[2] || 8);
+  const planetSeed = (coordParts[0] || 1) * 10000 + (coordParts[1] || 1) * 1000 + (coordParts[2] || 100) * 100 + (coordParts[3] || 3);
   const planetInfo = getPlanetDetails(planetSeed);
 
   return (

@@ -361,8 +361,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [activeMissions, setActiveMissions] = useState<Mission[]>([]);
 
-  const [planetName, setPlanetName] = useState("Homeworld");
-  const [coordinates, setCoordinates] = useState("1:102:8");
+  const [planetName, setPlanetName] = useState("Earth");
+  const [coordinates, setCoordinates] = useState("1:1:100:3");
   const [isAdmin, setIsAdmin] = useState(false);
   const [isActualAdmin, setIsActualAdmin] = useState(false);
   const [adminRole, setAdminRole] = useState<string | null>(null);
@@ -498,8 +498,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (state.government) setGovernment(state.government);
       if (state.artifacts) setArtifacts(state.artifacts);
       if (state.cronJobs) setCronJobs(state.cronJobs);
-      setPlanetName(state.planetName || "Homeworld");
-      setCoordinates(state.coordinates || "1:1:1");
+      setPlanetName(state.planetName || "Earth");
+      setCoordinates(state.coordinates || "1:1:100:3");
       setUsername(authUser.firstName || authUser.email?.split('@')[0] || authUser.username || 'Commander');
       setTotalTurns(state.totalTurns || 0);
       setCurrentTurns(state.currentTurns || 0);

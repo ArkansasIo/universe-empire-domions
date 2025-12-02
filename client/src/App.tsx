@@ -33,6 +33,7 @@ import AccountSetup from "@/pages/AccountSetup";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import ServerConsole from "@/pages/ServerConsole";
+import Exploration from "@/pages/Exploration";
 import { useGame } from "@/lib/gameContext";
 
 function LoadingSplash() {
@@ -69,7 +70,7 @@ function LoadingSplash() {
   );
 }
 
-function Router() {
+function RouterContent() {
   const { isLoggedIn, needsSetup, isLoading } = useGame();
 
   if (isLoading) {
@@ -121,12 +122,17 @@ function Router() {
       <Route path="/messages" component={Messages} />
       <Route path="/combat" component={Combat} />
       <Route path="/battle-logs" component={BattleLogs} />
+      <Route path="/exploration" component={Exploration} />
       <Route path="/settings" component={Settings} />
       <Route path="/admin" component={Admin} />
       <Route path="/console" component={ServerConsole} />
       <Route component={NotFound} />
     </Switch>
   );
+}
+
+function Router() {
+  return <RouterContent />;
 }
 
 function App() {
