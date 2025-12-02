@@ -201,6 +201,19 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
+      {error?.includes("Database is temporarily") && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm">
+          <div className="bg-yellow-900 border-2 border-yellow-500 text-yellow-100 px-4 py-3 rounded-lg shadow-xl">
+            <div className="flex items-start gap-2">
+              <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm">⚡ Server Maintenance</p>
+                <p className="text-xs mt-1">Game servers being refreshed. Try again in a moment.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <Card className="w-full max-w-md bg-white border border-slate-300 text-slate-900 relative z-10 shadow-lg hover:shadow-xl transition-shadow duration-300">
         <CardHeader className="text-center pb-2">
           <div className="w-16 h-16 bg-gradient-to-br from-slate-800 to-slate-900 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
