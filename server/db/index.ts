@@ -1,6 +1,8 @@
-import { Pool } from 'pg';
+import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
+
+const { Pool } = pg;
 
 // Use DATABASE_URL if available (Neon), otherwise construct from individual Replit db env vars
 let connectionString = process.env.DATABASE_URL;
