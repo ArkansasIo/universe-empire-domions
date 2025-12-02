@@ -8,6 +8,8 @@ import {
   marketOrders,
   auctionListings,
   auctionBids,
+  tradeOffers,
+  tradeHistory,
   queueItems,
   playerColonies,
   resourceFields,
@@ -41,6 +43,9 @@ import {
   type InsertAuctionListing,
   type AuctionBid,
   type InsertAuctionBid,
+  type TradeOffer,
+  type InsertTradeOffer,
+  type TradeHistory,
   type QueueItem,
   type InsertQueueItem,
   type PlayerColony,
@@ -169,6 +174,18 @@ export interface IStorage {
   cancelAuction(auctionId: string, sellerId: string): Promise<{ success: boolean; error?: string }>;
   completeExpiredAuctions(): Promise<AuctionListing[]>;
   getAuctionBidHistory(auctionId: string): Promise<AuctionBid[]>;
+  
+  // Trade operations (mail-integrated player-to-player trading)
+  getTradeOffers(userId: string): Promise<TradeOffer[]>;
+  getTradeOfferById(id: string): Promise<TradeOffer | undefined>;
+  getIncomingTradeOffers(userId: string): Promise<TradeOffer[]>;
+  getOutgoingTradeOffers(userId: string): Promise<TradeOffer[]>;
+  createTradeOffer(offer: InsertTradeOffer): Promise<TradeOffer>;
+  acceptTradeOffer(tradeId: string, receiverId: string): Promise<{ success: boolean; trade?: TradeOffer; error?: string }>;
+  declineTradeOffer(tradeId: string, receiverId: string): Promise<{ success: boolean; error?: string }>;
+  cancelTradeOffer(tradeId: string, senderId: string): Promise<{ success: boolean; error?: string }>;
+  counterTradeOffer(originalTradeId: string, counterOffer: InsertTradeOffer): Promise<{ success: boolean; trade?: TradeOffer; error?: string }>;
+  getTradeHistory(userId: string): Promise<TradeHistory[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -954,6 +971,269 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(auctionBids)
       .where(eq(auctionBids.auctionId, auctionId))
       .orderBy(desc(auctionBids.createdAt));
+  }
+
+  // Trade operations (mail-integrated player-to-player trading)
+  async getTradeOffers(userId: string): Promise<TradeOffer[]> {
+    return await db.select().from(tradeOffers)
+      .where(
+        or(
+          eq(tradeOffers.senderId, userId),
+          eq(tradeOffers.receiverId, userId)
+        )
+      )
+      .orderBy(desc(tradeOffers.createdAt));
+  }
+
+  async getTradeOfferById(id: string): Promise<TradeOffer | undefined> {
+    const [offer] = await db.select().from(tradeOffers).where(eq(tradeOffers.id, id));
+    return offer;
+  }
+
+  async getIncomingTradeOffers(userId: string): Promise<TradeOffer[]> {
+    return await db.select().from(tradeOffers)
+      .where(
+        and(
+          eq(tradeOffers.receiverId, userId),
+          eq(tradeOffers.status, "pending")
+        )
+      )
+      .orderBy(desc(tradeOffers.createdAt));
+  }
+
+  async getOutgoingTradeOffers(userId: string): Promise<TradeOffer[]> {
+    return await db.select().from(tradeOffers)
+      .where(
+        and(
+          eq(tradeOffers.senderId, userId),
+          eq(tradeOffers.status, "pending")
+        )
+      )
+      .orderBy(desc(tradeOffers.createdAt));
+  }
+
+  async createTradeOffer(offer: InsertTradeOffer): Promise<TradeOffer> {
+    // Set expiration to 7 days from now if not specified
+    const expiresAt = offer.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    
+    const [tradeOffer] = await db.insert(tradeOffers)
+      .values({ ...offer, expiresAt })
+      .returning();
+    
+    // Create a message for the receiver
+    await db.insert(messages).values({
+      fromUserId: offer.senderId,
+      toUserId: offer.receiverId,
+      from: offer.senderName,
+      to: offer.receiverName,
+      subject: `Trade Offer from ${offer.senderName}`,
+      body: offer.message || `${offer.senderName} has sent you a trade offer. Check your trade inbox to review it.`,
+      type: "trade"
+    });
+    
+    return tradeOffer;
+  }
+
+  async acceptTradeOffer(tradeId: string, receiverId: string): Promise<{ success: boolean; trade?: TradeOffer; error?: string }> {
+    const trade = await this.getTradeOfferById(tradeId);
+    
+    if (!trade) {
+      return { success: false, error: "Trade offer not found" };
+    }
+    
+    if (trade.receiverId !== receiverId) {
+      return { success: false, error: "You can only accept trades sent to you" };
+    }
+    
+    if (trade.status !== "pending") {
+      return { success: false, error: "This trade offer is no longer pending" };
+    }
+    
+    if (trade.expiresAt && new Date(trade.expiresAt) < new Date()) {
+      await db.update(tradeOffers).set({ status: "expired" }).where(eq(tradeOffers.id, tradeId));
+      return { success: false, error: "This trade offer has expired" };
+    }
+    
+    // Get both player states
+    const senderState = await this.getPlayerState(trade.senderId);
+    const receiverState = await this.getPlayerState(receiverId);
+    
+    if (!senderState || !receiverState) {
+      return { success: false, error: "Player state not found" };
+    }
+    
+    const senderResources = senderState.resources as any;
+    const receiverResources = receiverState.resources as any;
+    
+    // Check if sender has enough resources
+    if (senderResources.metal < trade.offerMetal ||
+        senderResources.crystal < trade.offerCrystal ||
+        senderResources.deuterium < trade.offerDeuterium) {
+      return { success: false, error: "Sender does not have enough resources" };
+    }
+    
+    // Check if receiver has enough resources
+    if (receiverResources.metal < trade.requestMetal ||
+        receiverResources.crystal < trade.requestCrystal ||
+        receiverResources.deuterium < trade.requestDeuterium) {
+      return { success: false, error: "You do not have enough resources to complete this trade" };
+    }
+    
+    // Update sender resources (subtract offered, add requested)
+    await this.updatePlayerState(trade.senderId, {
+      resources: {
+        ...senderResources,
+        metal: senderResources.metal - trade.offerMetal + trade.requestMetal,
+        crystal: senderResources.crystal - trade.offerCrystal + trade.requestCrystal,
+        deuterium: senderResources.deuterium - trade.offerDeuterium + trade.requestDeuterium
+      }
+    });
+    
+    // Update receiver resources (add offered, subtract requested)
+    await this.updatePlayerState(receiverId, {
+      resources: {
+        ...receiverResources,
+        metal: receiverResources.metal + trade.offerMetal - trade.requestMetal,
+        crystal: receiverResources.crystal + trade.offerCrystal - trade.requestCrystal,
+        deuterium: receiverResources.deuterium + trade.offerDeuterium - trade.requestDeuterium
+      }
+    });
+    
+    // Update trade status
+    const [updated] = await db.update(tradeOffers)
+      .set({ status: "accepted", completedAt: new Date() })
+      .where(eq(tradeOffers.id, tradeId))
+      .returning();
+    
+    // Record trade history
+    await db.insert(tradeHistory).values({
+      tradeOfferId: tradeId,
+      senderId: trade.senderId,
+      senderName: trade.senderName,
+      receiverId: trade.receiverId,
+      receiverName: trade.receiverName,
+      senderGave: { metal: trade.offerMetal, crystal: trade.offerCrystal, deuterium: trade.offerDeuterium },
+      receiverGave: { metal: trade.requestMetal, crystal: trade.requestCrystal, deuterium: trade.requestDeuterium },
+      result: "completed"
+    });
+    
+    // Send confirmation messages
+    await db.insert(messages).values({
+      fromUserId: receiverId,
+      toUserId: trade.senderId,
+      from: trade.receiverName,
+      to: trade.senderName,
+      subject: `Trade Accepted!`,
+      body: `${trade.receiverName} has accepted your trade offer. Resources have been exchanged.`,
+      type: "trade"
+    });
+    
+    return { success: true, trade: updated };
+  }
+
+  async declineTradeOffer(tradeId: string, receiverId: string): Promise<{ success: boolean; error?: string }> {
+    const trade = await this.getTradeOfferById(tradeId);
+    
+    if (!trade) {
+      return { success: false, error: "Trade offer not found" };
+    }
+    
+    if (trade.receiverId !== receiverId) {
+      return { success: false, error: "You can only decline trades sent to you" };
+    }
+    
+    if (trade.status !== "pending") {
+      return { success: false, error: "This trade offer is no longer pending" };
+    }
+    
+    await db.update(tradeOffers)
+      .set({ status: "declined", completedAt: new Date() })
+      .where(eq(tradeOffers.id, tradeId));
+    
+    // Notify sender
+    await db.insert(messages).values({
+      fromUserId: receiverId,
+      toUserId: trade.senderId,
+      from: trade.receiverName,
+      to: trade.senderName,
+      subject: `Trade Declined`,
+      body: `${trade.receiverName} has declined your trade offer.`,
+      type: "trade"
+    });
+    
+    return { success: true };
+  }
+
+  async cancelTradeOffer(tradeId: string, senderId: string): Promise<{ success: boolean; error?: string }> {
+    const trade = await this.getTradeOfferById(tradeId);
+    
+    if (!trade) {
+      return { success: false, error: "Trade offer not found" };
+    }
+    
+    if (trade.senderId !== senderId) {
+      return { success: false, error: "You can only cancel your own trades" };
+    }
+    
+    if (trade.status !== "pending") {
+      return { success: false, error: "This trade offer is no longer pending" };
+    }
+    
+    await db.update(tradeOffers)
+      .set({ status: "cancelled", completedAt: new Date() })
+      .where(eq(tradeOffers.id, tradeId));
+    
+    return { success: true };
+  }
+
+  async counterTradeOffer(originalTradeId: string, counterOffer: InsertTradeOffer): Promise<{ success: boolean; trade?: TradeOffer; error?: string }> {
+    const originalTrade = await this.getTradeOfferById(originalTradeId);
+    
+    if (!originalTrade) {
+      return { success: false, error: "Original trade offer not found" };
+    }
+    
+    if (originalTrade.receiverId !== counterOffer.senderId) {
+      return { success: false, error: "You can only counter trades sent to you" };
+    }
+    
+    // Decline the original offer
+    await db.update(tradeOffers)
+      .set({ status: "countered", completedAt: new Date() })
+      .where(eq(tradeOffers.id, originalTradeId));
+    
+    // Create new counter offer
+    const [newTrade] = await db.insert(tradeOffers)
+      .values({
+        ...counterOffer,
+        originalOfferId: originalTradeId,
+        expiresAt: counterOffer.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      })
+      .returning();
+    
+    // Notify original sender
+    await db.insert(messages).values({
+      fromUserId: counterOffer.senderId,
+      toUserId: counterOffer.receiverId,
+      from: counterOffer.senderName,
+      to: counterOffer.receiverName,
+      subject: `Counter Offer from ${counterOffer.senderName}`,
+      body: counterOffer.message || `${counterOffer.senderName} has made a counter offer to your trade. Check your trade inbox to review it.`,
+      type: "trade"
+    });
+    
+    return { success: true, trade: newTrade };
+  }
+
+  async getTradeHistory(userId: string): Promise<TradeHistory[]> {
+    return await db.select().from(tradeHistory)
+      .where(
+        or(
+          eq(tradeHistory.senderId, userId),
+          eq(tradeHistory.receiverId, userId)
+        )
+      )
+      .orderBy(desc(tradeHistory.completedAt));
   }
 }
 

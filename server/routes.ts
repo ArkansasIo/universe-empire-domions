@@ -597,4 +597,207 @@ export function registerRoutes(app: Express) {
       res.status(500).json({ message: "Failed to cancel auction" });
     }
   });
+
+  // ==== PLAYER TRADE ROUTES (Mail-Integrated) ====
+
+  // Get all trade offers (incoming and outgoing)
+  app.get("/api/trades", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const trades = await storage.getTradeOffers(userId);
+      res.json(trades);
+    } catch (error: any) {
+      console.error("Error fetching trades:", error);
+      res.status(500).json({ message: "Failed to fetch trades" });
+    }
+  });
+
+  // Get incoming trade offers
+  app.get("/api/trades/incoming", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const trades = await storage.getIncomingTradeOffers(userId);
+      res.json(trades);
+    } catch (error: any) {
+      console.error("Error fetching incoming trades:", error);
+      res.status(500).json({ message: "Failed to fetch incoming trades" });
+    }
+  });
+
+  // Get outgoing trade offers
+  app.get("/api/trades/outgoing", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const trades = await storage.getOutgoingTradeOffers(userId);
+      res.json(trades);
+    } catch (error: any) {
+      console.error("Error fetching outgoing trades:", error);
+      res.status(500).json({ message: "Failed to fetch outgoing trades" });
+    }
+  });
+
+  // Get trade history
+  app.get("/api/trades/history", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const history = await storage.getTradeHistory(userId);
+      res.json(history);
+    } catch (error: any) {
+      console.error("Error fetching trade history:", error);
+      res.status(500).json({ message: "Failed to fetch trade history" });
+    }
+  });
+
+  // Get specific trade offer
+  app.get("/api/trades/:id", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const trade = await storage.getTradeOfferById(req.params.id);
+      if (!trade) {
+        return res.status(404).json({ message: "Trade not found" });
+      }
+      res.json(trade);
+    } catch (error: any) {
+      console.error("Error fetching trade:", error);
+      res.status(500).json({ message: "Failed to fetch trade" });
+    }
+  });
+
+  // Create a new trade offer
+  app.post("/api/trades", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Find receiver by username
+      const receiver = await storage.getUserByUsername(req.body.receiverName);
+      if (!receiver) {
+        return res.status(404).json({ message: "Recipient not found" });
+      }
+      
+      if (receiver.id === userId) {
+        return res.status(400).json({ message: "You cannot trade with yourself" });
+      }
+      
+      const tradeOffer = {
+        senderId: userId,
+        senderName: user.username || "Unknown",
+        receiverId: receiver.id,
+        receiverName: receiver.username || "Unknown",
+        offerMetal: req.body.offerMetal || 0,
+        offerCrystal: req.body.offerCrystal || 0,
+        offerDeuterium: req.body.offerDeuterium || 0,
+        offerItems: req.body.offerItems || [],
+        requestMetal: req.body.requestMetal || 0,
+        requestCrystal: req.body.requestCrystal || 0,
+        requestDeuterium: req.body.requestDeuterium || 0,
+        requestItems: req.body.requestItems || [],
+        message: req.body.message
+      };
+      
+      const trade = await storage.createTradeOffer(tradeOffer);
+      res.status(201).json(trade);
+    } catch (error: any) {
+      console.error("Error creating trade offer:", error);
+      res.status(500).json({ message: "Failed to create trade offer" });
+    }
+  });
+
+  // Accept a trade offer
+  app.post("/api/trades/:id/accept", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const result = await storage.acceptTradeOffer(req.params.id, userId);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.json(result.trade);
+    } catch (error: any) {
+      console.error("Error accepting trade:", error);
+      res.status(500).json({ message: "Failed to accept trade" });
+    }
+  });
+
+  // Decline a trade offer
+  app.post("/api/trades/:id/decline", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const result = await storage.declineTradeOffer(req.params.id, userId);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.json({ message: "Trade declined" });
+    } catch (error: any) {
+      console.error("Error declining trade:", error);
+      res.status(500).json({ message: "Failed to decline trade" });
+    }
+  });
+
+  // Cancel a trade offer
+  app.delete("/api/trades/:id", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const result = await storage.cancelTradeOffer(req.params.id, userId);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.json({ message: "Trade cancelled" });
+    } catch (error: any) {
+      console.error("Error cancelling trade:", error);
+      res.status(500).json({ message: "Failed to cancel trade" });
+    }
+  });
+
+  // Create counter offer
+  app.post("/api/trades/:id/counter", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      const originalTrade = await storage.getTradeOfferById(req.params.id);
+      if (!originalTrade) {
+        return res.status(404).json({ message: "Original trade not found" });
+      }
+      
+      const counterOffer = {
+        senderId: userId,
+        senderName: user.username || "Unknown",
+        receiverId: originalTrade.senderId,
+        receiverName: originalTrade.senderName,
+        offerMetal: req.body.offerMetal || 0,
+        offerCrystal: req.body.offerCrystal || 0,
+        offerDeuterium: req.body.offerDeuterium || 0,
+        offerItems: req.body.offerItems || [],
+        requestMetal: req.body.requestMetal || 0,
+        requestCrystal: req.body.requestCrystal || 0,
+        requestDeuterium: req.body.requestDeuterium || 0,
+        requestItems: req.body.requestItems || [],
+        message: req.body.message
+      };
+      
+      const result = await storage.counterTradeOffer(req.params.id, counterOffer);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.status(201).json(result.trade);
+    } catch (error: any) {
+      console.error("Error creating counter offer:", error);
+      res.status(500).json({ message: "Failed to create counter offer" });
+    }
+  });
 }

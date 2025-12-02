@@ -348,6 +348,85 @@ export const insertAuctionBidSchema = createInsertSchema(auctionBids).omit({ id:
 export type InsertAuctionBid = z.infer<typeof insertAuctionBidSchema>;
 export type AuctionBid = typeof auctionBids.$inferSelect;
 
+// Player-to-Player Trade Offers (Mail Integrated)
+export const tradeOffers = pgTable("trade_offers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Participants
+  senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  senderName: varchar("sender_name").notNull(),
+  receiverId: varchar("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  receiverName: varchar("receiver_name").notNull(),
+  
+  // What sender offers
+  offerMetal: integer("offer_metal").notNull().default(0),
+  offerCrystal: integer("offer_crystal").notNull().default(0),
+  offerDeuterium: integer("offer_deuterium").notNull().default(0),
+  offerItems: jsonb("offer_items").default([]), // Array of item objects
+  
+  // What sender requests
+  requestMetal: integer("request_metal").notNull().default(0),
+  requestCrystal: integer("request_crystal").notNull().default(0),
+  requestDeuterium: integer("request_deuterium").notNull().default(0),
+  requestItems: jsonb("request_items").default([]), // Array of item objects
+  
+  // Message
+  message: text("message"),
+  
+  // Status
+  status: varchar("status").notNull().default("pending"), // "pending", "accepted", "declined", "cancelled", "expired", "countered"
+  
+  // Associated message IDs for mail integration
+  senderMessageId: varchar("sender_message_id"),
+  receiverMessageId: varchar("receiver_message_id"),
+  
+  // Counter offer reference
+  counterOfferId: varchar("counter_offer_id"),
+  originalOfferId: varchar("original_offer_id"),
+  
+  // Expiration
+  expiresAt: timestamp("expires_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertTradeOfferSchema = createInsertSchema(tradeOffers).omit({ 
+  id: true, 
+  status: true, 
+  senderMessageId: true,
+  receiverMessageId: true,
+  createdAt: true, 
+  updatedAt: true, 
+  completedAt: true 
+});
+export type InsertTradeOffer = z.infer<typeof insertTradeOfferSchema>;
+export type TradeOffer = typeof tradeOffers.$inferSelect;
+
+// Trade history log
+export const tradeHistory = pgTable("trade_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tradeOfferId: varchar("trade_offer_id").notNull(),
+  
+  // Participants
+  senderId: varchar("sender_id").notNull(),
+  senderName: varchar("sender_name").notNull(),
+  receiverId: varchar("receiver_id").notNull(),
+  receiverName: varchar("receiver_name").notNull(),
+  
+  // What was traded
+  senderGave: jsonb("sender_gave").notNull(), // { metal, crystal, deuterium, items }
+  receiverGave: jsonb("receiver_gave").notNull(),
+  
+  // Result
+  result: varchar("result").notNull(), // "completed", "cancelled", "expired"
+  
+  completedAt: timestamp("completed_at").defaultNow(),
+});
+
+export type TradeHistory = typeof tradeHistory.$inferSelect;
+
 // Construction/Research Queue
 export const queueItems = pgTable("queue_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
