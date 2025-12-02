@@ -4,15 +4,26 @@ export interface BlueprintRequirement {
   quantity: number;
 }
 
+export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "exotic";
+export type Rank = "I" | "II" | "III" | "IV" | "V" | "VI" | "VII" | "VIII" | "IX" | "X";
+
 export interface Blueprint {
   id: string;
   name: string;
+  displayName: string;
   description: string;
+  detailedDescription: string;
   type: "ship" | "building" | "component" | "module";
   outputId: string;
   outputName: string;
   outputQuantity: number;
   category: string;
+  
+  // Rarity & Progression
+  rarity: Rarity;
+  level: number; // 1-100
+  rank: Rank;
+  color: string; // hex color for rarity
   
   // Manufacturing parameters
   baseManufacturingTime: number; // seconds
@@ -56,18 +67,34 @@ export interface ProductionJob {
   failureReason?: string;
 }
 
+// Rarity color mapping
+export const rarityColors: {[key in Rarity]: string} = {
+  common: "#94a3b8",
+  uncommon: "#22c55e",
+  rare: "#3b82f6",
+  epic: "#a855f7",
+  legendary: "#f59e0b",
+  exotic: "#ec4899",
+};
+
 // Base blueprints available in game
 export const BASE_BLUEPRINTS: Blueprint[] = [
   // Ship Blueprints
   {
     id: "bp_lightfighter",
     name: "Light Fighter Blueprint",
+    displayName: "Sentinel Fighter",
     description: "Blueprint for manufacturing Light Fighter ships.",
+    detailedDescription: "Entry-level combat vessel. Lightweight frame with rapid acceleration. Ideal for novice commanders seeking to build their first combat fleet. Reliable atmospheric and space operations.",
     type: "ship",
     outputId: "lightFighter",
     outputName: "Light Fighter",
     outputQuantity: 1,
     category: "combat",
+    rarity: "common",
+    level: 1,
+    rank: "I",
+    color: "#94a3b8",
     baseManufacturingTime: 300,
     baseMaterialNeeded: [
       { itemId: "metal", itemName: "Metal", quantity: 1000 },
@@ -90,12 +117,18 @@ export const BASE_BLUEPRINTS: Blueprint[] = [
   {
     id: "bp_heavyfighter",
     name: "Heavy Fighter Blueprint",
+    displayName: "Vanguard Striker",
     description: "Blueprint for manufacturing Heavy Fighter ships.",
+    detailedDescription: "Advanced combat vessel with enhanced armor plating and weapons systems. Moderately rare blueprint featuring improved damage output and durability. Superior firepower for experienced commanders.",
     type: "ship",
     outputId: "heavyFighter",
     outputName: "Heavy Fighter",
     outputQuantity: 1,
     category: "combat",
+    rarity: "uncommon",
+    level: 10,
+    rank: "II",
+    color: "#22c55e",
     baseManufacturingTime: 600,
     baseMaterialNeeded: [
       { itemId: "metal", itemName: "Metal", quantity: 6000 },
@@ -118,12 +151,18 @@ export const BASE_BLUEPRINTS: Blueprint[] = [
   {
     id: "bp_cruiser",
     name: "Cruiser Blueprint",
+    displayName: "Dominion Cruiser",
     description: "Blueprint for manufacturing Cruiser ships.",
+    detailedDescription: "Rare military-grade cruiser platform. Balanced design featuring adequate firepower, speed, and cargo capacity. Preferred vessel for mid-tier naval operations and trade route protection.",
     type: "ship",
     outputId: "cruiser",
     outputName: "Cruiser",
     outputQuantity: 1,
     category: "capital",
+    rarity: "rare",
+    level: 25,
+    rank: "III",
+    color: "#3b82f6",
     baseManufacturingTime: 1200,
     baseMaterialNeeded: [
       { itemId: "metal", itemName: "Metal", quantity: 20000 },
@@ -147,12 +186,18 @@ export const BASE_BLUEPRINTS: Blueprint[] = [
   {
     id: "bp_smallcargo",
     name: "Small Cargo Ship Blueprint",
+    displayName: "Merchant Hauler",
     description: "Blueprint for manufacturing Small Cargo Ships.",
+    detailedDescription: "Common logistics vessel designed for interstellar trade. Efficient cargo capacity with minimal combat capability. Essential for empire-wide resource distribution and commercial operations.",
     type: "ship",
     outputId: "smallCargo",
     outputName: "Small Cargo Ship",
     outputQuantity: 1,
     category: "transport",
+    rarity: "common",
+    level: 3,
+    rank: "I",
+    color: "#94a3b8",
     baseManufacturingTime: 400,
     baseMaterialNeeded: [
       { itemId: "metal", itemName: "Metal", quantity: 2000 },
@@ -177,12 +222,18 @@ export const BASE_BLUEPRINTS: Blueprint[] = [
   {
     id: "bp_metalmine",
     name: "Metal Mine Blueprint",
+    displayName: "Ore Extraction Facility",
     description: "Blueprint for constructing Metal Mines.",
+    detailedDescription: "Basic extraction facility for harvesting metal ore deposits. Foundational industrial structure for any growing empire. Increases planetary production output significantly.",
     type: "building",
     outputId: "metalMine",
     outputName: "Metal Mine",
     outputQuantity: 1,
     category: "production",
+    rarity: "common",
+    level: 1,
+    rank: "I",
+    color: "#94a3b8",
     baseManufacturingTime: 30,
     baseMaterialNeeded: [
       { itemId: "metal", itemName: "Metal", quantity: 60 },
@@ -205,12 +256,18 @@ export const BASE_BLUEPRINTS: Blueprint[] = [
   {
     id: "bp_shipyard",
     name: "Shipyard Blueprint",
+    displayName: "Advanced Shipyard",
     description: "Blueprint for constructing Shipyards.",
+    detailedDescription: "Industrial complex specializing in starship construction and maintenance. Epic-tier facility enabling production of advanced capital vessels. Doubles fleet construction speed.",
     type: "building",
     outputId: "shipyard",
     outputName: "Shipyard",
     outputQuantity: 1,
     category: "production",
+    rarity: "epic",
+    level: 50,
+    rank: "V",
+    color: "#a855f7",
     baseManufacturingTime: 30,
     baseMaterialNeeded: [
       { itemId: "metal", itemName: "Metal", quantity: 400 },
@@ -297,6 +354,14 @@ export function createBlueprintCopy(
   runs: number = 10,
   quality: number = 85
 ): Blueprint {
+  // Quality affects rarity downgrade
+  let copyRarity = original.rarity;
+  if (quality < 90 && original.rarity !== "common") {
+    copyRarity = (["common", "uncommon", "rare", "epic", "legendary", "exotic"] as Rarity[])[
+      Math.max(0, (["common", "uncommon", "rare", "epic", "legendary", "exotic"] as Rarity[]).indexOf(original.rarity) - 1)
+    ];
+  }
+
   return {
     ...original,
     id: `${original.id}_copy_${Date.now()}`,
@@ -306,6 +371,8 @@ export function createBlueprintCopy(
     currentRuns: runs,
     remainingRuns: runs,
     quality: quality,
+    rarity: copyRarity,
+    color: rarityColors[copyRarity],
     status: "active",
   };
 }
