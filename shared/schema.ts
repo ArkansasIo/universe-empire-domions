@@ -8,7 +8,8 @@ import {
   text,
   integer,
   boolean,
-  real
+  real,
+  serial
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -27,6 +28,7 @@ export const sessions = pgTable(
 // User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  uid: serial("uid").unique().notNull(),
   username: varchar("username").unique().notNull(),
   passwordHash: varchar("password_hash").notNull(),
   email: varchar("email").unique(),

@@ -451,7 +451,7 @@ export function getKardashevLevel(level: number): KardashevLevel {
 }
 
 export function getKardashevTier(level: KardashevLevel): KardashevTier {
-  return KARDASHEV_SCALE[level];
+  return KARDASHEV_SCALE[level as unknown as KardashevLevel];
 }
 
 export function calculateProgressToNext(current: KardashevLevel, metal: number, crystal: number, deuterium: number): number {
