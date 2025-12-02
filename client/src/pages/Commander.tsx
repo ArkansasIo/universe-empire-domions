@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   User, Sword, Shield, Cpu, Hammer, Anvil, Sparkles, 
-  Box, Gem, Database, Flame, Star, Fingerprint, Dna
+  Box, Gem, Database, Flame, Star, Fingerprint, Dna, FlaskConical
 } from "lucide-react";
 import { Item, blueprints, RACES, CLASSES, SUBCLASSES, RaceId, ClassId, SubClassId } from "@/lib/commanderTypes";
 import { cn } from "@/lib/utils";
