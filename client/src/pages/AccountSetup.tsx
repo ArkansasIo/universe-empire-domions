@@ -9,15 +9,14 @@ import { RACES, RaceId, CLASSES } from "@/lib/commanderTypes";
 import { GOVERNMENTS, GovernmentId } from "@/lib/governmentData";
 
 export default function AccountSetup() {
-  const { completeSetup, isLoading, commander, government, logout } = useGame();
+  const { completeSetup, isLoading, commander, government } = useGame();
   const [selectedRace, setSelectedRace] = useState<RaceId>("terran");
   const [selectedGovernment, setSelectedGovernment] = useState<GovernmentId>("democracy");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
-  const handleBack = async () => {
-    await logout();
+  const handleBack = () => {
     window.location.href = "/";
   };
 
