@@ -222,13 +222,21 @@ export async function setupAuth(app: Express) {
             if (user && user.passwordHash && verifyPassword(password, user.passwordHash)) {
               (req.session as any).userId = user.id;
               logger.info("AUTH", `Basic auth successful for user: ${username}`);
-              return res.status(200).json({ 
-                id: user.id, 
-                username: user.username || "",
-                email: user.email,
-                firstName: user.firstName,
-                isAdmin: false,
-                adminRole: null
+              
+              // Explicitly save session to persist it
+              return req.session.save((err) => {
+                if (err) {
+                  logger.error("AUTH", "Session save error in /api/auth/user", {}, err);
+                  return res.status(500).json({ message: "Session creation failed" });
+                }
+                return res.status(200).json({ 
+                  id: user.id, 
+                  username: user.username || "",
+                  email: user.email,
+                  firstName: user.firstName,
+                  isAdmin: false,
+                  adminRole: null
+                });
               });
             }
           }
