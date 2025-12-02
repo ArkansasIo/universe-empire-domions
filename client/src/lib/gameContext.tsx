@@ -149,6 +149,9 @@ interface GameState {
   toggleCronJob: (id: string) => void;
   runCronJob: (id: string) => void;
   travelTo: (destinationName: string, coords: string, cost: { deuterium: number }) => void;
+  inventory: {[key: string]: number};
+  buyItem: (itemId: string, cost: {metal: number, crystal: number, deuterium: number}) => void;
+  sellItem: (itemId: string, value: {metal: number, crystal: number, deuterium: number}) => void;
 }
 
 const GameContext = createContext<GameState | undefined>(undefined);
@@ -199,6 +202,50 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     marine: 50,
     colonist: 100
   });
+
+  // Items Inventory
+  const [inventory, setInventory] = useState<{[key: string]: number}>({
+    plasteel: 10,
+    circuit_board: 5
+  });
+
+  const buyItem = (itemId: string, cost: {metal: number, crystal: number, deuterium: number}) => {
+    if (
+      resources.metal >= cost.metal && 
+      resources.crystal >= cost.crystal && 
+      resources.deuterium >= cost.deuterium
+    ) {
+      setResources(prev => ({
+        ...prev,
+        metal: prev.metal - cost.metal,
+        crystal: prev.crystal - cost.crystal,
+        deuterium: prev.deuterium - cost.deuterium
+      }));
+      setInventory(prev => ({
+        ...prev,
+        [itemId]: (prev[itemId] || 0) + 1
+      }));
+      addEvent("Purchase Successful", `Bought item ${itemId}`, "success");
+    } else {
+      addEvent("Purchase Failed", "Insufficient funds.", "danger");
+    }
+  };
+
+  const sellItem = (itemId: string, value: {metal: number, crystal: number, deuterium: number}) => {
+    if ((inventory[itemId] || 0) > 0) {
+       setInventory(prev => ({
+         ...prev,
+         [itemId]: prev[itemId] - 1
+       }));
+       setResources(prev => ({
+         ...prev,
+         metal: prev.metal + value.metal,
+         crystal: prev.crystal + value.crystal,
+         deuterium: prev.deuterium + value.deuterium
+       }));
+       addEvent("Sale Successful", `Sold item ${itemId}`, "success");
+    }
+  };
 
   const [commander, setCommander] = useState<CommanderState>({
     name: "Commander",
@@ -844,7 +891,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        activateArtifact,
        toggleCronJob,
        runCronJob,
-       travelTo
+       travelTo,
+       inventory,
+       buyItem,
+       sellItem
     }}>
       {children}
     </GameContext.Provider>

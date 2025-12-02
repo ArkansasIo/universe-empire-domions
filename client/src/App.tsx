@@ -22,6 +22,7 @@ import Artifacts from "@/pages/Artifacts";
 import Interstellar from "@/pages/Interstellar";
 import Admin from "@/pages/Admin";
 import Auth from "@/pages/Auth";
+import Market from "@/pages/Market";
 import { useGame } from "@/lib/gameContext";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/commander" component={Commander} />
       <Route path="/government" component={Government} />
       <Route path="/alliance" component={Alliance} />
+      <Route path="/market" component={Market} />
       <Route path="/messages" component={Messages} />
       <Route path="/settings" component={Settings} />
       <Route path="/admin" component={Admin} />
