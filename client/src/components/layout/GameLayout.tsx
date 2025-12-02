@@ -297,6 +297,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
             
             {/* System */}
             <div className="px-4 mt-4 mb-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">System</div>
+            <SidebarItem href="/diagnostics" icon={AlertTriangle} label="Diagnostics" active={location === "/diagnostics"} />
             <SidebarItem href="/settings" icon={Settings} label="Settings" active={location === "/settings"} />
             
             {isAdmin && (

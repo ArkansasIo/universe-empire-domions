@@ -112,9 +112,16 @@ app.use((req, res, next) => {
   next();
 });
 
+import { registerSettingsRoutes } from "./routes-settings";
+import { registerStatusRoutes } from "./routes-status";
+import { registerDiagnosticsRoutes } from "./routes-diagnostics";
+
 (async () => {
   await setupAuth(app);
   registerRoutes(app);
+  registerSettingsRoutes(app);
+  registerStatusRoutes(app);
+  registerDiagnosticsRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

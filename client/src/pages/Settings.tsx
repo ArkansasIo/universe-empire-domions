@@ -12,7 +12,7 @@ import {
   Settings as SettingsIcon, Server, Shield, Monitor, Database, Power, Save, RefreshCw, 
   Clock, Play, Pause, Bell, Volume2, VolumeX, Eye, EyeOff, Globe, Palette, Moon, Sun,
   Mail, Key, Smartphone, Lock, LogOut, Trash2, Download, Upload, AlertTriangle, CheckCircle,
-  User, Languages, Zap
+  User as UserIcon, Languages, Zap
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -71,7 +71,7 @@ export default function Settings() {
 
         <Tabs defaultValue="account" className="w-full">
            <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start overflow-x-auto">
-              <TabsTrigger value="account" className="font-orbitron"><User className="w-4 h-4 mr-2" /> Account</TabsTrigger>
+              <TabsTrigger value="account" className="font-orbitron"><UserIcon className="w-4 h-4 mr-2" /> Account</TabsTrigger>
               <TabsTrigger value="notifications" className="font-orbitron"><Bell className="w-4 h-4 mr-2" /> Notifications</TabsTrigger>
               <TabsTrigger value="display" className="font-orbitron"><Monitor className="w-4 h-4 mr-2" /> Display</TabsTrigger>
               <TabsTrigger value="sound" className="font-orbitron"><Volume2 className="w-4 h-4 mr-2" /> Sound</TabsTrigger>
