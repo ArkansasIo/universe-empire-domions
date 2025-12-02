@@ -54,32 +54,38 @@ export default function TechnologyTree() {
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [expandedTech, setExpandedTech] = useState<string | null>(null);
 
-  const { data: areas = [] } = useQuery({
+  const { data: areasData = {} } = useQuery({
     queryKey: ["research-areas"],
-    queryFn: () => fetch("/api/research/areas").then(r => r.json()),
+    queryFn: () => fetch("/api/research/areas").then(r => r.json()).catch(() => ({})),
   });
 
-  const { data: subcategories = [] } = useQuery({
+  const areas = Array.isArray(areasData) ? areasData : areasData.areas || [];
+
+  const { data: subcategoriesData = [] } = useQuery({
     queryKey: ["research-subcategories", selectedArea],
     queryFn: () =>
       selectedArea
-        ? fetch(`/api/research/subcategories?areaId=${selectedArea}`).then(r => r.json())
+        ? fetch(`/api/research/subcategories?areaId=${selectedArea}`).then(r => r.json()).catch(() => [])
         : Promise.resolve([]),
     enabled: !!selectedArea,
   });
 
-  const { data: technologies = [] } = useQuery({
+  const subcategories = Array.isArray(subcategoriesData) ? subcategoriesData : subcategoriesData.subcategories || [];
+
+  const { data: technologiesData = [] } = useQuery({
     queryKey: ["research-technologies", subcategories],
     queryFn: () =>
       subcategories.length > 0
-        ? fetch(`/api/research/technologies?subcategoryIds=${subcategories.map((s: any) => s.id).join(",")}`).then(r => r.json())
+        ? fetch(`/api/research/technologies?subcategoryIds=${subcategories.map((s: any) => s.id).join(",")}`).then(r => r.json()).catch(() => [])
         : Promise.resolve([]),
     enabled: subcategories.length > 0,
   });
 
+  const technologies = Array.isArray(technologiesData) ? technologiesData : technologiesData.technologies || [];
+
   const { data: playerProgress = {} } = useQuery({
     queryKey: ["player-research-progress"],
-    queryFn: () => fetch("/api/research/progress").then(r => r.json()),
+    queryFn: () => fetch("/api/research/progress").then(r => r.json()).catch(() => ({})),
   });
 
   const techsByCategory = useMemo(() => {
