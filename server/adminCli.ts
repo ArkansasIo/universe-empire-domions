@@ -69,16 +69,10 @@ class ServerAdminCLI {
 
   private prompt(question: string, hideInput: boolean = false): Promise<string> {
     return new Promise(resolve => {
-      if (hideInput && process.stdin.isTTY) {
-        process.stdin.setRawMode?.(true);
-        this.rl.question(question, (answer) => {
-          process.stdin.setRawMode?.(false);
-          console.log();
-          resolve(answer);
-        });
-      } else {
-        this.rl.question(question, resolve);
-      }
+      this.rl.question(question, (answer) => {
+        if (hideInput) console.log(); // Add newline for hidden inputs
+        resolve(answer.trim()); // Trim whitespace from input
+      });
     });
   }
 
@@ -759,12 +753,19 @@ class ServerAdminCLI {
         continue;
       }
 
-      console.log(this.colors.bright + 'Login to Admin Panel:' + this.colors.reset);
+      console.log(this.colors.bright + '\nLogin to Admin Panel:' + this.colors.reset);
       const username = await this.prompt(this.colors.cyan + '➜ Username: ' + this.colors.reset);
-      const password = await this.prompt(this.colors.cyan + '➜ Password: ' + this.colors.reset, true);
+      const password = await this.prompt(this.colors.cyan + '➜ Password: ' + this.colors.reset);
       const secCode = await this.prompt(this.colors.cyan + '➜ Security Code: ' + this.colors.reset);
 
-      if (username === this.adminCreds.username && this.hashPassword(password) === this.adminCreds.passwordHash && secCode === this.adminCreds.securityCode) {
+      // Debug: show what we're checking
+      const storedHash = this.adminCreds.passwordHash;
+      const inputHash = this.hashPassword(password);
+      const userMatch = username === this.adminCreds.username;
+      const passMatch = inputHash === storedHash;
+      const codeMatch = secCode === this.adminCreds.securityCode;
+
+      if (userMatch && passMatch && codeMatch) {
         this.adminCreds.lastLogin = new Date().toISOString();
         this.saveAdminCredentials();
         this.isLoggedIn = true;
@@ -774,7 +775,10 @@ class ServerAdminCLI {
         return;
       } else {
         console.log(this.colors.red + '\n✗ Invalid credentials' + this.colors.reset);
-        await this.prompt(this.colors.dim + 'Press Enter to retry...' + this.colors.reset);
+        if (!userMatch) console.log(this.colors.dim + '  Username mismatch' + this.colors.reset);
+        if (!passMatch) console.log(this.colors.dim + '  Password incorrect' + this.colors.reset);
+        if (!codeMatch) console.log(this.colors.dim + '  Security code incorrect' + this.colors.reset);
+        await this.prompt(this.colors.dim + '\nPress Enter to retry...' + this.colors.reset);
       }
     }
   }
