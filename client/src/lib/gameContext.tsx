@@ -376,7 +376,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     queryKey: ['/api/auth/user'],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/auth/user', { credentials: 'include' });
+        const headers: Record<string, string> = {};
+        
+        // Add basic auth if credentials are stored
+        const username = localStorage.getItem('stellar_username');
+        const password = localStorage.getItem('stellar_password');
+        if (username && password) {
+          const encoded = btoa(`${username}:${password}`);
+          headers['Authorization'] = `Basic ${encoded}`;
+        }
+        
+        const res = await fetch('/api/auth/user', { 
+          credentials: 'include',
+          headers 
+        });
         if (!res.ok) return null;
         return res.json();
       } catch {
