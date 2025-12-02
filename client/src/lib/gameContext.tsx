@@ -23,6 +23,10 @@ interface Buildings {
   researchLab: number;
 }
 
+interface OrbitalBuildings {
+  [key: string]: number;
+}
+
 // Define Research interface locally if not exported, or match the structure
 export interface Research {
   energyTech: number;
@@ -105,6 +109,9 @@ export interface Message {
 interface GameState {
   resources: Resources;
   buildings: Buildings;
+  orbitalBuildings: OrbitalBuildings;
+  activeBase: "planet" | "moon" | "station";
+  setActiveBase: (base: "planet" | "moon" | "station") => void;
   research: {[key: string]: number};
   units: Units;
   commander: CommanderState;
@@ -125,7 +132,7 @@ interface GameState {
   login: (username: string) => void;
   logout: () => void;
   toggleAdmin: () => void;
-  updateBuilding: (building: keyof Buildings, name: string, time: number) => void;
+  updateBuilding: (building: keyof Buildings | string, name: string, time: number) => void;
   updateResearch: (tech: string, name: string, time: number) => void;
   buildUnit: (unitId: string, amount: number, name: string, time: number) => void;
   addEvent: (title: string, description: string, type: GameEvent["type"]) => void;
@@ -173,6 +180,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     shipyard: 2,
     researchLab: 1,
   });
+
+  const [orbitalBuildings, setOrbitalBuildings] = useState<OrbitalBuildings>({
+    lunarBase: 0,
+    sensorPhalanx: 0,
+    jumpGate: 0,
+    starbaseHub: 0,
+    orbitalShipyard: 0,
+    tradeDock: 0,
+    defenseGrid: 0
+  });
+
+  const [activeBase, setActiveBase] = useState<"planet" | "moon" | "station">("planet");
 
   const [research, setResearch] = useState<{[key: string]: number}>({
     energyTech: 0,
@@ -848,6 +867,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     <GameContext.Provider value={{ 
        resources, 
        buildings, 
+       orbitalBuildings,
+       activeBase,
+       setActiveBase,
        research,
        units,
        commander,
