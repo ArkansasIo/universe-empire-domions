@@ -58,6 +58,8 @@ import UniverseEvents from "@/pages/UniverseEvents";
 import RaidBosses from "@/pages/RaidBosses";
 import RaidFinder from "@/pages/RaidFinder";
 import { useGame } from "@/lib/gameContext";
+
+function LoadingSplash() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden relative">
       <style>{`
