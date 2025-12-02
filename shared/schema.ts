@@ -124,6 +124,144 @@ export const insertMissionSchema = createInsertSchema(missions).omit({ id: true,
 export type InsertMission = z.infer<typeof insertMissionSchema>;
 export type Mission = typeof missions.$inferSelect;
 
+// Admin system tables
+export const adminUsers = pgTable("admin_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").unique().references(() => users.id, { onDelete: "cascade" }),
+  role: varchar("role").notNull().default("moderator"), // superAdmin, moderator, technician
+  permissions: jsonb("permissions").notNull().default([]),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type AdminUser = typeof adminUsers.$inferSelect;
+
+export const adminLogs = pgTable("admin_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").references(() => users.id, { onDelete: "set null" }),
+  action: varchar("action").notNull(),
+  targetUserId: varchar("target_user_id").references(() => users.id, { onDelete: "set null" }),
+  details: jsonb("details"),
+  ipAddress: varchar("ip_address"),
+  status: varchar("status").default("completed"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AdminLog = typeof adminLogs.$inferSelect;
+
+export const playerSanctions = pgTable("player_sanctions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  adminId: varchar("admin_id").references(() => users.id, { onDelete: "set null" }),
+  sanctionType: varchar("sanction_type").notNull(), // ban, mute, kick, etc
+  reason: varchar("reason").notNull(),
+  banDurationDays: integer("ban_duration_days"),
+  isPermanent: boolean("is_permanent").default(false),
+  startedAt: timestamp("started_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  liftedAt: timestamp("lifted_at"),
+  liftedByAdminId: varchar("lifted_by_admin_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PlayerSanction = typeof playerSanctions.$inferSelect;
+
+export const adminSettings = pgTable("admin_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  settingKey: varchar("setting_key").unique().notNull(),
+  settingValue: jsonb("setting_value").notNull(),
+  description: varchar("description"),
+  modifiedByAdminId: varchar("modified_by_admin_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type AdminSetting = typeof adminSettings.$inferSelect;
+
+export const serverEvents = pgTable("server_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventType: varchar("event_type").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  eventStart: timestamp("event_start").notNull(),
+  eventEnd: timestamp("event_end"),
+  rewardMultiplier: real("reward_multiplier").default(1.0),
+  isActive: boolean("is_active").default(true),
+  createdByAdminId: varchar("created_by_admin_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type ServerEvent = typeof serverEvents.$inferSelect;
+
+export const announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  priority: varchar("priority").default("normal"), // low, normal, high, critical
+  isActive: boolean("is_active").default(true),
+  createdByAdminId: varchar("created_by_admin_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+
+export const systemMetrics = pgTable("system_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metricType: varchar("metric_type").notNull(),
+  metricValue: real("metric_value").notNull(),
+  additionalData: jsonb("additional_data"),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
+export type SystemMetric = typeof systemMetrics.$inferSelect;
+
+export const backupLog = pgTable("backup_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  backupName: varchar("backup_name").notNull(),
+  backupSizeMb: real("backup_size_mb"),
+  backupLocation: varchar("backup_location"),
+  backupType: varchar("backup_type"),
+  status: varchar("status").default("pending"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type BackupLog = typeof backupLog.$inferSelect;
+
+export const economyAdjustments = pgTable("economy_adjustments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adjustmentType: varchar("adjustment_type").notNull(),
+  multiplier: real("multiplier").default(1.0),
+  target: varchar("target"),
+  reason: varchar("reason"),
+  appliedByAdminId: varchar("applied_by_admin_id").references(() => users.id, { onDelete: "set null" }),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
+export type EconomyAdjustment = typeof economyAdjustments.$inferSelect;
+
+export const supportTickets = pgTable("support_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  category: varchar("category").notNull(),
+  subject: varchar("subject").notNull(),
+  description: text("description").notNull(),
+  status: varchar("status").default("open"), // open, in-progress, resolved, closed
+  priority: varchar("priority").default("normal"), // low, normal, high, urgent
+  assignedAdminId: varchar("assigned_admin_id").references(() => users.id, { onDelete: "set null" }),
+  responseText: text("response_text"),
+  respondedAt: timestamp("responded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+
 // Messages (player communications, battle reports, espionage reports)
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
