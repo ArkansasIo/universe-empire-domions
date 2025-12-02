@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GameProvider } from "@/lib/gameContext";
 import NotFound from "@/pages/not-found";
+import { Rocket } from "lucide-react";
 
 import Overview from "@/pages/Overview";
 import Resources from "@/pages/Resources";
@@ -31,8 +32,46 @@ import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import { useGame } from "@/lib/gameContext";
 
+function LoadingSplash() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center overflow-hidden">
+      <div className="relative">
+        <div className="absolute inset-0 animate-ping">
+          <div className="w-32 h-32 rounded-full bg-primary/20" />
+        </div>
+        <div className="relative w-32 h-32 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-2xl shadow-primary/50 animate-pulse">
+          <Rocket className="w-16 h-16 text-white animate-bounce" />
+        </div>
+      </div>
+      
+      <div className="mt-12 text-center">
+        <h1 className="font-orbitron text-4xl font-bold text-white tracking-widest mb-2">
+          STELLAR <span className="text-primary">DOMINION</span>
+        </h1>
+        <p className="text-slate-400 font-rajdhani text-lg tracking-wider uppercase">
+          Initializing Command Systems
+        </p>
+      </div>
+      
+      <div className="mt-8 flex items-center gap-2">
+        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      </div>
+      
+      <div className="absolute bottom-8 text-slate-500 text-xs font-mono">
+        v0.8.2-beta // Nexus-Alpha Server
+      </div>
+    </div>
+  );
+}
+
 function Router() {
-  const { isLoggedIn, needsSetup } = useGame();
+  const { isLoggedIn, needsSetup, isLoading } = useGame();
+
+  if (isLoading) {
+    return <LoadingSplash />;
+  }
 
   if (!isLoggedIn) {
     return (
