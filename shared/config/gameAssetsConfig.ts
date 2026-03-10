@@ -690,15 +690,83 @@ export function getAssetsByCategory(category: string): any[] {
   return (categories as any)[category] || [];
 }
 
-type ASSET_CATEGORIES = {
-  navigation: true;
-  buildings: true;
-  resources: true;
-  planets: true;
-  ships: true;
-  techs: true;
-  backgrounds: true;
-};
+export const ASSET_CATEGORIES = {
+  NAVIGATION: "navigation",
+  BUILDINGS: "buildings",
+  RESOURCES: "resources",
+  PLANETS: "planets",
+  SHIPS: "ships",
+  TECHS: "techs",
+  BACKGROUNDS: "backgrounds",
+} as const;
+
+export const ASSET_VERSIONS = {
+  CURRENT: "1.0.0",
+} as const;
+
+export type AssetCategory = typeof ASSET_CATEGORIES[keyof typeof ASSET_CATEGORIES];
+
+export interface GameAsset {
+  id: string;
+  name: string;
+  type: string;
+  category: string;
+  path: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  version: string;
+  createdAt: Date;
+  updatedAt: Date;
+  tags: string[];
+  usage: Array<{
+    componentName: string;
+    componentType: string;
+    usageCount: number;
+  }>;
+}
+
+export interface AssetBundle {
+  id: string;
+  name: string;
+  description: string;
+  assets: GameAsset[];
+  totalSize: number;
+  version: string;
+  platform: "web" | "mobile" | "desktop" | "universal";
+  compressionMode: "gzip" | "brotli" | "none";
+  packaged: boolean;
+}
+
+export interface AssetManifest {
+  version: string;
+  buildDate: Date;
+  assetBundles: AssetBundle[];
+  totalBundles: number;
+  totalAssets: number;
+  totalSize: number;
+  checksums: Record<string, string>;
+  dependencies: Record<string, string[]>;
+}
+
+export interface AssetUsageStatistics {
+  totalAssets: number;
+  totalSize: number;
+  mostUsedAssets: Array<{ assetId: string; usageCount: number }>;
+  assetsByCategory: Record<string, number>;
+  cacheHitRate: number;
+  averageLoadTime: number;
+}
+
+export interface AssetCatalog {
+  id: string;
+  name: string;
+  category: string;
+  assets: GameAsset[];
+  totalAssets: number;
+  totalSize: number;
+  lastUpdated: Date;
+}
 
 /**
  * Get asset pack (multiple related assets)

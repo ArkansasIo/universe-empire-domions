@@ -6,6 +6,7 @@
 // Server Status Types
 export type ServerStatus = 'online' | 'degraded' | 'maintenance' | 'offline';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+const ENV = typeof process !== 'undefined' ? process.env : {};
 
 // System Resource Metrics
 export interface SystemMetrics {
@@ -164,7 +165,7 @@ export const DEFAULT_SERVER_CONFIG: ServerConfig = {
   },
 
   security: {
-    jwtSecret: process.env.JWT_SECRET || 'change-me-in-production',
+    jwtSecret: ENV.JWT_SECRET || 'change-me-in-production',
     jwtExpiration: 604800, // 7 days
     sessionTimeout: 86400, // 24 hours
     passwordMinLength: 8,

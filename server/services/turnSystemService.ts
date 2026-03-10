@@ -14,7 +14,7 @@ import {
   calculateOfflineTurns,
   canCompleteThisTurn,
 } from '../../shared/config/turnSystemConfig';
-import { db } from '../db';
+import { pool } from '../db';
 
 export class TurnSystemService {
   /**
@@ -23,8 +23,8 @@ export class TurnSystemService {
    */
   static async generateTurns(userId: string): Promise<number> {
     try {
-      const result = await db.query(
-        `SELECT turns_data FROM player_states WHERE user_id = $1`,
+      const result = await pool.query(
+          `SELECT turns_data FROM player_states WHERE user_id = $1`,
         [userId]
       );
 
@@ -51,7 +51,7 @@ export class TurnSystemService {
       turnsData.lastTurnTimestamp = Date.now();
       turnsData.totalTurnsGenerated = (turnsData.totalTurnsGenerated || 0) + offlineTurns;
 
-      await db.query(
+      await pool.query(
         `UPDATE player_states 
          SET turns_data = $1, updated_at = NOW() 
          WHERE user_id = $2`,
@@ -71,8 +71,8 @@ export class TurnSystemService {
   static async progressResearchByTurns(userId: string, turnsToConsume: number): Promise<any> {
     try {
       // Get player and research data
-      const playerResult = await db.query(
-        `SELECT turns_data, research_queue FROM player_states WHERE user_id = $1`,
+      const playerResult = await pool.query(
+          `SELECT turns_data, research_queue FROM player_states WHERE user_id = $1`,
         [userId]
       );
 
@@ -116,7 +116,7 @@ export class TurnSystemService {
       }
 
       // Save updates
-      await db.query(
+      await pool.query(
         `UPDATE player_states 
          SET turns_data = $1, research_queue = $2, updated_at = NOW() 
          WHERE user_id = $3`,
@@ -143,8 +143,8 @@ export class TurnSystemService {
    */
   static async getTurnInfo(userId: string): Promise<any> {
     try {
-      const result = await db.query(
-        `SELECT turns_data, research_queue FROM player_states WHERE user_id = $1`,
+      const result = await pool.query(
+          `SELECT turns_data, research_queue FROM player_states WHERE user_id = $1`,
         [userId]
       );
 
@@ -185,8 +185,8 @@ export class TurnSystemService {
    */
   static async autoProgressResearch(userId: string): Promise<any> {
     try {
-      const result = await db.query(
-        `SELECT turns_data, research_queue FROM player_states WHERE user_id = $1`,
+      const result = await pool.query(
+          `SELECT turns_data, research_queue FROM player_states WHERE user_id = $1`,
         [userId]
       );
 
@@ -239,8 +239,8 @@ export class TurnSystemService {
         throw new Error(`Unknown event type: ${eventType}`);
       }
 
-      const result = await db.query(
-        `SELECT research_queue FROM player_states WHERE user_id = $1`,
+      const result = await pool.query(
+          `SELECT research_queue FROM player_states WHERE user_id = $1`,
         [userId]
       );
 
@@ -279,7 +279,7 @@ export class TurnSystemService {
         activeResearch.modifiers.eventPenalty = (eventEffect as any).speedPenalty;
       }
 
-      await db.query(
+      await pool.query(
         `UPDATE player_states 
          SET research_queue = $1, updated_at = NOW() 
          WHERE user_id = $2`,

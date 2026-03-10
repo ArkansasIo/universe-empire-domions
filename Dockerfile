@@ -7,13 +7,13 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Build the application
 FROM base AS builder
 WORKDIR /app
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 
@@ -34,7 +34,7 @@ RUN adduser --system --uid 1001 stellarapp
 COPY --from=builder --chown=stellarapp:nodejs /app/dist ./dist
 COPY --from=builder --chown=stellarapp:nodejs /app/client/public ./client/public
 COPY --from=deps --chown=stellarapp:nodejs /app/node_modules ./node_modules
-COPY --chown=stellarapp:nodejs package*.json ./
+COPY --chown=stellarapp:nodejs package.json package-lock.json ./
 
 USER stellarapp
 

@@ -1,9 +1,11 @@
 // Admin Credentials Configuration - Root Admin and Admin Account Setup
+const ENV = typeof process !== "undefined" ? process.env : {};
+
 export const ADMIN_CREDENTIALS_CONFIG = {
   // Root Admin Account (Primary Owner)
   rootAdmin: {
-    username: process.env.ROOT_ADMIN_USERNAME || "root_admin",
-    email: process.env.ROOT_ADMIN_EMAIL || "root@stellar.local",
+    username: ENV.ROOT_ADMIN_USERNAME || "root_admin",
+    email: ENV.ROOT_ADMIN_EMAIL || "root@stellar.local",
     firstName: "Root",
     lastName: "Administrator",
     rank: "founder",

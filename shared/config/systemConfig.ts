@@ -1,9 +1,11 @@
 // System Configuration - Server, database, and environment settings
+const ENV = typeof process !== 'undefined' ? process.env : {};
+
 export const SYSTEM_CONFIG = {
   // Server settings
   server: {
     port: 5000,
-    environment: process.env.NODE_ENV || 'development',
+    environment: ENV.NODE_ENV || 'development',
     apiPrefix: '/api',
     corsOrigins: ['http://localhost:5000', 'http://localhost:3000'],
     requestTimeout: 30000, // 30 seconds
@@ -14,10 +16,10 @@ export const SYSTEM_CONFIG = {
   database: {
     // Using Neon serverless PostgreSQL
     provider: 'postgresql',
-    name: process.env.PGDATABASE || 'stellar_dominion',
-    host: process.env.PGHOST || 'localhost',
-    port: parseInt(process.env.PGPORT || '5432'),
-    user: process.env.PGUSER || 'postgres',
+    name: ENV.PGDATABASE || 'stellar_dominion',
+    host: ENV.PGHOST || 'localhost',
+    port: parseInt(ENV.PGPORT || '5432'),
+    user: ENV.PGUSER || 'postgres',
     // Password is in environment variable
     pool: {
       min: 1,
@@ -38,7 +40,7 @@ export const SYSTEM_CONFIG = {
 
   // Logging
   logging: {
-    level: process.env.LOG_LEVEL || 'info',
+    level: ENV.LOG_LEVEL || 'info',
     format: 'json',
     logRequests: true,
     logErrors: true,
@@ -61,9 +63,9 @@ export const SYSTEM_CONFIG = {
 
   // Email settings (for notifications)
   email: {
-    provider: process.env.EMAIL_PROVIDER || 'sendgrid',
-    from: process.env.EMAIL_FROM || 'noreply@stellardominion.game',
-    apiKey: process.env.EMAIL_API_KEY,
+    provider: ENV.EMAIL_PROVIDER || 'sendgrid',
+    from: ENV.EMAIL_FROM || 'noreply@stellardominion.game',
+    apiKey: ENV.EMAIL_API_KEY,
   },
 
   // Feature flags
@@ -118,27 +120,27 @@ export const SYSTEM_CONFIG = {
 
   // CDN and static assets
   cdn: {
-    enabled: process.env.CDN_ENABLED === 'true',
-    url: process.env.CDN_URL || 'https://cdn.stellardominion.game',
+    enabled: ENV.CDN_ENABLED === 'true',
+    url: ENV.CDN_URL || 'https://cdn.stellardominion.game',
   },
 
   // Third-party integrations
   integrations: {
     stripe: {
-      enabled: process.env.STRIPE_ENABLED === 'true',
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-      secretKey: process.env.STRIPE_SECRET_KEY,
+      enabled: ENV.STRIPE_ENABLED === 'true',
+      publishableKey: ENV.STRIPE_PUBLISHABLE_KEY,
+      secretKey: ENV.STRIPE_SECRET_KEY,
     },
     discord: {
-      enabled: process.env.DISCORD_ENABLED === 'true',
-      webhookUrl: process.env.DISCORD_WEBHOOK_URL,
+      enabled: ENV.DISCORD_ENABLED === 'true',
+      webhookUrl: ENV.DISCORD_WEBHOOK_URL,
     },
   },
 };
 
 // Environment-specific overrides
 export const getEnvConfig = () => {
-  const env = process.env.NODE_ENV || 'development';
+  const env = ENV.NODE_ENV || 'development';
   
   switch (env) {
     case 'production':
