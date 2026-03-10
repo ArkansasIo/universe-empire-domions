@@ -39,7 +39,7 @@
 5. Review web service settings (from `render.yaml`):
    - Build command: `npm ci --include=dev && npm run build`
    - Start command: `npm start`
-   - Node version: `20`
+   - Node version: `22`
    - Health check path: `/api/status/health`
 6. Add/verify environment variables:
    - `NODE_ENV=production`

@@ -4,6 +4,9 @@
   "type": "module",
   "license": "MIT",
   "author": "Stephen (https://github.com/ArkansasIo | https://github.com/Apocalypsecoder0)",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "scripts": {
     "dev:client": "vite dev --port 5000",
     "dev:server": "tsx server/index.ts",

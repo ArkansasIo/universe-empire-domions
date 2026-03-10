@@ -10,7 +10,7 @@ services:
     rootDir: .
     autoDeploy: true
     runtime: node
-    nodeVersion: 20
+    nodeVersion: 22
     pullRequestPreviewsEnabled: false
     healthCheckPath: /api/status/health
     envVars:
