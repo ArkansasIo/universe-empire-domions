@@ -349,4 +349,103 @@ export function registerGameActionRoutes(app: Express) {
       res.status(500).json({ error: "Failed to recall fleet" });
     }
   });
+
+  // Process mission completions - auto-complete missions whose arrival time has passed
+  app.post("/api/game/process-missions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session!.userId!;
+      const playerState = await db.query.playerStates.findFirst({
+        where: eq(playerStates.userId, userId),
+      });
+      
+      if (!playerState) {
+        return res.status(404).json({ error: "Player state not found" });
+      }
+      
+      const travelState = (playerState.travelState as any) || { activeRoute: null, discoveredWormholes: [], activeMissions: [] };
+      const activeMissions = travelState.activeMissions || [];
+      const completedMissions = [];
+      const remainingMissions = [];
+      
+      let updatedResources = playerState.resources as any || { metal: 0, crystal: 0, deuterium: 0, energy: 0 };
+      let updatedUnits = playerState.units as any || {};
+      const now = Date.now();
+      
+      for (const mission of activeMissions) {
+        if (mission.arrivalTime <= now) {
+          // Mission has arrived! Process it based on type
+          completedMissions.push({
+            ...mission,
+            status: "completed",
+            completedAt: now,
+          });
+          
+          // Return fleet to player
+          for (const [shipType, quantity] of Object.entries(mission.ships)) {
+            updatedUnits[shipType] = (updatedUnits[shipType] || 0) + (quantity as number);
+          }
+          
+          // Grant mission rewards based on type
+          switch (mission.type) {
+            case "trade":
+              // Trading mission: gain 20% of base production
+              updatedResources.metal = (updatedResources.metal || 0) + 200;
+              updatedResources.crystal = (updatedResources.crystal || 0) + 150;
+              updatedResources.deuterium = (updatedResources.deuterium || 0) + 100;
+              break;
+              
+            case "explore":
+              // Exploration mission: gain resources + research
+              updatedResources.metal = (updatedResources.metal || 0) + 150;
+              updatedResources.crystal = (updatedResources.crystal || 0) + 200;
+              updatedResources.deuterium = (updatedResources.deuterium || 0) + 80;
+              // Boost research progress slightly (implementation depends on research system)
+              break;
+              
+            case "attack":
+              // Attack mission: gain plunder (30% of typical enemy resources)
+              updatedResources.metal = (updatedResources.metal || 0) + 300;
+              updatedResources.crystal = (updatedResources.crystal || 0) + 225;
+              updatedResources.deuterium = (updatedResources.deuterium || 0) + 150;
+              updatedResources.energy = (updatedResources.energy || 0) + 500;
+              break;
+              
+            case "transport":
+              // Transport mission: cargo already loaded, no additional rewards
+              break;
+              
+            default:
+              // Generic mission: minimal rewards
+              updatedResources.metal = (updatedResources.metal || 0) + 50;
+              break;
+          }
+        } else {
+          // Mission still in transit
+          remainingMissions.push(mission);
+        }
+      }
+      
+      travelState.activeMissions = remainingMissions;
+      
+      await db.update(playerStates)
+        .set({
+          resources: updatedResources,
+          units: updatedUnits,
+          travelState: travelState,
+          updatedAt: new Date(),
+        })
+        .where(eq(playerStates.userId, userId));
+      
+      res.json({
+        message: "Missions processed successfully",
+        completedCount: completedMissions.length,
+        completedMissions,
+        remainingMissions: remainingMissions.length,
+        resources: updatedResources,
+      });
+    } catch (error) {
+      console.error("Error processing missions:", error);
+      res.status(500).json({ error: "Failed to process missions" });
+    }
+  });
 }

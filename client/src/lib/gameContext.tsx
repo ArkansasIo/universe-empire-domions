@@ -421,6 +421,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => refetchMissions()
   });
 
+  const processMissionsMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/game/process-missions', {}),
+    onSuccess: () => {
+      refetchMissions();
+      refetchGameState();
+    }
+  });
+
   const updateMissionMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string, updates: any }) => apiRequest('PATCH', `/api/missions/${id}`, updates)
   });
@@ -1084,6 +1092,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
      addEvent("Fleet Dispatched", `Fleet sent to ${missionData.target} on ${missionData.type} mission.`, "info");
   };
 
+  const processMissions = () => {
+    processMissionsMutation.mutate(undefined, {
+      onSuccess: (data: any) => {
+        if (data.completedCount > 0) {
+          addEvent("Missions Completed", `${data.completedCount} mission(s) completed. Resources gained!`, "success");
+        }
+      },
+      onError: (error: any) => {
+        addEvent("Mission Processing Error", `Failed to process missions: ${error.message}`, "error");
+      }
+    });
+  };
+
   const updateConfig = (newConfig: Partial<GameConfig>) => {
      setConfig(prev => ({ ...prev, ...newConfig }));
      addEvent("System Update", "Server configuration parameters updated.", "warning");
@@ -1265,7 +1286,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        sellItem,
        totalTurns,
        currentTurns,
-       spendTurns
+       spendTurns,
+       processMissions
     }}>
       {children}
     </GameContext.Provider>
