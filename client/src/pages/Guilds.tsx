@@ -39,10 +39,10 @@ export default function Guilds() {
               <CardTitle>Create or Join a Guild</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button className="w-full" data-testid="button-create-guild">
+              <Button className="w-full" onClick={() => alert("Guild creation feature coming soon!")} data-testid="button-create-guild">
                 Create Guild
               </Button>
-              <Button variant="outline" className="w-full" data-testid="button-browse-guilds">
+              <Button variant="outline" className="w-full" onClick={() => alert("Browsing guild directory...")} data-testid="button-browse-guilds">
                 Browse Guilds
               </Button>
             </CardContent>

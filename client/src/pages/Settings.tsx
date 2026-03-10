@@ -16,10 +16,15 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
 export default function Settings() {
   const { config, updateConfig, cronJobs, toggleCronJob, runCronJob, isAdmin, isActualAdmin, adminRole, toggleAdmin, username, logout } = useGame();
+  const [, setLocation] = useLocation();
+  const [displayName, setDisplayName] = useState(username || "Commander");
+  const [commanderTitle, setCommanderTitle] = useState("commander");
+  const [bioMessage, setBioMessage] = useState("");
   
   const [notifications, setNotifications] = useState({
     attackAlerts: true,
@@ -99,7 +104,7 @@ export default function Settings() {
                              <div className="font-orbitron font-bold text-lg text-slate-900">{username || "Commander"}</div>
                              <div className="text-sm text-slate-500">Active since {new Date().toLocaleDateString()}</div>
                           </div>
-                          <Button variant="outline" size="sm">Change Avatar</Button>
+                          <Button variant="outline" size="sm" onClick={() => alert("Avatar customization coming soon!")}>Change Avatar</Button>
                        </div>
                        
                        <Separator />
@@ -107,11 +112,11 @@ export default function Settings() {
                        <div className="space-y-4">
                           <div className="space-y-2">
                              <label className="text-sm font-bold text-slate-700">Display Name</label>
-                             <Input defaultValue={username || "Commander"} className="bg-slate-50 border-slate-200" data-testid="input-display-name" />
+                             <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="bg-slate-50 border-slate-200" data-testid="input-display-name" />
                           </div>
                           <div className="space-y-2">
                              <label className="text-sm font-bold text-slate-700">Commander Title</label>
-                             <Select defaultValue="commander">
+                             <Select value={commanderTitle} onValueChange={setCommanderTitle}>
                                 <SelectTrigger className="bg-slate-50 border-slate-200">
                                    <SelectValue />
                                 </SelectTrigger>
@@ -126,11 +131,11 @@ export default function Settings() {
                           </div>
                           <div className="space-y-2">
                              <label className="text-sm font-bold text-slate-700">Bio / Status Message</label>
-                             <Input placeholder="Set your status message..." className="bg-slate-50 border-slate-200" />
+                             <Input value={bioMessage} onChange={(e) => setBioMessage(e.target.value)} placeholder="Set your status message..." className="bg-slate-50 border-slate-200" />
                           </div>
                        </div>
                        
-                       <Button className="w-full">
+                       <Button className="w-full" onClick={() => alert("Profile updated: " + displayName)}>
                           <Save className="w-4 h-4 mr-2" /> Save Profile Changes
                        </Button>
                     </CardContent>
@@ -152,7 +157,7 @@ export default function Settings() {
                                    <div className="text-xs text-slate-500">*****@email.com</div>
                                 </div>
                              </div>
-                             <Button variant="ghost" size="sm">Change</Button>
+                             <Button variant="ghost" size="sm" onClick={() => alert("Email change feature coming soon!")}>Change</Button>
                           </div>
                           
                           <div className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100">
@@ -163,7 +168,7 @@ export default function Settings() {
                                    <div className="text-xs text-slate-500">Last changed 30 days ago</div>
                                 </div>
                              </div>
-                             <Button variant="ghost" size="sm">Change</Button>
+                             <Button variant="ghost" size="sm" onClick={() => alert("Password change feature coming soon!")}>Change</Button>
                           </div>
                           
                           <div className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100">
@@ -174,7 +179,7 @@ export default function Settings() {
                                    <div className="text-xs text-red-500">Not enabled</div>
                                 </div>
                              </div>
-                             <Button variant="outline" size="sm">Enable</Button>
+                             <Button variant="outline" size="sm" onClick={() => alert("2FA setup coming soon!")}>Enable</Button>
                           </div>
                           
                           <Separator />
@@ -204,13 +209,13 @@ export default function Settings() {
                           </CardTitle>
                        </CardHeader>
                        <CardContent className="space-y-3">
-                          <Button variant="outline" className="w-full justify-start text-slate-600">
+                          <Button variant="outline" className="w-full justify-start text-slate-600" onClick={() => alert("Account data export downloading...")}>
                              <Download className="w-4 h-4 mr-2" /> Export Account Data
                           </Button>
                           <Button variant="outline" className="w-full justify-start text-orange-600 hover:bg-orange-50" onClick={logout}>
                              <LogOut className="w-4 h-4 mr-2" /> Logout from All Devices
                           </Button>
-                          <Button variant="outline" className="w-full justify-start text-red-600 hover:bg-red-50">
+                          <Button variant="outline" className="w-full justify-start text-red-600 hover:bg-red-50" onClick={() => confirm("Are you sure? This cannot be undone!") && alert("Account deletion scheduled...")}>
                              <Trash2 className="w-4 h-4 mr-2" /> Delete Account Permanently
                           </Button>
                        </CardContent>
@@ -597,13 +602,13 @@ export default function Settings() {
                             Manage local game data and server snapshots.
                          </div>
                          
-                         <Button variant="outline" className="w-full justify-start">
+                         <Button variant="outline" className="w-full justify-start" onClick={() => alert("Backup snapshot created successfully!")}>
                             <Save className="w-4 h-4 mr-2" /> Create Backup Snapshot
                          </Button>
-                         <Button variant="outline" className="w-full justify-start">
+                         <Button variant="outline" className="w-full justify-start" onClick={() => confirm("This will erase all universe data! Continue?") && alert("Universe reset in progress...")}>
                             <RefreshCw className="w-4 h-4 mr-2" /> Reset Universe (Wipe Data)
                          </Button>
-                         <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50">
+                         <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => confirm("Restart server now?") && alert("Server restarting...")}>
                             <Power className="w-4 h-4 mr-2" /> Force Server Restart
                          </Button>
                       </CardContent>

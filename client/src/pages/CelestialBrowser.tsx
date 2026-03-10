@@ -233,7 +233,7 @@ export default function CelestialBrowser() {
                   <Card key={planet.id} className="border-slate-200">
                     <CardContent className="pt-4">
                       <h4 className="font-bold mb-2">{planet.name}</h4>
-                      <Button size="sm" className="w-full">
+                      <Button size="sm" className="w-full" onClick={() => alert("Viewing details for " + planet.name)}>
                         View Details
                       </Button>
                     </CardContent>
@@ -249,7 +249,7 @@ export default function CelestialBrowser() {
                         <Star className="w-4 h-4 text-yellow-500" />
                         <h4 className="font-bold">{star.name}</h4>
                       </div>
-                      <Button size="sm" className="w-full">
+                      <Button size="sm" className="w-full" onClick={() => alert("Viewing star system " + star.name)}>
                         View Star System
                       </Button>
                     </CardContent>

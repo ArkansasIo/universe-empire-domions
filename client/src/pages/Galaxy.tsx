@@ -236,17 +236,17 @@ export default function Galaxy() {
                       <TableCell className="text-right">
                          {data.type !== "empty" && !isMe && (
                             <div className="flex justify-end gap-2">
-                               <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600">
+                               <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" onClick={() => alert("Scanning " + data.name)}>
                                  <Search className="w-4 h-4" />
                                </Button>
                                {(data.type === "planet" || data.type === "station") && (
                                  <>
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"><MessageSquare className="w-4 h-4" /></Button>
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-red-50 hover:text-red-600"><ShieldAlert className="w-4 h-4" /></Button>
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" onClick={() => alert("Messaging " + data.name)}><MessageSquare className="w-4 h-4" /></Button>
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-red-50 hover:text-red-600" onClick={() => alert("Attacking " + data.name)}><ShieldAlert className="w-4 h-4" /></Button>
                                  </>
                                )}
                                {(data.type === "asteroid" || data.type === "blackhole") && (
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-yellow-50 hover:text-yellow-600"><Rocket className="w-4 h-4" /></Button>
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-yellow-50 hover:text-yellow-600" onClick={() => alert("Launching fleet to " + data.name)}><Rocket className="w-4 h-4" /></Button>
                                )}
                             </div>
                          )}

@@ -972,7 +972,7 @@ export default function Market() {
                           </div>
                        </div>
 
-                       <Button className="w-full" data-testid="button-exchange">
+                       <Button className="w-full" onClick={() => alert("Exchanging " + exchangeAmount + " resources!")} data-testid="button-exchange">
                           <ArrowUpDown className="w-4 h-4 mr-2" /> Exchange Resources
                        </Button>
                     </CardContent>

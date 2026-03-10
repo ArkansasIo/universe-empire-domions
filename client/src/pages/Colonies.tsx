@@ -142,11 +142,11 @@ export default function Colonies() {
                       <div><span className="text-green-600 font-bold">{colony.resources.deuterium.toLocaleString()}</span><div>Deut</div></div>
                     </div>
 
-                    <Button size="sm" className="w-full" variant="outline" data-testid={`btn-manage-${colony.id}`}>
-                      <Link href={`/planet/${colony.id}`} style={{ width: '100%', textDecoration: 'none', color: 'inherit' }}>
+                    <Link href={`/planet/${colony.id}`}>
+                      <Button size="sm" className="w-full" variant="outline" data-testid={`btn-manage-${colony.id}`}>
                         Manage Colony
-                      </Link>
-                    </Button>
+                      </Button>
+                    </Link>
                   </CardContent>
                 </Card>
               ))}
@@ -180,7 +180,7 @@ export default function Colonies() {
                       </div>
                     </div>
 
-                    <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" data-testid={`btn-colonize-${slot.id}`}>
+                    <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => alert("Starting colonization of " + slot.name + "!")} data-testid={`btn-colonize-${slot.id}`}>
                       Colonize
                     </Button>
                   </CardContent>

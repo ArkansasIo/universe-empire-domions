@@ -129,7 +129,7 @@ export default function Admin() {
                  <CardContent>
                     <div className="flex justify-between mb-4">
                        <Input placeholder="Search users..." className="max-w-sm bg-slate-50" />
-                       <Button variant="outline"><Users className="w-4 h-4 mr-2" /> Export CSV</Button>
+                       <Button variant="outline" onClick={() => alert("Exporting user data to CSV...")}><Users className="w-4 h-4 mr-2" /> Export CSV</Button>
                     </div>
                     <Table>
                        <TableHeader>
@@ -166,7 +166,7 @@ export default function Admin() {
                                 <TableCell className="text-slate-500 text-sm">{user.lastLogin}</TableCell>
                                 <TableCell className="font-mono text-xs text-slate-500">{user.ip}</TableCell>
                                 <TableCell className="text-right space-x-2">
-                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600">
+                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => alert("Viewing user: " + user.name)}>
                                       <Eye className="w-4 h-4" />
                                    </Button>
                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-yellow-600" onClick={() => handleMute(user.id)}>

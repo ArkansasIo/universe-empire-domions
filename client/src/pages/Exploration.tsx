@@ -102,7 +102,7 @@ export default function Exploration() {
                           </div>
                         </div>
                         {!anomaly.discovered && (
-                          <Button size="sm" className="w-full mt-2 bg-orange-600 hover:bg-orange-700" data-testid={`btn-scan-anomaly-${anomaly.id}`}>
+                          <Button size="sm" className="w-full mt-2 bg-orange-600 hover:bg-orange-700" onClick={() => alert("Scanning anomaly...")} data-testid={`btn-scan-anomaly-${anomaly.id}`}>
                             <Compass className="w-3 h-3 mr-1" /> Scan
                           </Button>
                         )}
@@ -151,7 +151,7 @@ export default function Exploration() {
                             <div className="font-bold mb-1">Linked Gates: {gate.linkedGates.length}</div>
                           </div>
                         )}
-                        <Button size="sm" className="w-full mt-2" variant={gate.owned ? "outline" : "default"} data-testid={`btn-gate-${gate.id}`}>
+                        <Button size="sm" className="w-full mt-2" variant={gate.owned ? "outline" : "default"} onClick={() => alert(gate.owned ? "Jumping to " + gate.name : "Capturing " + gate.name)} data-testid={`btn-gate-${gate.id}`}>
                           {gate.owned ? "Jump" : "Capture"}
                         </Button>
                       </CardContent>

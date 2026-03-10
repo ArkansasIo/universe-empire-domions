@@ -178,7 +178,7 @@ export default function MegaStructures() {
                             </div>
                           </div>
 
-                          <Button className="w-full bg-primary hover:bg-primary/90" data-testid={`button-construct-${structure.id}`}>
+                          <Button className="w-full bg-primary hover:bg-primary/90" onClick={() => alert("Starting construction of " + structure.name)} data-testid={`button-construct-${structure.id}`}>
                             Begin Construction
                           </Button>
                         </CardContent>

@@ -263,16 +263,16 @@ export default function Alliance() {
                                 <Input placeholder="e.g. NOVA" className="bg-slate-50 font-mono" />
                              </div>
                              <div className="grid grid-cols-2 gap-2">
-                                <Button variant="outline" className="border-green-200 text-green-600 hover:bg-green-50">
+                                <Button variant="outline" className="border-green-200 text-green-600 hover:bg-green-50" onClick={() => alert("Alliance proposal sent!")}>
                                    <Handshake className="w-4 h-4 mr-2" /> Propose Alliance
                                 </Button>
-                                <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
+                                <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50" onClick={() => alert("Opening diplomatic talks...")}>
                                    <MessageSquare className="w-4 h-4 mr-2" /> Open Talks
                                 </Button>
-                                <Button variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50">
+                                <Button variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50" onClick={() => alert("Warning issued!")}>
                                    <Flag className="w-4 h-4 mr-2" /> Issue Warning
                                 </Button>
-                                <Button variant="destructive">
+                                <Button variant="destructive" onClick={() => alert("War declared! Hostilities commence.")}>
                                    <Swords className="w-4 h-4 mr-2" /> Declare War
                                 </Button>
                              </div>
@@ -386,7 +386,7 @@ export default function Alliance() {
                           className="bg-slate-50 border-slate-200"
                           data-testid="input-search-alliance"
                        />
-                       <Button data-testid="button-search-alliance">Search</Button>
+                       <Button onClick={() => alert("Searching for: " + (searchQuery || "all alliances"))} data-testid="button-search-alliance">Search</Button>
                     </div>
 
                     <div className="space-y-4">

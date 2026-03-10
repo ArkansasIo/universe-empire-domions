@@ -476,7 +476,7 @@ export default function Fleet() {
                          <span>Est. Power: 15,000</span>
                          <span>80 ships</span>
                        </div>
-                       <Button className="w-full mt-4" variant="outline" data-testid="button-load-template-alpha">Load Template</Button>
+                       <Button className="w-full mt-4" variant="outline" onClick={() => alert("Loading Attack Fleet template...")} data-testid="button-load-template-alpha">Load Template</Button>
                     </CardContent>
                  </Card>
 
@@ -498,7 +498,7 @@ export default function Fleet() {
                          <span>Est. Power: 2,500</span>
                          <span>8 ships</span>
                        </div>
-                       <Button className="w-full mt-4" variant="outline" data-testid="button-load-template-colony">Load Template</Button>
+                       <Button className="w-full mt-4" variant="outline" onClick={() => alert("Loading Colony Ship template...")} data-testid="button-load-template-colony">Load Template</Button>
                     </CardContent>
                  </Card>
 

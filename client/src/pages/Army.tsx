@@ -430,10 +430,10 @@ export default function Army() {
                           ))}
                         </div>
                         <div className="flex gap-2 mt-3">
-                          <Button size="sm" variant="outline" className="flex-1 text-xs" data-testid={`button-manage-${troop.id}`}>
+                          <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => alert("Opening equipment for " + troop.name)} data-testid={`button-manage-${troop.id}`}>
                             Equip
                           </Button>
-                          <Button size="sm" variant="outline" className="flex-1 text-xs" data-testid={`button-deploy-${troop.id}`}>
+                          <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => alert("Deploying " + troop.name)} data-testid={`button-deploy-${troop.id}`}>
                             Deploy
                           </Button>
                         </div>
@@ -458,7 +458,7 @@ export default function Army() {
                           <p className="text-xs text-slate-600">{troop.troopClass} - Level {troop.level}</p>
                         </div>
                       </div>
-                      <Button size="sm" data-testid={`button-deploy-active-${troop.id}`}>Deploy</Button>
+                      <Button size="sm" onClick={() => alert("Deploying " + troop.name)} data-testid={`button-deploy-active-${troop.id}`}>Deploy</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -482,7 +482,7 @@ export default function Army() {
                     </div>
                   ))}
                 </div>
-                <Button className="w-full mt-4" data-testid="button-deploy-squad">Deploy Squad</Button>
+                <Button className="w-full mt-4" onClick={() => alert("Deploying Strike Squadron!")} data-testid="button-deploy-squad">Deploy Squad</Button>
               </CardContent>
             </Card>
           </TabsContent>

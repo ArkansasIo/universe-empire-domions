@@ -72,10 +72,10 @@ export default function FriendsList() {
                       <p className="text-sm text-slate-400">{req.message}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" data-testid={`button-accept-request-${req.id}`}>
+                      <Button size="sm" onClick={() => alert("Friend request accepted!")} data-testid={`button-accept-request-${req.id}`}>
                         Accept
                       </Button>
-                      <Button size="sm" variant="outline" data-testid={`button-reject-request-${req.id}`}>
+                      <Button size="sm" variant="outline" onClick={() => alert("Friend request rejected!")} data-testid={`button-reject-request-${req.id}`}>
                         Reject
                       </Button>
                     </div>

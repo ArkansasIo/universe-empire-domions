@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { playerStates } from "../shared/schema";
+import { eq } from "drizzle-orm";
 
 // Middleware to check authentication
 function isAuthenticated(req: Request, res: Response, next: Function) {

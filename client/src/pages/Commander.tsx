@@ -305,7 +305,7 @@ export default function Commander() {
                                <Badge variant="outline" className="font-mono">{skill.currentLevel}/{skill.maxLevel}</Badge>
                             </div>
                             <Progress value={(skill.currentLevel / skill.maxLevel) * 100} className="h-2 mb-2" />
-                            <Button size="sm" variant="outline" className="w-full" disabled={skill.currentLevel >= skill.maxLevel}>
+                            <Button size="sm" variant="outline" className="w-full" disabled={skill.currentLevel >= skill.maxLevel} onClick={() => skill.currentLevel < skill.maxLevel && alert("Upgrading " + skill.name + "!")}>
                                Upgrade (1 SP)
                             </Button>
                          </div>

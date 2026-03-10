@@ -101,7 +101,7 @@ export default function RaidBosses() {
                   </div>
                 )}
 
-                <Button className="w-full" data-testid={`button-challenge-boss-${boss.id}`}>
+                <Button className="w-full" onClick={() => alert("Challenging " + boss.name + "!")} data-testid={`button-challenge-boss-${boss.id}`}>
                   Challenge Boss
                 </Button>
               </CardContent>
