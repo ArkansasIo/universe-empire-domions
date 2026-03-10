@@ -1,5 +1,5 @@
 # Fly.io Configuration for Stellar Dominion
-app = "stellar-dominion"
+app = "stellar-dominion-1-5"
 primary_region = "sea"
 
 [build]
@@ -8,10 +8,10 @@ primary_region = "sea"
 
 [env]
   NODE_ENV = "production"
-  PORT = "8080"
+  PORT = "5000"
 
 [http_service]
-  internal_port = 8080
+  internal_port = 5000
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true

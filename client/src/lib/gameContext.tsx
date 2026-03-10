@@ -1287,7 +1287,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        sellItem,
        totalTurns,
        currentTurns,
-       spendTurns
+       spendTurns,
+       processMissions
     }}>
       {children}
     </GameContext.Provider>
