@@ -63,6 +63,7 @@ const RaidFinder = lazy(() => import("@/pages/RaidFinder"));
 const EmpirePlanetViewer = lazy(() => import("@/pages/EmpirePlanetViewer"));
 const ResearchLab = lazy(() => import("@/pages/ResearchLab"));
 const GameAssetsGallery = lazy(() => import("@/pages/GameAssetsGallery"));
+const PlanetDetail = lazy(() => import("@/pages/PlanetDetail"));
 
 function LoadingSplash() {
   return (
@@ -216,6 +217,7 @@ function RouterContent() {
       <Route path="/raid-bosses" component={RaidBosses} />
       <Route path="/raid-finder" component={RaidFinder} />
       <Route path="/empire-planets" component={EmpirePlanetViewer} />
+      <Route path="/planet/:id" component={PlanetDetail} />
       <Route path="/research-lab" component={ResearchLab} />
       <Route path="/assets-gallery" component={GameAssetsGallery} />
       <Route path="/settings" component={Settings} />

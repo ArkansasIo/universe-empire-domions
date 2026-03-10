@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Star, Zap, Droplets, Thermometer, Radio, Users } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 
 const SAMPLE_PLANETS = [
   {
@@ -172,9 +173,11 @@ export default function CelestialBrowser() {
                                   </div>
                                 )}
 
-                                <Button className="w-full" size="sm">
-                                  {planet.colonized ? "Visit Colony" : "Colonize"}
-                                </Button>
+                                <Link href={`/planet/${planet.id}`}>
+                                  <Button className="w-full" size="sm">
+                                    {planet.colonized ? "Visit Colony" : "View Planet"}
+                                  </Button>
+                                </Link>
                               </CardContent>
                             </Card>
                           ))}

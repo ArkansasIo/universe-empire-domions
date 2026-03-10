@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Globe, Zap, Users, Shield, Building2, Orbit } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 import { SOL_SYSTEM_COLONIES, EMPIRE_SLOTS_LIMIT } from "@/lib/empireManager";
 import { cn } from "@/lib/utils";
 import Navigation from "./Navigation";
@@ -142,7 +143,9 @@ export default function Colonies() {
                     </div>
 
                     <Button size="sm" className="w-full" variant="outline" data-testid={`btn-manage-${colony.id}`}>
-                      Manage Colony
+                      <Link href={`/planet/${colony.id}`} style={{ width: '100%', textDecoration: 'none', color: 'inherit' }}>
+                        Manage Colony
+                      </Link>
                     </Button>
                   </CardContent>
                 </Card>

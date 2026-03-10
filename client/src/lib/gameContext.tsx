@@ -406,14 +406,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   });
 
   const { data: serverMissions, refetch: refetchMissions } = useQuery({
-    queryKey: ['/api/missions/active'],
-    queryFn: () => apiRequest('GET', '/api/missions/active'),
+    queryKey: ['/api/game/missions'],
+    queryFn: () => apiRequest('GET', '/api/game/missions'),
     enabled: !!authUser,
     staleTime: 5000
   });
 
   const createMissionMutation = useMutation({
-    mutationFn: (mission: any) => apiRequest('POST', '/api/missions', mission),
+    mutationFn: (mission: any) => apiRequest('POST', '/api/game/send-fleet', {
+      missionType: mission.type,
+      destination: mission.target,
+      ships: mission.units
+    }),
     onSuccess: () => refetchMissions()
   });
 
@@ -828,32 +832,42 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }, ...prev].slice(0, 10));
   };
 
-  const updateBuilding = (building: keyof Buildings, name: string, time: number = 5000) => {
-    const costMetal = 100 * Math.pow(2, buildings[building]);
-    const costCrystal = 50 * Math.pow(2, buildings[building]);
+  const updateBuilding = async (building: keyof Buildings, name: string, time: number = 5000) => {
     const turnCost = 2; // 2 turns per building
 
     if (!spendTurns(turnCost)) return;
 
-    if (resources.metal >= costMetal && resources.crystal >= costCrystal) {
-      setResources(prev => ({
-        ...prev,
-        metal: prev.metal - costMetal,
-        crystal: prev.crystal - costCrystal
-      }));
-      const adjustedTime = (time * Math.pow(1.15, buildings[building] || 0)) / (config?.gameSpeed || 1);
-      const now = Date.now();
-      setQueue(prev => [...prev, {
-        id: building,
-        name: name,
-        startTime: now,
-        endTime: now + adjustedTime,
-        type: "building",
-        itemId: building
-      }]);
-    } else {
+    try {
+      // Call backend API to build
+      const response = await apiRequest("POST", "/api/game/build", {
+        building: building,
+        level: (buildings[building] || 0) + 1
+      });
+      
+      if (response.success) {
+        // Update local state based on response
+        setResources(response.resources || resources);
+        setBuildings(response.buildings || buildings);
+        
+        const adjustedTime = (time * Math.pow(1.15, buildings[building] || 0)) / (config?.gameSpeed || 1);
+        const now = Date.now();
+        setQueue(prev => [...prev, {
+          id: building,
+          name: name,
+          startTime: now,
+          endTime: now + adjustedTime,
+          type: "building",
+          itemId: building
+        }]);
+        
+        addEvent("Build Started", `Construction of ${name} started`, "success");
+      } else {
+        setCurrentTurns(prev => prev + turnCost);
+        addEvent("Build Failed", response.error || "Failed to start construction", "danger");
+      }
+    } catch (error) {
       setCurrentTurns(prev => prev + turnCost);
-      alert("Not enough resources!");
+      addEvent("Build Error", "Server error occurred", "danger");
     }
   };
 
@@ -874,21 +888,43 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }]);
   };
 
-  const buildUnit = (unitId: string, amount: number, name: string, time: number = 2000) => {
+  const buildUnit = async (unitId: string, amount: number, name: string, time: number = 2000) => {
     const turnCost = amount; // 1 turn per unit
     if (!spendTurns(turnCost)) return;
     
-    const adjustedTime = (time * amount) / (config?.gameSpeed || 1);
-    const now = Date.now();
-    setQueue(prev => [...prev, {
-      id: unitId,
-      name: name,
-      startTime: now,
-      endTime: now + adjustedTime,
-      type: "unit",
-      amount,
-      itemId: unitId
-    }]);
+    try {
+      // Call backend API to build ships
+      const response = await apiRequest("POST", "/api/game/build-ships", {
+        shipType: unitId,
+        quantity: amount
+      });
+      
+      if (response.success) {
+        // Update local state based on response
+        setResources(response.resources || resources);
+        setUnits(response.units || units);
+        
+        const adjustedTime = (time * amount) / (config?.gameSpeed || 1);
+        const now = Date.now();
+        setQueue(prev => [...prev, {
+          id: unitId,
+          name: name,
+          startTime: now,
+          endTime: now + adjustedTime,
+          type: "unit",
+          amount,
+          itemId: unitId
+        }]);
+        
+        addEvent("Ships Constructed", `${amount}x ${name} built successfully`, "success");
+      } else {
+        setCurrentTurns(prev => prev + turnCost);
+        addEvent("Build Failed", response.error || "Failed to build ships", "danger");
+      }
+    } catch (error) {
+      setCurrentTurns(prev => prev + turnCost);
+      addEvent("Build Error", "Server error occurred", "danger");
+    }
   };
 
   const equipItem = (item: Item) => {
