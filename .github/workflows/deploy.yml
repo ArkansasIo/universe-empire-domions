@@ -107,7 +107,7 @@ jobs:
 
       - name: Deploy to Fly.io
         if: steps.check-token.outputs.skip != 'true'
-        run: flyctl deploy --remote-only --config fly.toml
+        run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
