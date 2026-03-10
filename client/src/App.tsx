@@ -57,6 +57,9 @@ import Raids from "@/pages/Raids";
 import UniverseEvents from "@/pages/UniverseEvents";
 import RaidBosses from "@/pages/RaidBosses";
 import RaidFinder from "@/pages/RaidFinder";
+import EmpirePlanetViewer from "@/pages/EmpirePlanetViewer";
+import ResearchLab from "@/pages/ResearchLab";
+import GameAssetsGallery from "@/pages/GameAssetsGallery";
 import { useGame } from "@/lib/gameContext";
 
 function LoadingSplash() {
@@ -207,6 +210,9 @@ function RouterContent() {
       <Route path="/universe-events" component={UniverseEvents} />
       <Route path="/raid-bosses" component={RaidBosses} />
       <Route path="/raid-finder" component={RaidFinder} />
+      <Route path="/empire-planets" component={EmpirePlanetViewer} />
+      <Route path="/research-lab" component={ResearchLab} />
+      <Route path="/assets-gallery" component={GameAssetsGallery} />
       <Route path="/settings" component={Settings} />
       <Route path="/admin" component={Admin} />
       <Route path="/server-console" component={ServerConsole} />

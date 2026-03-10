@@ -1,5 +1,7 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
+import { Pool as NodePgPool } from 'pg';
+import { drizzle as drizzleNeon } from 'drizzle-orm/neon-serverless';
+import { drizzle as drizzleNode } from 'drizzle-orm/node-postgres';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
@@ -13,10 +15,24 @@ if (!process.env.DATABASE_URL) {
 
 console.log('🔌 Connecting to database...');
 
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
+const databaseUrl = process.env.DATABASE_URL;
+const isNeonUrl = databaseUrl.includes('neon.tech') || databaseUrl.includes('neon.database');
+
+// Neon serverless URLs require websocket transport, while local/standard Postgres should use node-postgres.
+const neonPool = new NeonPool({
+  connectionString: databaseUrl,
   connectionTimeoutMillis: 5000,
 });
+
+const nodePool = new NodePgPool({
+  connectionString: databaseUrl,
+  connectionTimeoutMillis: 5000,
+});
+
+const activePool = isNeonUrl ? neonPool : nodePool;
+
+// Expose a stable pool surface for existing code that uses `pool.query(...)`.
+export const pool = activePool as unknown as NodePgPool;
 
 // Test connection and log status
 pool.connect()
@@ -30,4 +46,6 @@ pool.connect()
     console.error('💡 Make sure PostgreSQL is running or update DATABASE_URL');
   });
 
-export const db = drizzle({ client: pool, schema });
+export const db = isNeonUrl
+  ? drizzleNeon({ client: neonPool, schema })
+  : drizzleNode({ client: nodePool, schema });

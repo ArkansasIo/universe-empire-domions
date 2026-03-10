@@ -10,7 +10,8 @@ The active admin credentials are stored in `.admin-credentials.json`:
 
 - **Username:** `admin`
 - **Password:** Not stored in plaintext (hashed with SHA-256)
-- **Password Hash:** `33d8e6060c342e82afc82c079bba90f75fe7edacab32b1c167dfdd61c15e269f`
+- **Password Hash:** `33d8e6060c342e82afc82c079bba90f75fe7edacab32b1c167dfdd61c15e26
+9f`
 - **Security Code:** `8F54446E`
 - **Created:** `2025-12-02T16:10:32.545Z`
 - **Last Login:** `2025-12-02T16:10:32.546Z`

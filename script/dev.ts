@@ -1,4 +1,15 @@
 import { spawn } from "node:child_process";
+import { config } from "dotenv";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDir = dirname(currentFilePath);
+const projectRoot = resolve(currentDir, "..");
+
+// Always resolve .env relative to the nested project root, then fallback to cwd.
+config({ path: resolve(projectRoot, ".env") });
+config();
 
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
 const nodeEnv = process.env.NODE_ENV ?? "development";

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { eq, desc } from "drizzle-orm";
+import { createHash } from "crypto";
 import { db } from "./db";
 import {
   users,
@@ -18,7 +19,7 @@ import {
   empireValues,
   playerItems,
 } from "@shared/schema";
-import type { DatabaseStorage } from "./storage";
+import { storage } from "./storage";
 
 // Augment express-session types
 declare module "express-session" {
@@ -26,8 +27,6 @@ declare module "express-session" {
     userId?: string;
   }
 }
-
-let storage: DatabaseStorage;
 
 const isAuthenticated = (req: Request, res: Response, next: any) => {
   if (!req.session.userId) {
@@ -56,8 +55,7 @@ export function registerRoutes(app: any) {
         return res.status(400).json({ message: "User already exists" });
       }
 
-      const hash = require("crypto")
-        .createHash("sha256")
+      const hash = createHash("sha256")
         .update(password)
         .digest("hex");
       const [user] = await db
@@ -75,8 +73,7 @@ export function registerRoutes(app: any) {
   app.post("/api/auth/login", async (req: Request, res: any) => {
     try {
       const { username, password } = req.body;
-      const hash = require("crypto")
-        .createHash("sha256")
+      const hash = createHash("sha256")
         .update(password)
         .digest("hex");
 
@@ -110,6 +107,28 @@ export function registerRoutes(app: any) {
       res.json(state || {});
     } catch (error: any) {
       res.status(500).json({ message: "Failed to fetch player state" });
+    }
+  });
+
+  // Backward-compatible game state routes used by the client game context.
+  app.get("/api/game/state", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const state = await storage.getPlayerState(userId);
+      res.json(state || {});
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to fetch game state" });
+    }
+  });
+
+  app.patch("/api/game/state", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const updates = req.body || {};
+      const updated = await storage.updatePlayerState(userId, updates);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to update game state" });
     }
   });
 

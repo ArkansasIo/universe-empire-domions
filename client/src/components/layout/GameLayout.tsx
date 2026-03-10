@@ -45,7 +45,8 @@ import {
   Link2,
   ScrollText,
   Network,
-  AlertTriangle
+  AlertTriangle,
+  Image,
 } from "lucide-react";
 
 const SidebarItem = ({ href, icon: Icon, label, active, className, indent = false }: { href: string, icon: any, label: string, active: boolean, className?: string, indent?: boolean }) => (
@@ -234,6 +235,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
               location={location}
               items={[
                 { href: "/research", icon: FlaskConical, label: "Research Lab" },
+                { href: "/research-lab", icon: Zap, label: "Research Management" },
                 { href: "/technology-tree", icon: GraduationCap, label: "Tech Tree" },
                 { href: "/blueprints", icon: FileText, label: "Blueprints" },
                 { href: "/artifacts", icon: Hexagon, label: "Artifacts" },
@@ -267,6 +269,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
                 { href: "/exploration", icon: Compass, label: "Exploration" },
                 { href: "/warp-network", icon: Network, label: "Warp Network" },
                 { href: "/celestial-browser", icon: CircleDot, label: "Celestial Browser" },
+                { href: "/empire-planets", icon: Globe, label: "Empire Planets" },
               ]}
             />
             
@@ -299,6 +302,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
             {/* System */}
             <div className="px-4 mt-4 mb-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">System</div>
             <SidebarItem href="/diagnostics" icon={AlertTriangle} label="Diagnostics" active={location === "/diagnostics"} />
+            <SidebarItem href="/assets-gallery" icon={Image} label="Assets Gallery" active={location === "/assets-gallery"} />
             <SidebarItem href="/settings" icon={Settings} label="Settings" active={location === "/settings"} />
             
             {isAdmin && (

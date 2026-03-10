@@ -53,6 +53,9 @@ export const playerStates = pgTable("player_states", {
   // Planet Info
   planetName: varchar("planet_name").notNull().default("New Colony"),
   coordinates: varchar("coordinates").notNull().default("[1:1:1]"),
+  knownPlanets: jsonb("known_planets").notNull().default([]),
+  travelState: jsonb("travel_state").notNull().default({ activeRoute: null, discoveredWormholes: [] }),
+  travelLog: jsonb("travel_log").notNull().default([]),
   
   // Resources (stored as JSON for flexibility)
   resources: jsonb("resources").notNull().default({ metal: 1000, crystal: 500, deuterium: 0, energy: 0 }),
@@ -63,6 +66,43 @@ export const playerStates = pgTable("player_states", {
   
   // Research (JSON object with tech levels)
   research: jsonb("research").notNull().default({}),
+  
+  // Research Queue System
+  researchQueue: jsonb("research_queue").notNull().default([]),  // [] of ResearchQueuedItem
+  researchHistory: jsonb("research_history").notNull().default([]),  // Completed research
+  activeResearch: jsonb("active_research").notNull().default(null),  // Current research
+  researchBonuses: jsonb("research_bonuses").notNull().default([]),  // Active bonuses
+  researchModifiers: jsonb("research_modifiers").notNull().default([]),  // Tech/gov modifiers
+  researchLab: jsonb("research_lab").notNull().default({
+    type: "standard",
+    level: 1,
+    specialization: "general",
+    durability: 100
+  }),  // Currently using lab
+  availableLabs: jsonb("available_labs").notNull().default([]),  // Accessible labs
+  
+  // Turn System - Track turn generation and progression
+  turnsData: jsonb("turns_data").notNull().default({
+    totalTurnsGenerated: 0,
+    currentTurn: 0,
+    lastTurnTimestamp: 0,
+    turnsAvailable: 0,
+    currentResearchTurns: 0,
+    researchTurnHistory: []
+  }),  // Turn tracking and generation
+  
+  // Research XP & Discovery System
+  researchXP: jsonb("research_xp").notNull().default({
+    totalXP: 0,
+    currentLevelXP: 0,
+    currentLevel: 1,
+    researchesCompleted: 0,
+    discoveredTechs: [],
+    discoveries: [],
+    discoveryStreak: 0,
+    lastDiscoveryTime: 0,
+    discoveryMultiplier: 1.0
+  }),  // XP and discovery tracking
   
   // Units/Fleet (JSON object with unit counts)
   units: jsonb("units").notNull().default({}),

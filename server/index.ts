@@ -115,6 +115,18 @@ app.use((req, res, next) => {
 import { registerSettingsRoutes } from "./routes-settings";
 import { registerStatusRoutes } from "./routes-status";
 import { registerDiagnosticsRoutes } from "./routes-diagnostics";
+import { registerResearchRoutes } from "./routes-research";
+import { registerResearchLabRoutes } from "./routes-researchlab";
+import { registerTravelRoutes } from "./routes-travel";
+import turnSystemRoutes from "./routes-turnsystem";
+import researchXPRoutes from "./routes-researchxp";
+import recommendationsRoutes from "./routes-recommendations";
+import multiplayerBonusesRoutes from "./routes-multiplayerbonuses";
+import customLabRoutes from "./routes-customlabs";
+import achievementRoutes from "./routes-achievements";
+import autoBuyResourcesRoutes from "./routes-autobuyresources";
+import tradingRoutes from "./routes-trading";
+import assetsRoutes from "./routes-assets";
 
 (async () => {
   await setupAuth(app);
@@ -122,8 +134,21 @@ import { registerDiagnosticsRoutes } from "./routes-diagnostics";
   registerSettingsRoutes(app);
   registerStatusRoutes(app);
   registerDiagnosticsRoutes(app);
+  registerResearchRoutes(app);
+  registerResearchLabRoutes(app);
+  registerTravelRoutes(app);
+  app.use(turnSystemRoutes);
+  app.use(researchXPRoutes);
+  app.use(recommendationsRoutes);
+  app.use('/api/alliances', multiplayerBonusesRoutes);
+  app.use('/api/labs', customLabRoutes);
+  app.use('/api/achievements', achievementRoutes);
+  app.use('/api/autobuy', autoBuyResourcesRoutes);
+  app.use('/api/trading', tradingRoutes);
+  app.use('/api/assets', assetsRoutes);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // Error handling middleware
+  app.use((err: any, req: any, res: any, next: any) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 

@@ -158,6 +158,71 @@ import {
 import { db } from "./db/index";
 import { eq, and, or, desc, asc, sql, inArray } from "drizzle-orm";
 
+const MAX_LEVEL = 999;
+const MAX_TIER = 99;
+const MAX_VALUE = 999999999;
+
+function boostNestedValues(value: any, path: string[] = []): any {
+  if (value === null || value === undefined) return value;
+  if (value instanceof Date) return value;
+
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => boostNestedValues(entry, [...path, String(index)]));
+  }
+
+  if (typeof value === "number") {
+    const joined = path.join(".").toLowerCase();
+    const key = (path[path.length - 1] || "").toLowerCase();
+
+    if (key.includes("tier") || joined.includes("tier")) return MAX_TIER;
+    if (key.includes("level") || key === "lvl") return MAX_LEVEL;
+    if (key.includes("experience") || key.includes("xp")) return MAX_VALUE;
+
+    if (
+      joined.includes("research") ||
+      joined.includes("buildings") ||
+      joined.includes("units") ||
+      joined.includes("stats") ||
+      joined.includes("substats") ||
+      joined.includes("attributes") ||
+      joined.includes("tierbonuses")
+    ) {
+      return MAX_LEVEL;
+    }
+
+    if (
+      joined.includes("resources") ||
+      joined.includes("currency") ||
+      joined.includes("balance") ||
+      joined.includes("kardashev")
+    ) {
+      return MAX_VALUE;
+    }
+
+    return Math.max(value, MAX_LEVEL);
+  }
+
+  if (typeof value === "object") {
+    const result: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value)) {
+      result[k] = boostNestedValues(v, [...path, k]);
+    }
+    return result;
+  }
+
+  return value;
+}
+
+function maximizePlayerState<T extends Record<string, any>>(state: T): T {
+  const boosted = boostNestedValues(state) as T;
+  if (typeof boosted === "object" && boosted !== null) {
+    (boosted as any).empireLevel = MAX_LEVEL;
+    (boosted as any).tier = MAX_TIER;
+    (boosted as any).setupComplete = true;
+  }
+  return boosted;
+}
+
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
@@ -525,11 +590,11 @@ export class DatabaseStorage implements IStorage {
       stats: government.stats || { stability: 50, efficiency: 70, publicSupport: 60, militaryReadiness: 50 }
     };
     
-    return {
+    return maximizePlayerState({
       ...state,
       commander: defaultCommander,
       government: defaultGovernment
-    };
+    });
   }
 
   // Tier and Empire progression
@@ -621,18 +686,46 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPlayerState(playerState: InsertPlayerState): Promise<PlayerState> {
+    const boostedState = maximizePlayerState(playerState as any) as InsertPlayerState;
     const [state] = await db
       .insert(playerStates)
-      .values(playerState)
+      .values(boostedState)
       .returning();
-    return state;
+    return maximizePlayerState(state as any) as PlayerState;
   }
 
   async updatePlayerState(userId: string, updates: Partial<PlayerState>): Promise<PlayerState> {
+    const boostedUpdates = maximizePlayerState({ ...(updates as any) }) as Partial<PlayerState>;
+
+    // First-time users may not have a player_states row yet.
+    // Create one on-demand so setup/save flows do not fail.
+    const existing = await this.getPlayerState(userId);
+    if (!existing) {
+      return this.createPlayerState({
+        userId,
+        commander: (boostedUpdates.commander as any) || {
+          race: "human",
+          class: "warrior",
+          stats: { level: 1, xp: 0, warfare: 0, logistics: 0, engineering: 0 },
+          equipment: {},
+          inventory: [],
+          title: "Commander",
+        },
+        government: (boostedUpdates.government as any) || {
+          type: "democracy",
+          taxRate: 10,
+          policies: [],
+          stats: { stability: 50, efficiency: 70, publicSupport: 60, militaryReadiness: 50 },
+        },
+        ...boostedUpdates,
+        updatedAt: new Date(),
+      } as InsertPlayerState);
+    }
+
     const result = await db
       .update(playerStates)
       .set({ 
-        ...updates, 
+        ...boostedUpdates,
         updatedAt: new Date() 
       })
       .where(eq(playerStates.userId, userId))
@@ -642,7 +735,7 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Failed to update player state for user ${userId}`);
     }
     
-    return result[0];
+    return maximizePlayerState(result[0] as any) as PlayerState;
   }
 
   // Mission operations
