@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -5,6 +6,10 @@ import { createServer } from "http";
 import { logger } from "./logger";
 import { ConsoleMenu } from "./consoleMenu";
 import { setupAuth } from "./basicAuth";
+
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = "production";
+}
 
 const app = express();
 const httpServer = createServer(app);
