@@ -1,294 +1,116 @@
-export type EntityFamily =
-  | "starship"
-  | "mothership"
-  | "troop"
-  | "unit"
-  | "untrained-unit"
-  | "civilian-unit"
-  | "military-unit"
-  | "government-unit"
-  | "personal-unit"
-  | "item"
-  | "weapon"
-  | "armor"
-  | "vehicle"
-  | "smaug";
 
-export interface EntityArchetype {
-  id: string;
-  name: string;
-  family: EntityFamily;
-  type: string;
-  subType: string;
-  class: string;
-  subClass: string;
-  baseStats: {
-    power: number;
-    defense: number;
-    mobility: number;
-    utility: number;
-  };
-  subStats: {
-    precision: number;
-    endurance: number;
-    efficiency: number;
-    control: number;
-  };
-  attributes: {
-    tech: number;
-    command: number;
-    logistics: number;
-    survivability: number;
-  };
-  subAttributes: {
-    sensorRange: number;
-    energyUse: number;
-    maintenance: number;
-    adaptation: number;
-  };
-}
-
-function buildArchetype(
-  family: EntityFamily,
-  index: number,
-  name: string,
-  type: string,
-  subType: string,
-  cls: string,
-  subClass: string,
-): EntityArchetype {
-  const seed = index + 1;
-  return {
-    id: `${family}-${seed.toString().padStart(3, "0")}`,
-    name,
-    family,
-    type,
-    subType,
-    class: cls,
-    subClass,
-    baseStats: {
-      power: 80 + seed * 3,
-      defense: 70 + seed * 2,
-      mobility: 65 + seed * 2,
-      utility: 60 + seed,
-    },
-    subStats: {
-      precision: 55 + seed,
-      endurance: 58 + seed,
-      efficiency: 60 + seed,
-      control: 57 + seed,
-    },
-    attributes: {
-      tech: 50 + seed,
-      command: 48 + seed,
-      logistics: 52 + seed,
-      survivability: 54 + seed,
-    },
-    subAttributes: {
-      sensorRange: 40 + seed,
-      energyUse: 100 - Math.min(70, seed),
-      maintenance: 30 + Math.floor(seed / 2),
-      adaptation: 45 + seed,
-    },
-  };
-}
-
-const STARSHIPS: EntityArchetype[] = [
-  ["Interceptor", "combat", "dogfighter", "frigate", "rapid-strike"],
-  ["Skirmisher", "combat", "hit-and-run", "corvette", "raider"],
-  ["Lancer", "combat", "pierce", "destroyer", "anti-armor"],
-  ["Sentinel", "combat", "screen", "frigate", "guardian"],
-  ["Arbiter", "command", "battle-control", "cruiser", "tactician"],
-  ["Vanguard", "assault", "breach", "battlecruiser", "line-breaker"],
-  ["Tempest", "assault", "plasma", "destroyer", "shock"],
-  ["Comet", "recon", "deep-scan", "corvette", "scout"],
-  ["Phalanx", "defense", "point-defense", "frigate", "shield-net"],
-  ["Mercury", "support", "fleet-boost", "cruiser", "buffer"],
-  ["Nova", "support", "field-repair", "support-cruiser", "restoration"],
-  ["Eclipse", "stealth", "cloak", "corvette", "silent-hunter"],
-].map((v, i) => buildArchetype("starship", i, v[0], v[1], v[2], v[3], v[4]));
-
-const MOTHERSHIPS: EntityArchetype[] = [
-  ["Citadel Prime", "capital", "fortress-core", "mothership", "command-anchor"],
-  ["Aegis Crown", "capital", "shield-hub", "mothership", "defense-core"],
-  ["Helios Ark", "carrier", "wing-deployment", "mothership", "launch-director"],
-  ["Obelisk One", "capital", "siege-hub", "mothership", "planetbreaker"],
-  ["Atlas Relay", "support", "logistics-hub", "mothership", "supply-master"],
-  ["Sovereign Node", "command", "network-core", "mothership", "fleet-overmind"],
-].map((v, i) => buildArchetype("mothership", i + 20, v[0], v[1], v[2], v[3], v[4]));
-
-const TROOPS: EntityArchetype[] = [
-  ["Rifle Legionary", "infantry", "line", "trooper", "marksman"],
-  ["Breach Trooper", "infantry", "close-quarters", "trooper", "breacher"],
-  ["Shield Guard", "infantry", "defender", "trooper", "protector"],
-  ["Heavy Gunner", "infantry", "suppression", "trooper", "siege-infantry"],
-  ["Recon Scout", "light", "pathfinder", "trooper", "infiltrator"],
-  ["Field Medic", "support", "healer", "trooper", "stabilizer"],
-  ["Combat Engineer", "support", "fortification", "trooper", "constructor"],
-  ["Drone Handler", "support", "remote-ops", "trooper", "controller"],
-  ["Shock Vanguard", "assault", "frontline", "trooper", "charger"],
-  ["Psi Operative", "special", "mind-war", "trooper", "psionic"],
-].map((v, i) => buildArchetype("troop", i + 30, v[0], v[1], v[2], v[3], v[4]));
-
-const UNITS: EntityArchetype[] = [
-  ["Worker Unit", "industrial", "resource", "utility", "extraction"],
-  ["Builder Unit", "industrial", "construction", "utility", "fabrication"],
-  ["Repair Unit", "industrial", "maintenance", "utility", "restoration"],
-  ["Survey Unit", "exploration", "mapping", "utility", "cartography"],
-  ["Harvester Unit", "resource", "collection", "utility", "agri-harvest"],
-  ["Refinery Unit", "resource", "processing", "utility", "material-refine"],
-  ["Relay Unit", "network", "signal", "utility", "communications"],
-  ["Guardian Unit", "security", "patrol", "utility", "watch"],
-  ["Archive Unit", "knowledge", "indexing", "utility", "catalog"],
-  ["Mediator Unit", "diplomacy", "liaison", "utility", "negotiation"],
-].map((v, i) => buildArchetype("unit", i + 40, v[0], v[1], v[2], v[3], v[4]));
-
-const UNTRAINED_UNITS: EntityArchetype[] = [
-  ["Cadet Core", "trainee", "basic-combat", "starter", "cadet"],
-  ["Labor Recruit", "trainee", "basic-labor", "starter", "apprentice"],
-  ["Scout Initiate", "trainee", "basic-recon", "starter", "spotter"],
-  ["Tech Novice", "trainee", "basic-tech", "starter", "assistant"],
-  ["Aid Trainee", "trainee", "basic-support", "starter", "orderly"],
-  ["Pilot Trainee", "trainee", "basic-flight", "starter", "flight-cadet"],
-].map((v, i) => buildArchetype("untrained-unit", i + 50, v[0], v[1], v[2], v[3], v[4]));
-
-const CIVILIAN_UNITS: EntityArchetype[] = [
-  ["Colonist", "population", "settler", "civilian", "founder"],
-  ["Agronomist", "economy", "food", "civilian", "farm-specialist"],
-  ["Miner", "economy", "ore", "civilian", "extraction-specialist"],
-  ["Technician", "infrastructure", "systems", "civilian", "maintenance-specialist"],
-  ["Merchant", "economy", "trade", "civilian", "market-specialist"],
-  ["Educator", "social", "learning", "civilian", "academy-specialist"],
-  ["Medic", "social", "health", "civilian", "clinic-specialist"],
-  ["Transit Operator", "infrastructure", "transport", "civilian", "mobility-specialist"],
-  ["Artisan", "culture", "crafting", "civilian", "creative"],
-  ["Entertainer", "culture", "morale", "civilian", "performer"],
-].map((v, i) => buildArchetype("civilian-unit", i + 56, v[0], v[1], v[2], v[3], v[4]));
-
-const MILITARY_UNITS: EntityArchetype[] = [
-  ["Line Infantry", "ground", "assault", "military", "rifle"],
-  ["Siege Battery", "ground", "artillery", "military", "long-range"],
-  ["Assault Walker", "mechanized", "breaker", "military", "walker"],
-  ["Defense Walker", "mechanized", "shield", "military", "bulwark"],
-  ["Interceptor Wing", "aerial", "fighter", "military", "air-superiority"],
-  ["Bomber Wing", "aerial", "strike", "military", "payload"],
-  ["Electronic Warfare", "special", "jamming", "military", "ew-ops"],
-  ["Orbital Marines", "special", "boarding", "military", "void-assault"],
-  ["Command Cadre", "command", "coordination", "military", "field-command"],
-  ["Strategic Reserve", "command", "reinforcement", "military", "rapid-response"],
-].map((v, i) => buildArchetype("military-unit", i + 64, v[0], v[1], v[2], v[3], v[4]));
-
-const GOVERNMENT_UNITS: EntityArchetype[] = [
-  ["Senate Envoy", "administration", "diplomatic", "government", "external-affairs"],
-  ["Civic Marshal", "administration", "order", "government", "security-office"],
-  ["Treasury Auditor", "administration", "finance", "government", "budget-control"],
-  ["Policy Architect", "administration", "planning", "government", "long-range"],
-  ["Intelligence Bureau", "administration", "counter-intel", "government", "analysis"],
-  ["Systems Governor", "administration", "regional-rule", "government", "sector-command"],
-  ["Spymaster", "intelligence", "espionage", "government", "handler"],
-  ["Propagandist", "influence", "morale", "government", "information-warfare"],
-].map((v, i) => buildArchetype("government-unit", i + 74, v[0], v[1], v[2], v[3], v[4]));
-
-const PERSONAL_UNITS: EntityArchetype[] = [
-  ["Commander", "command", "leadership", "personal", "tactician"],
-  ["Scientist", "research", "discovery", "personal", "analyst"],
-  ["Explorer", "exploration", "pioneer", "personal", "pathfinder"],
-  ["Engineer", "industrial", "construction", "personal", "innovator"],
-  ["Diplomat", "social", "negotiation", "personal", "ambassador"],
-  ["Operative", "stealth", "infiltration", "personal", "spectre"],
-].map((v, i) => buildArchetype("personal-unit", i + 110, v[0], v[1], v[2], v[3], v[4]));
-
-const SMAUG_UNITS: EntityArchetype[] = [
-  ["Wyrm", "smaug", "lesser-dragon", "smaug", "hatchling"],
-  ["Drake", "smaug", "dragon", "smaug", "adolescent"],
-  ["Elder Dragon", "smaug", "greater-dragon", "smaug", "ancient"],
-  ["Smaug Prime", "smaug", "celestial-dragon", "smaug", "progenitor"],
-].map((v, i) => buildArchetype("smaug", i + 120, v[0], v[1], v[2], v[3], v[4]));
-
-const ITEMS: EntityArchetype[] = [
-  ["Nano Toolkit", "consumable", "repair-kit", "item", "engineering-pack"],
-  ["Quantum Battery", "consumable", "energy-cell", "item", "power-pack"],
-  ["Signal Beacon", "utility", "locator", "item", "nav-pack"],
-  ["Field Ration", "consumable", "sustainment", "item", "supply-pack"],
-  ["Memory Core", "utility", "data-module", "item", "intel-pack"],
-  ["Phase Key", "utility", "access-token", "item", "security-pack"],
-].map((v, i) => buildArchetype("item", i + 80, v[0], v[1], v[2], v[3], v[4]));
-
-const WEAPONS: EntityArchetype[] = [
-  ["Rail Carbine", "ballistic", "kinetic", "weapon", "marksman"],
-  ["Plasma Rifle", "energy", "plasma", "weapon", "line-assault"],
-  ["Ion Lance", "energy", "ion", "weapon", "piercing"],
-  ["Gauss Cannon", "ballistic", "gauss", "weapon", "siege"],
-  ["Arc Blade", "melee", "electro", "weapon", "duelist"],
-  ["Pulse Mortar", "explosive", "pulse", "weapon", "suppression"],
-].map((v, i) => buildArchetype("weapon", i + 86, v[0], v[1], v[2], v[3], v[4]));
-
-const ARMORS: EntityArchetype[] = [
-  ["Reactive Vest", "light", "reactive", "armor", "scout"],
-  ["Composite Plate", "medium", "composite", "armor", "assault"],
-  ["Bulwark Shell", "heavy", "fortified", "armor", "tank"],
-  ["Aegis Suit", "heavy", "shielded", "armor", "guardian"],
-  ["Phase Mantle", "special", "phase", "armor", "operative"],
-].map((v, i) => buildArchetype("armor", i + 92, v[0], v[1], v[2], v[3], v[4]));
-
-const VEHICLES: EntityArchetype[] = [
-  ["Scout Rover", "ground", "recon", "vehicle", "light"],
-  ["Cargo Hauler", "ground", "logistics", "vehicle", "transport"],
-  ["Siege Crawler", "ground", "assault", "vehicle", "heavy"],
-  ["Med Evac Skiff", "aerial", "support", "vehicle", "rescue"],
-  ["Command APC", "ground", "command", "vehicle", "coordination"],
-].map((v, i) => buildArchetype("vehicle", i + 97, v[0], v[1], v[2], v[3], v[4]));
-
-export const ENTITY_ARCHETYPES: EntityArchetype[] = [
-  ...STARSHIPS,
-  ...MOTHERSHIPS,
-  ...TROOPS,
-  ...UNITS,
-  ...UNTRAINED_UNITS,
-  ...CIVILIAN_UNITS,
-  ...MILITARY_UNITS,
-  ...GOVERNMENT_UNITS,
-  ...PERSONAL_UNITS,
-  ...SMAUG_UNITS,
-  ...ITEMS,
-  ...WEAPONS,
-  ...ARMORS,
-  ...VEHICLES,
+export const ENTITY_ARCHETYPES_90 = [
+  // Starships (12)
+  { type: "Starship", subType: "Interceptor", class: "Fighter", subClass: "Light Attack" },
+  { type: "Starship", subType: "Battlecruiser", class: "Capital", subClass: "Command" },
+  { type: "Starship", subType: "Dreadnought", class: "Capital", subClass: "Heavy Assault" },
+  { type: "Starship", subType: "Carrier", class: "Capital", subClass: "Support" },
+  { type: "Starship", subType: "Scout", class: "Fighter", subClass: "Recon" },
+  { type: "Starship", subType: "Bomber", class: "Fighter", subClass: "Heavy Attack" },
+  { type: "Starship", subType: "Frigate", class: "Cruiser", subClass: "Escort" },
+  { type: "Starship", subType: "Destroyer", class: "Cruiser", subClass: "Assault" },
+  { type: "Starship", subType: "Corvette", class: "Fighter", subClass: "Anti-Fighter" },
+  { type: "Starship", subType: "Titan", class: "Titan", subClass: "Ultimate Weapon" },
+  { type: "Starship", subType: "Flagship", class: "Capital", subClass: "Fleet Command" },
+  { type: "Starship", subType: "Assault Ship", class: "Cruiser", subClass: "Planetary Assault" },
+  // Motherships (6)
+  { type: "Mothership", subType: "Command Ship", class: "Support", subClass: "Fleet Command" },
+  { type: "Mothership", subType: "Factory Ship", class: "Support", subClass: "Production" },
+  { type: "Mothership", subType: "Hospital Ship", class: "Support", subClass: "Medical" },
+  { type: "Mothership", subType: "Colony Ship", class: "Civilian", subClass: "Colonization" },
+  { type: "Mothership", subType: "Resource Harvester", class: "Civilian", subClass: "Mining" },
+  { type: "Mothership", subType: "Mobile Fortress", class: "Capital", subClass: "Defense" },
+  // Troops (10)
+  { type: "Troop", subType: "Infantry", class: "Ground", subClass: "Standard" },
+  { type: "Troop", subType: "Heavy Infantry", class: "Ground", subClass: "Heavy" },
+  { type: "Troop", subType: "Special Forces", class: "Ground", subClass: "Elite" },
+  { type: "Troop", subType: "Sniper", class: "Ground", subClass: "Recon" },
+  { type: "Troop", subType: "Medic", class: "Ground", subClass: "Support" },
+  { type: "Troop", subType: "Engineer", class: "Ground", subClass: "Support" },
+  { type: "Troop", subType: "Scout", class: "Ground", subClass: "Recon" },
+  { type: "Troop", subType: "Assault Team", class: "Ground", subClass: "Assault" },
+  { type: "Troop", subType: "Paratrooper", class: "Airborne", subClass: "Assault" },
+  { type: "Troop", subType: "Commando", class: "Ground", subClass: "Stealth" },
+  // Units (10)
+  { type: "Unit", subType: "Tank", class: "Armor", subClass: "Heavy" },
+  { type: "Unit", subType: "Artillery", class: "Armor", subClass: "Support" },
+  { type: "Unit", subType: "Mech", class: "Armor", subClass: "Assault" },
+  { type: "Unit", subType: "Drone", class: "Robotic", subClass: "Swarm" },
+  { type: "Unit", subType: "Walker", class: "Armor", subClass: "Heavy Assault" },
+  { type: "Unit", subType: "Gunship", class: "Air", subClass: "Attack" },
+  { type: "Unit", subType: "Transport", class: "Support", subClass: "Logistics" },
+  { type: "Unit", subType: "Support Vehicle", class: "Support", subClass: "Repair" },
+  { type: "Unit", subType: "Recon Unit", class: "Recon", subClass: "Scout" },
+  { type: "Unit", subType: "Heavy Armor", class: "Armor", subClass: "Super Heavy" },
+  // Untrained Units (6)
+  { type: "Untrained", subType: "Conscript", class: "Infantry", subClass: "Basic" },
+  { type: "Untrained", subType: "Militia", class: "Infantry", subClass: "Basic" },
+  { type: "Untrained", subType: "Volunteer", class: "Infantry", subClass: "Basic" },
+  { type: "Untrained", subType: "Reserve", class: "Infantry", subClass: "Basic" },
+  { type: "Untrained", subType: "Recruit", class: "Infantry", subClass: "Basic" },
+  { type: "Untrained", subType: "Cadet", class: "Officer", subClass: "Training" },
+  // Civilian Units (8)
+  { type: "Civilian", subType: "Worker", class: "Labor", subClass: "General" },
+  { type: "Civilian", subType: "Scientist", class: "Research", subClass: "Specialist" },
+  { type: "Civilian", subType: "Trader", class: "Commerce", subClass: "Merchant" },
+  { type: "Civilian", subType: "Diplomat", class: "Political", subClass: "Ambassador" },
+  { type: "Civilian", subType: "Administrator", class: "Political", subClass: "Bureaucrat" },
+  { type: "Civilian", subType: "Colonist", class: "Exploration", subClass: "Settler" },
+  { type: "Civilian", subType: "Miner", class: "Labor", subClass: "Mining" },
+  { type: "Civilian", subType: "Farmer", class: "Labor", subClass: "Agriculture" },
+  // Military Units (10)
+  { type: "Military", subType: "Marine", class: "Infantry", subClass: "Standard" },
+  { type: "Military", subType: "Pilot", class: "Starship Crew", subClass: "Fighter" },
+  { type: "Military", subType: "Officer", class: "Command", subClass: "Junior" },
+  { type: "Military", subType: "Sergeant", class: "Command", subClass: "NCO" },
+  { type: "Military", subType: "Captain", class: "Command", subClass: "Senior" },
+  { type: "Military", subType: "General", class: "Command", subClass: "High Command" },
+  { type: "Military", subType: "Admiral", class: "Command", subClass: "Fleet Command" },
+  { type: "Military", subType: "Commander", class: "Command", subClass: "Field Command" },
+  { type: "Military", subType: "Elite Guard", class: "Infantry", subClass: "Elite" },
+  { type: "Military", subType: "Spec Ops", class: "Special Forces", subClass: "Covert" },
+  // Additional units to reach 90
+  { type: "Starship", subType: "Gunboat", class: "Fighter", subClass: "Heavy Gun" },
+  { type: "Starship", subType: "Raider", class: "Cruiser", subClass: "Pirate" },
+  { type: "Starship", subType: "Blockade Runner", class: "Cruiser", subClass: "Stealth" },
+  { type: "Mothership", subType: "Siege Ship", class: "Capital", subClass: "Planetary Siege" },
+  { type: "Troop", subType: "Grenadier", class: "Ground", subClass: "Explosives" },
+  { type: "Unit", subType: "Amphibious Assault Vehicle", class: "Armor", subClass: "Assault" },
+  { type: "Untrained", subType: "Penal Legion", class: "Infantry", subClass: "Expendable" },
+  { type: "Civilian", subType: "Entertainer", class: "Support", subClass: "Morale" },
+  { type: "Military", subType: "Navigator", class: "Starship Crew", subClass: "Support" },
+  { type: "Starship", subType: "Science Vessel", class: "Support", subClass: "Research" },
+  { type: "Starship", subType: "EMP Fighter", class: "Fighter", subClass: "Electronic Warfare" },
+  { type: "Starship", subType: "Missile Frigate", class: "Cruiser", subClass: "Ordnance" },
+  { type: "Starship", subType: "Light Carrier", class: "Cruiser", subClass: "Support" },
+  { type: "Mothership", subType: "Diplomatic Barge", class: "Civilian", subClass: "Diplomacy" },
+  { type: "Troop", subType: "Anti-Armor Specialist", class: "Ground", subClass: "Heavy Weapons" },
+  { type: "Troop", subType: "Riot Police", class: "Ground", subClass: "Law Enforcement" },
+  { type: "Unit", subType: "Mobile SAM", class: "Armor", subClass: "Anti-Air" },
+  { type: "Unit", subType: "ECM Tank", class: "Armor", subClass: "Electronic Warfare" },
+  { type: "Untrained", subType: "Partisan", class: "Infantry", subClass: "Irregular" },
+  { type: "Civilian", subType: "Biologist", class: "Research", subClass: "Xenobiology" },
+  { type: "Civilian", subType: "Media Correspondent", class: "Support", subClass: "Information" },
+  { type: "Military", subType: "Damage Controlman", class: "Starship Crew", subClass: "Engineering" },
+  { type: "Military", subType: "Heavy Marine", class: "Infantry", subClass: "Heavy" },
+  { type: "Starship", subType: "Gas Collector", class: "Civilian", subClass: "Harvesting" },
+  { type: "Troop", subType: "Jump Trooper", class: "Airborne", subClass: "Jump Pack" },
+  { type: "Unit", subType: "Infiltration Droid", class: "Robotic", subClass: "Stealth" },
+  { type: "Civilian", subType: "Ambassadorial Aide", class: "Political", subClass: "Support" },
+  { type: "Military", subType: "Psychic Operative", class: "Special Forces", subClass: "Psionics" }
 ];
 
-export const ENTITY_ARCHETYPES_GROUPED = {
-  starships: STARSHIPS,
-  motherships: MOTHERSHIPS,
-  troops: TROOPS,
-  units: UNITS,
-  untrainedUnits: UNTRAINED_UNITS,
-  civilianUnits: CIVILIAN_UNITS,
-  militaryUnits: MILITARY_UNITS,
-  governmentUnits: GOVERNMENT_UNITS,
-  personalUnits: PERSONAL_UNITS,
-  smaugUnits: SMAUG_UNITS,
-  items: ITEMS,
-  weapons: WEAPONS,
-  armors: ARMORS,
-  vehicles: VEHICLES,
-};
+export const ENTITY_ARCHETYPES_GROUPED = ENTITY_ARCHETYPES_90.reduce((acc, entity) => {
+  if (!acc[entity.type]) {
+    acc[entity.type] = [];
+  }
+  acc[entity.type].push(entity);
+  return acc;
+}, {} as Record<string, typeof ENTITY_ARCHETYPES_90>);
 
 export const ENTITY_ARCHETYPES_META = {
-  total: ENTITY_ARCHETYPES.length,
-  byFamily: {
-    starship: STARSHIPS.length,
-    mothership: MOTHERSHIPS.length,
-    troop: TROOPS.length,
-    unit: UNITS.length,
-    "untrained-unit": UNTRAINED_UNITS.length,
-    "civilian-unit": CIVILIAN_UNITS.length,
-    "military-unit": MILITARY_UNITS.length,
-    "government-unit": GOVERNMENT_UNITS.length,
-    "personal-unit": PERSONAL_UNITS.length,
-    smaug: SMAUG_UNITS.length,
-    item: ITEMS.length,
-    weapon: WEAPONS.length,
-    armor: ARMORS.length,
-    vehicle: VEHICLES.length,
-  },
+  total: ENTITY_ARCHETYPES_90.length,
+  types: [...new Set(ENTITY_ARCHETYPES_90.map(e => e.type))],
+  classes: [...new Set(ENTITY_ARCHETYPES_90.map(e => e.class))],
+  subClasses: [...new Set(ENTITY_ARCHETYPES_90.map(e => e.subClass))],
 };
