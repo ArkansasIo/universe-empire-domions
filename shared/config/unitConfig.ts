@@ -1,4 +1,14 @@
 // Unit Configuration - Unit types, classes, ranks, jobs, and attributes
+
+export interface UnitProgressionConfig {
+  tiers: {
+    max: number;
+  };
+  levels: {
+    max: number;
+  };
+}
+
 export const UNIT_CONFIG = {
   // Unit statuses
   unitStatus: {

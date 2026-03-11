@@ -109,6 +109,15 @@ export interface MegastructureStats {
   survivability: number;
 }
 
+export interface MegastructureProgressionConfig {
+  tiers: {
+    max: number;
+  };
+  levels: {
+    max: number;
+  };
+}
+
 export interface Megastructure {
   id: string;
   name: string;
@@ -123,6 +132,7 @@ export interface Megastructure {
   level: number;
   tier: number;
   experience: number;
+  progressionConfig: MegastructureProgressionConfig;
   
   // Stats
   baseStats: MegastructureStats;
@@ -194,6 +204,10 @@ function createMegastructureTemplate(
     description: `${name} - A ${size} megastructure of ${type} class`,
     lore: `Ancient technology of unimaginable scale and power`,
     baseStats,
+    progressionConfig: {
+      tiers: { max: 99 },
+      levels: { max: 999 },
+    },
     constructionTime: 1000,
     completionPercentage: 0,
     resourcesCost: {
@@ -626,8 +640,8 @@ export function createMegastructure(
   const template = MEGASTRUCTURES.find(m => m.id === templateId);
   if (!template) return null;
   
-  const clampedLevel = Math.max(1, Math.min(level, 999));
-  const clampedTier = Math.max(1, Math.min(tier, 99));
+  const clampedLevel = Math.max(1, Math.min(level, template.progressionConfig.levels.max));
+  const clampedTier = Math.max(1, Math.min(tier, template.progressionConfig.tiers.max));
   const levelMult = MegastructureProgression.getLevelMultiplier(clampedLevel);
   const tierMult = MegastructureProgression.getTierMultiplier(clampedTier);
   const totalMult = levelMult * tierMult;
@@ -657,7 +671,7 @@ export function createMegastructure(
  * Upgrade megastructure level
  */
 export function upgradeMegastructureLevel(mega: Megastructure, levels: number = 1): Megastructure {
-  const newLevel = Math.min(mega.level + levels, 999);
+  const newLevel = Math.min(mega.level + levels, mega.progressionConfig.levels.max);
   const newStats = MegastructureProgression.calculateAllStats(mega.baseStats, newLevel, mega.tier);
   
   return {
@@ -673,7 +687,7 @@ export function upgradeMegastructureLevel(mega: Megastructure, levels: number = 
  * Upgrade megastructure tier
  */
 export function upgradeMegastructureTier(mega: Megastructure, tiers: number = 1): Megastructure {
-  const newTier = Math.min(mega.tier + tiers, 99);
+  const newTier = Math.min(mega.tier + tiers, mega.progressionConfig.tiers.max);
   const newStats = MegastructureProgression.calculateAllStats(mega.baseStats, mega.level, newTier);
   
   return {

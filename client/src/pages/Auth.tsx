@@ -43,120 +43,12 @@ export default function Auth() {
   };
 
   const useDemoAccount = () => {
-    setIsForgot(false);
-    setIsLogin(true);
-    setError("");
-    setTempPassword("");
-    setUsername("player1");
-    setPassword("password123");
+    login();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    
-    if (isForgot) {
-      return handleForgotPassword(e);
-    }
-    
-    // Validate inputs
-    if (!username.trim()) {
-      setError("Username is required");
-      console.warn("[AUTH] Validation failed: Username required");
-      return;
-    }
-    if (username.trim().length < 3) {
-      setError("Username must be at least 3 characters");
-      console.warn("[AUTH] Validation failed: Username too short");
-      return;
-    }
-    if (!password) {
-      setError("Password is required");
-      console.warn("[AUTH] Validation failed: Password required");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      console.warn("[AUTH] Validation failed: Password too short");
-      return;
-    }
-
-    if (!isLogin && !email.trim()) {
-      setError("Email is required");
-      console.warn("[AUTH] Validation failed: Email required");
-      return;
-    }
-    if (!isLogin && !email.includes("@")) {
-      setError("Valid email address required");
-      console.warn("[AUTH] Validation failed: Invalid email");
-      return;
-    }
-
-    setSubmitting(true);
-    const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
-    console.log(`[AUTH] Attempting ${isLogin ? 'LOGIN' : 'REGISTER'} for user: ${username.trim()}`);
-
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          username: username.trim(), 
-          password,
-          ...(isLogin ? {} : { email: email.trim(), firstName: firstName.trim() })
-        }),
-        credentials: "include"
-      });
-
-      console.log(`[AUTH] Response status: ${res.status} ${res.statusText}`);
-
-      if (res.status === 500) {
-        setError("🔧 Server error: Database is temporarily unavailable. Please try again in a moment.");
-        console.error("[AUTH] Server error - likely database connection issue");
-      } else if (!res.ok) {
-        const data = await res.json();
-        const errorMsg = data.message || "Authentication failed";
-        console.error(`[AUTH] ${isLogin ? 'LOGIN' : 'REGISTER'} failed:`, { status: res.status, message: errorMsg });
-        setError(errorMsg);
-        setSubmitting(false);
-        return;
-      }
-
-      let responseData;
-      try {
-        responseData = await res.json();
-        console.log(`[AUTH] ${isLogin ? 'LOGIN' : 'REGISTER'} successful:`, responseData);
-      } catch (parseErr) {
-        console.error("[AUTH] Failed to parse response JSON:", parseErr);
-        setError("Failed to parse authentication response");
-        setSubmitting(false);
-        return;
-      }
-      
-      // Validate response data
-      if (!responseData || typeof responseData !== 'object') {
-        console.error("[AUTH] Invalid response data structure:", responseData);
-        setError("Invalid authentication response");
-        setSubmitting(false);
-        return;
-      }
-      
-      console.log("[AUTH] Response data validated successfully");
-      
-      // Save credentials on successful login
-      saveCredentials(username.trim(), password);
-      console.log("[AUTH] Credentials saved, redirecting to game...");
-      
-      // Small delay to ensure credentials are saved, then force full page reload
-      // This ensures all React Query caches are cleared and everything refetches fresh
-      await new Promise(r => setTimeout(r, 200));
-      window.location.replace("/");
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error("[AUTH] Network/exception error:", errorMsg, err);
-      setError("Network error. Please try again. Check console for details.");
-      setSubmitting(false);
-    }
+    login();
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

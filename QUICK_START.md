@@ -9,7 +9,7 @@
 
 ### 1. Access the Game
 - **URL:** [stellar-dominion.replit.dev](https://stellar-dominion.replit.dev)
-- **Port:** 5000 (local development)
+- **Port:** 5000 (locFirebase Studio> ✘ Preview failed to startal development)
 - Open in any modern browser (Chrome, Firefox, Safari, Edge)
 
 ### 2. Create Your Account

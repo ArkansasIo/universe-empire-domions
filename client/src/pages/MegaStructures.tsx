@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MEGA_STRUCTURES, getMegaStructuresByTier, MEGA_STRUCTURE_CLASSES, calculateConstructionCost } from "@/lib/megaStructures";
-import { Zap, Cog, Users, Building2, TrendingUp } from "lucide-react";
+import { MEGA_STRUCTURES, calculateConstructionCost } from "@/lib/megaStructures";
+import { useGame } from "@/lib/gameContext";
+import { Zap, Users, Building2, TrendingUp } from "lucide-react";
 
 export default function MegaStructures() {
+  const { constructMegastructure } = useGame();
+
   const getTierColor = (tier: number) => {
     const colors = {
       1: "bg-blue-50 border-blue-200",
@@ -27,6 +30,10 @@ export default function MegaStructures() {
       5: "bg-amber-100 text-amber-800"
     };
     return colors[tier as keyof typeof colors] || "bg-slate-100 text-slate-800";
+  };
+
+  const handleConstruct = (structure: any) => {
+    constructMegastructure(structure.templateId, structure.name, structure.stats.constructionTime);
   };
 
   return (
@@ -118,7 +125,7 @@ export default function MegaStructures() {
                           <div className="space-y-2">
                             <p className="text-xs font-bold text-slate-600">ATTRIBUTE BREAKDOWN</p>
                             <div className="grid grid-cols-2 gap-2">
-                              {structure.subStats.map((stat, idx) => (
+                              {structure.subStats.map((stat: any, idx: number) => (
                                 <div key={idx} className="p-2 bg-slate-50 rounded border border-slate-200">
                                   <div className="flex items-center justify-between mb-1">
                                     <span className="text-sm font-bold text-slate-900">{stat.icon} {stat.name}</span>
@@ -163,14 +170,14 @@ export default function MegaStructures() {
                             <div>
                               <p className="text-xs font-bold text-blue-900 mb-1">📚 RESEARCH REQUIRED</p>
                               <div className="flex flex-wrap gap-1">
-                                {structure.researchRequired.map((tech, idx) => (
+                                {structure.researchRequired.map((tech: any, idx: number) => (
                                   <Badge key={idx} className="bg-blue-200 text-blue-800 text-xs">{tech}</Badge>
                                 ))}
                               </div>
                             </div>
                             <div>
                               <p className="text-xs font-bold text-blue-900 mb-1">🏗️ BUILDING REQUIREMENTS</p>
-                              {structure.buildingRequirements.map((req, idx) => (
+                              {structure.buildingRequirements.map((req: any, idx: number) => (
                                 <div key={idx} className="text-xs text-blue-800">
                                   {req.name} Level {req.level}+
                                 </div>
@@ -178,7 +185,7 @@ export default function MegaStructures() {
                             </div>
                           </div>
 
-                          <Button className="w-full bg-primary hover:bg-primary/90" onClick={() => alert("Starting construction of " + structure.name)} data-testid={`button-construct-${structure.id}`}>
+                          <Button className="w-full bg-primary hover:bg-primary/90" onClick={() => handleConstruct(structure)} data-testid={`button-construct-${structure.id}`}>
                             Begin Construction
                           </Button>
                         </CardContent>
