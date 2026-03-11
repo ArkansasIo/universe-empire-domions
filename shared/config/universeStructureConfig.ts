@@ -1,3 +1,4 @@
+git push origin main
 
 export type CelestialFamily =
   | "galaxy"
