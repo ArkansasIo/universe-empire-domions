@@ -1,6 +1,84 @@
 // Central configuration export point
 export { GAME_CONFIG, GOVERNMENT_MULTIPLIERS, RACE_BONUSES } from './gameConfig';
 export { SYSTEM_CONFIG, getEnvConfig } from './systemConfig';
+
+// Progression System Exports
+export {
+  ProgressionSystem,
+  SCALING_PROFILES,
+  TIER_REWARDS,
+  getProgressionMilestone,
+  type ProgressionStats,
+  type ScalingConfig,
+  type ProgressedEntity,
+} from './progressionSystem';
+
+// Buildings Progression Exports
+export {
+  BUILDING_CONFIGS,
+  BUILDINGS,
+  getBuildingConfig,
+  calculateBuildingCost,
+  calculateBuildingTime,
+  calculateBuildingProduction,
+  getBuildingsByTier,
+  isBuildingUnlocked,
+  type Building,
+  type BuildingType,
+  type BuildingCategory,
+  type BuildingStats,
+  type BuildingConfig,
+} from './buildingsProgression';
+
+// Units Progression Exports
+export {
+  UNITS,
+  LIGHT_FIGHTER,
+  HEAVY_FIGHTER,
+  CORVETTE,
+  FRIGATE,
+  DESTROYER,
+  BATTLESHIP,
+  CARRIER,
+  DREADNOUGHT,
+  TITAN,
+  ASCENDED_WARSHIP,
+  calculateUnitCost,
+  calculateUnitBuildTime,
+  calculateUnitStats,
+  calculateFleetStats,
+  getUnitsForTier,
+  getUnitsByType,
+  getUnitsByRole,
+  type UnitType,
+  type UnitTier,
+  type UnitStats,
+  type Unit,
+} from './unitsProgression';
+
+// Research Progression Exports
+export {
+  ALL_TECHNOLOGIES,
+  ENERGY_TECHNOLOGIES,
+  PROPULSION_TECHNOLOGIES,
+  WEAPON_TECHNOLOGIES,
+  DEFENSE_TECHNOLOGIES,
+  COMPUTER_TECHNOLOGIES,
+  MEGASTRUCTURE_TECHNOLOGIES,
+  QUANTUM_TECHNOLOGIES,
+  EXOTIC_TECHNOLOGIES,
+  RESEARCH_CONFIGS,
+  calculateResearchCost,
+  calculateResearchTime,
+  getResearchByBranch,
+  getResearchForTier,
+  getPrerequisites,
+  isResearchUnlocked,
+  getUnlockedByResearch,
+  type ResearchBranch,
+  type ResearchConfig,
+  type Research,
+} from './researchProgression';
 export { ENTITY_ARCHETYPES_90, ENTITY_ARCHETYPES_GROUPED, ENTITY_ARCHETYPES_META } from './entityArchetypesConfig';
 export { 
   PROGRESSION_CONSTANTS,

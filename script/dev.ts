@@ -11,7 +11,14 @@ const projectRoot = resolve(currentDir, "..");
 config({ path: resolve(projectRoot, ".env") });
 config();
 
-const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
+// Manually set DATABASE_URL if not already set
+if (!process.env.DATABASE_URL) {
+  const neonUrl = "postgresql://neondb_owner:npg_roX60HeYZbxW@ep-bitter-cloud-ad1d57rw-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
+  process.env.DATABASE_URL = neonUrl;
+  console.log("Set DATABASE_URL from hardcoded value");
+}
+
+const hasDatabaseUrl = Boolean(process.env.DATABASE_URL && process.env.DATABASE_URL.length > 0);
 const nodeEnv = process.env.NODE_ENV ?? "development";
 
 const command = "npx vite dev --port 5001";
@@ -29,6 +36,7 @@ const child = spawn(command, {
   env: {
     ...process.env,
     NODE_ENV: nodeEnv,
+    DATABASE_URL: process.env.DATABASE_URL || "",
   },
 });
 
