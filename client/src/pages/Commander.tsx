@@ -17,6 +17,10 @@ import {
    Item,
    COMMANDER_EQUIPMENT_TEMPLATES,
    COMMANDER_EQUIPMENT_TEMPLATE_COUNT,
+   GOVERNMENT_LEADER_TYPES_23,
+   GOVERNMENT_LEADER_TYPE_COUNT,
+   getGovernmentLeadersByType,
+   getGovernmentLeadersByClass,
    getCommanderEquipmentTemplatesByType,
    RACES,
    CLASSES,
@@ -123,6 +127,13 @@ export default function Commander() {
    const [selectedClass, setSelectedClass] = useState<ClassId>(commander.class || "admiral");
   const [selectedSubClass, setSelectedSubClass] = useState<SubClassId | "none">(commander.subClass || "none");
    const [selectedEquipmentType, setSelectedEquipmentType] = useState<CommanderEquipmentType>("weapon");
+   const [selectedLeaderType, setSelectedLeaderType] = useState<string>("all");
+   const [selectedLeaderClass, setSelectedLeaderClass] = useState<string>("all");
+
+   const leaderTypes = Array.from(new Set(GOVERNMENT_LEADER_TYPES_23.map(leader => leader.type)));
+   const leaderClasses = Array.from(new Set(GOVERNMENT_LEADER_TYPES_23.map(leader => leader.class)));
+   const leadersByType = selectedLeaderType === "all" ? GOVERNMENT_LEADER_TYPES_23 : getGovernmentLeadersByType(selectedLeaderType);
+   const filteredGovernmentLeaders = selectedLeaderClass === "all" ? leadersByType : leadersByType.filter(leader => getGovernmentLeadersByClass(selectedLeaderClass).some(match => match.id === leader.id));
 
   const totalSkillPoints = skills.reduce((acc, s) => acc + s.currentLevel, 0);
   const unlockedAchievements = achievements.filter(a => a.unlocked).length;
@@ -199,6 +210,7 @@ export default function Commander() {
             <TabsTrigger value="skills" className="font-orbitron" data-testid="tab-skills"><Target className="w-4 h-4 mr-2" /> Skills</TabsTrigger>
             <TabsTrigger value="achievements" className="font-orbitron" data-testid="tab-achievements"><Trophy className="w-4 h-4 mr-2" /> Achievements</TabsTrigger>
             <TabsTrigger value="identity" className="font-orbitron" data-testid="tab-identity"><Dna className="w-4 h-4 mr-2" /> Identity</TabsTrigger>
+            <TabsTrigger value="leaders" className="font-orbitron" data-testid="tab-leaders"><Crown className="w-4 h-4 mr-2" /> Gov Leaders</TabsTrigger>
             <TabsTrigger value="inventory" className="font-orbitron" data-testid="tab-inventory"><Box className="w-4 h-4 mr-2" /> Inventory</TabsTrigger>
             <TabsTrigger value="smithy" className="font-orbitron" data-testid="tab-smithy"><Anvil className="w-4 h-4 mr-2" /> Smithy</TabsTrigger>
           </TabsList>
@@ -465,6 +477,71 @@ export default function Commander() {
                       </Button>
                    </div>
 
+                </CardContent>
+             </Card>
+          </TabsContent>
+
+          <TabsContent value="leaders" className="mt-6">
+             <Card className="bg-white border-slate-200">
+                <CardHeader>
+                   <CardTitle className="flex items-center gap-2 text-slate-900"><Crown className="w-5 h-5 text-amber-600" /> Government Leaders ({GOVERNMENT_LEADER_TYPE_COUNT})</CardTitle>
+                   <CardDescription>Browse leader types by type, class, subclass, and subtype.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <Select value={selectedLeaderType} onValueChange={setSelectedLeaderType}>
+                         <SelectTrigger>
+                            <SelectValue placeholder="Filter by type" />
+                         </SelectTrigger>
+                         <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            {leaderTypes.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                         </SelectContent>
+                      </Select>
+
+                      <Select value={selectedLeaderClass} onValueChange={setSelectedLeaderClass}>
+                         <SelectTrigger>
+                            <SelectValue placeholder="Filter by class" />
+                         </SelectTrigger>
+                         <SelectContent>
+                            <SelectItem value="all">All Classes</SelectItem>
+                            {leaderClasses.map(leaderClass => (
+                              <SelectItem key={leaderClass} value={leaderClass}>{leaderClass}</SelectItem>
+                            ))}
+                         </SelectContent>
+                      </Select>
+                   </div>
+
+                   <ScrollArea className="h-[500px] pr-2">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {filteredGovernmentLeaders.map(leader => (
+                          <Card key={leader.id} className="border border-slate-200">
+                            <CardContent className="p-4 space-y-2">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <div className="font-bold text-slate-900">{leader.name}</div>
+                                  <div className="text-xs text-slate-500 uppercase tracking-wide">{leader.type}</div>
+                                </div>
+                                <Badge variant="secondary">{leader.subType}</Badge>
+                              </div>
+                              <div className="text-xs text-slate-600">Class: {leader.class}</div>
+                              <div className="text-xs text-slate-600">SubClass: {leader.subClass}</div>
+                              <div className="text-xs text-slate-600">Style: {leader.governanceStyle}</div>
+                              <div className="grid grid-cols-2 gap-1 pt-1 text-[11px]">
+                                {Object.entries(leader.bonuses).map(([key, value]) => (
+                                  <div key={`${leader.id}-${key}`} className="bg-slate-50 border border-slate-100 rounded px-2 py-1 flex justify-between">
+                                    <span className="capitalize">{key}</span>
+                                    <span className="font-semibold">+{value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                     </div>
+                   </ScrollArea>
                 </CardContent>
              </Card>
           </TabsContent>

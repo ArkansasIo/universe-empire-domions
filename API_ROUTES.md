@@ -224,6 +224,150 @@ Response: [{
 
 ---
 
+## Unit Systems Routes
+
+### GET `/api/unit-systems/templates`
+Fetch all unit templates (troop, civilian, government, military).
+```typescript
+Response: {
+  success: true
+  total: number
+  templates: UnitTemplate[]
+}
+```
+
+### GET `/api/unit-systems/templates/:domain`
+Fetch templates for a specific domain.
+```typescript
+Params: domain = "troop" | "civilian" | "government" | "military"
+Response: {
+  success: true
+  domain: string
+  total: number
+  templates: UnitTemplate[]
+}
+```
+
+### GET `/api/unit-systems/blueprints`
+Fetch all starship blueprints for construction yard.
+```typescript
+Response: {
+  success: true
+  total: number
+  blueprints: StarshipBlueprint[]
+}
+```
+
+### POST `/api/unit-systems/train`
+Queue unit training (untrained→trained or trained→elite).
+```typescript
+Body: {
+  state: PlayerUnitSystemState
+  unitId: string
+  quantity: number
+  toState: "trained" | "elite"
+}
+Response: { success: true, message: string, state: PlayerUnitSystemState }
+```
+
+### POST `/api/unit-systems/untrain`
+Revert trained/elite units back to untrained.
+```typescript
+Body: {
+  state: PlayerUnitSystemState
+  unitId: string
+  quantity: number
+  fromState: "trained" | "elite"
+}
+Response: { success: true, message: string, state: PlayerUnitSystemState }
+```
+
+### POST `/api/unit-systems/training/process`
+Process completed training queue entries.
+```typescript
+Body: {
+  state: PlayerUnitSystemState
+  now?: number // timestamp override
+}
+Response: { success: true, state: PlayerUnitSystemState }
+```
+
+### POST `/api/unit-systems/combat/simulate`
+Simulate combat between two unit groups.
+```typescript
+Body: {
+  attacker: CombatSideInput
+  defender: CombatSideInput
+}
+Response: {
+  success: true
+  result: CombatSimulationResult
+}
+```
+
+### POST `/api/unit-systems/yard/construct`
+Queue starship blueprint construction in construction yard.
+```typescript
+Body: {
+  state: PlayerUnitSystemState
+  blueprintId: string
+  quantity: number
+}
+Response: { success: true, message: string, state: PlayerUnitSystemState }
+```
+
+### POST `/api/unit-systems/yard/process`
+Process construction yard queue completion.
+```typescript
+Body: {
+  state: PlayerUnitSystemState
+  now?: number // timestamp override
+}
+Response: { success: true, state: PlayerUnitSystemState }
+```
+
+---
+
+## Government Leader Routes
+
+### GET `/api/government-leaders`
+Fetch all government leader definitions (23 total).
+```typescript
+Response: {
+  success: true
+  total: number
+  leaders: GovernmentLeaderType[]
+  leaderTypes: string[]
+  leaderClasses: string[]
+}
+```
+
+### GET `/api/government-leaders/type/:type`
+Filter government leaders by type.
+```typescript
+Params: { type: string }
+Response: {
+  success: true
+  type: string
+  total: number
+  leaders: GovernmentLeaderType[]
+}
+```
+
+### GET `/api/government-leaders/class/:leaderClass`
+Filter government leaders by class.
+```typescript
+Params: { leaderClass: string }
+Response: {
+  success: true
+  leaderClass: string
+  total: number
+  leaders: GovernmentLeaderType[]
+}
+```
+
+---
+
 ## Inventory Routes
 
 ### GET `/api/inventory`

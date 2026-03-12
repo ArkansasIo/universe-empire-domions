@@ -56,6 +56,47 @@ export {
   type Unit,
 } from './unitsProgression';
 
+// Unit Systems Exports
+export {
+  UNIT_SYSTEM_TEMPLATES,
+  STARSHIP_BLUEPRINTS,
+  TRAINING_STATE_MULTIPLIER,
+  createDefaultPlayerUnitSystemState,
+  getUnitTemplatesByDomain,
+  getUnitTemplate,
+  getBlueprint,
+  queueUnitTraining,
+  untrainUnits,
+  processTrainingQueue,
+  simulateUnitCombat,
+  queueStarshipConstruction,
+  processConstructionYard,
+  type ResourceBundle,
+  type UnitDomain,
+  type UnitTrainingState,
+  type UnitTemplate,
+  type UnitPoolEntry,
+  type TrainingOrder,
+  type CombatSideUnit,
+  type CombatSideInput,
+  type CombatSimulationResult,
+  type StarshipBlueprint,
+  type ConstructionOrder,
+  type ConstructionYardState,
+  type PlayerUnitSystemState,
+} from './unitSystemsConfig';
+
+// Government Leader Types Exports
+export {
+  GOVERNMENT_LEADER_TYPES_23,
+  GOVERNMENT_LEADER_TYPE_COUNT,
+  getGovernmentLeadersByType,
+  getGovernmentLeadersByClass,
+  getGovernmentLeaderTypes,
+  getGovernmentLeaderClasses,
+  type GovernmentLeaderType,
+} from './governmentLeadersConfig';
+
 // Research Progression Exports
 export {
   ALL_TECHNOLOGIES,
@@ -335,3 +376,5 @@ export * as AchievementSystemConfig from './achievementSystemConfig';
 export * as EntitiesExpansionConfig from './entitiesExpansionConfig';
 export * as AutoBuyResourcesConfig from './autoBuyResourcesConfig';
 export * as ResearchTradingConfig from './researchTradingConfig';
+export * as UnitSystemsConfig from './unitSystemsConfig';
+export * as GovernmentLeadersConfig from './governmentLeadersConfig';
