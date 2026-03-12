@@ -1,230 +1,344 @@
-# Stellar Dominion 1.5 - Enhanced Edition PRD
+# Stellar Dominion 1.5 - Complete Enhanced Edition PRD
 
 ## Project Overview
-**Name:** Stellar Dominion 1.5  
+**Name:** Stellar Dominion 1.5 Enhanced  
 **Version:** 2.0.0  
-**Type:** 4X Space Strategy Game  
 **Date:** March 12, 2026
 
-## Technology Stack
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Wouter, TanStack Query
-- **Backend:** Python FastAPI, MongoDB
-- **UI:** Radix UI, Framer Motion, Recharts, Lucide Icons
+---
+
+## UNIVERSE SYSTEM ✅
+
+### Configuration
+- **9 Universes** with unique characteristics
+- **30 Galaxies** per universe
+- **999 Systems** per galaxy
+- **15 Positions** per system
+- **Max Players:** 999,999 per universe
+
+### Universes
+| # | Name | Speed | Economy | Fleet | Special |
+|---|------|-------|---------|-------|---------|
+| 1 | Alpha Centauri | 1x | 1x | 1x | Original |
+| 2 | Orion Nebula | 2x | 2x | 2x | Fast-paced |
+| 3 | Andromeda | 1.5x | 1.5x | 1.5x | Balanced |
+| 4 | Triangulum | 1x | 0.8x | 2.5x | Combat |
+| 5 | Sagittarius | 1x | 3x | 1x | Economy |
+| 6 | Cygnus | 1.5x | 1.5x | 3x | Exploration |
+| 7 | Perseus | 3x | 3x | 2x | New Player |
+| 8 | Draco | 1x | 0.5x | 1x | Hardcore |
+| 9 | Phoenix | 2x | 2x | 2x | Latest |
+
+### Galaxy Types
+- **Spiral** - Standard resource distribution
+- **Elliptical** - Higher density cores
+- **Irregular** - Random resource hotspots
 
 ---
 
-## ENHANCED PLANET SYSTEM ✅
+## STARSHIP SYSTEM ✅
 
-### Planet Positioning & Size
-- **15 positions** per solar system
-- **Position 8 = OPTIMAL** (max 252 base fields)
-- Position size ranges:
-  - Pos 1: 34-68 fields, Pos 8: 210-252 fields, Pos 15: 34-68 fields
-- **Max achievable: 360+ fields** with all bonuses
+### 90 Starships with Full Stats
 
-### Size Bonuses
-- **Discoverer Class:** +10% planet size on colonization
-- **Cetus Lifeform:** +25 fields
-- **Alliance bonuses:** +2 to +15 fields based on member count
-- **Terraformer:** +5 fields per level (max level 20)
+#### Ship Classes (12)
+| Class | Size | Crew | Role |
+|-------|------|------|------|
+| Fighter | Small | 1-2 | Dogfighting |
+| Corvette | Small | 10-50 | Patrol/Escort |
+| Frigate | Medium | 50-200 | Fleet Support |
+| Destroyer | Medium | 150-400 | Anti-ship |
+| Cruiser | Large | 300-800 | Independent Ops |
+| Battleship | Capital | 1,000-3,000 | Heavy Firepower |
+| Carrier | Capital | 2,000-5,000 | Fighter Deployment |
+| Support | Varies | 5-500 | Logistics |
+| Science | Medium | 50-300 | Research |
+| Mining | Varies | 20-200 | Extraction |
+| Command | Capital | 500-2,000 | Coordination |
+| Titan | Super-Capital | 10,000-50,000 | Superweapon |
 
-### Field Size Categories (12 types)
-| Category | Fields | 
-|----------|--------|
-| Micro | 1-50 |
-| Tiny | 51-100 |
-| Small | 101-150 |
-| Normal | 151-250 |
-| Large | 251-350 |
-| Very Large | 351-500 |
-| Huge | 501-1,000 |
-| Massive | 1,001-10,000 |
-| Continental | 10,001-50,000 |
-| Oceanic | 50,001-99,999 |
-| Extreme Large | 100,000-500,000 |
-| Mega | 500,001-999,999 |
+#### Ship Types (12)
+- Combat, Stealth, Carrier, Artillery, Support
+- Transport, Science, Mining, Diplomatic
+- Special, Hybrid, Superweapon
 
----
+#### Ship Stats
+Every ship has:
+- **Hull** - Base structure points
+- **Health** - Current HP
+- **Armor** - Damage reduction (6 types)
+- **Shields** - Energy barrier (6 types)
+- **Weapons** - Attack power (12 types)
+- **Power** - Energy generation
+- **Engine** - Propulsion (8 types)
+- **Speed** - Movement rate
+- **Maneuverability** - Evasion capability
+- **Cargo** - Storage capacity
+- **Fuel** - Range/endurance
+- **Crew** - Personnel required
 
-## PLANET CLASSES (12 Types) ✅
+#### Ship Attributes
+- Attack, Defense, Accuracy, Evasion
+- Critical Chance, Critical Damage
 
-| Class | Name | Habitability | Resource Mod |
-|-------|------|--------------|--------------|
-| M | Terran | 0.95 | 1.0 |
-| O | Ocean | 0.75 | 0.8 |
-| L | Marginal | 0.45 | 1.1 |
-| H | Desert | 0.35 | 1.3 |
-| P | Glacial | 0.25 | 0.9 |
-| Y | Demon | 0.10 | 1.8 |
-| J | Gas Giant | 0.00 | 2.5 |
-| K | Adaptable | 0.55 | 1.2 |
-| D | Asteroid | 0.15 | 1.5 |
-| T | Gas Dwarf | 0.05 | 1.4 |
-| N | Reducing | 0.20 | 1.6 |
-| R | Rogue | 0.08 | 0.7 |
+#### Ship Sub-Attributes
+- Sensor Range, Stealth, Repair Rate, Morale Bonus
 
----
-
-## PLANET TYPES & SUBTYPES (12 Types) ✅
-
-1. **Terrestrial** - Silicate, Iron Core, Carbon, Lava
-2. **Ocean** - Shallow, Deep, Ice-Covered
-3. **Desert** - Hot, Cold, Dust
-4. **Ice** - Permafrost, Glacial, Cryo
-5. **Volcanic** - Active, Dormant, Magma
-6. **Gas Giant** - Hot Jupiter, Cold Jupiter, Super Jupiter
-7. **Barren** - Cratered, Smooth, Fractured
-8. **Jungle** - Tropical, Fungal, Swamp
-9. **Toxic** - Acid, Sulfuric, Methane
-10. **Artificial** - Ecumenopolis, Machine World, Ringworld
-11. **Exotic** - Crystalline, Radioactive, Dark Matter
-12. **Proto** - Accretion, Protoplanetary
+### Sample Ships (Tier 1-10)
+- **Viper Interceptor** (Fighter, Tier 1)
+- **Sentinel Corvette** (Corvette, Tier 1)
+- **Guardian Frigate** (Frigate, Tier 2)
+- **Tempest Destroyer** (Destroyer, Tier 3)
+- **Valiant Cruiser** (Cruiser, Tier 3)
+- **Colossus Battleship** (Battleship, Tier 5)
+- **Harbinger Carrier** (Carrier, Tier 4)
+- **Galaxy Destroyer** (Titan, Tier 10)
 
 ---
 
-## BIOMES (90 Types) ✅
+## MOTHERSHIP SYSTEM ✅
 
-### Categories:
-- **Terrestrial (1-15):** Temperate Forest, Tropical Rainforest, Boreal, etc.
-- **Desert (16-30):** Hot Desert, Cold Desert, Salt Flat, Dune Sea, etc.
-- **Ice (31-45):** Ice Sheet, Tundra, Glacier, Permafrost, etc.
-- **Ocean (46-60):** Coral Reef, Kelp Forest, Hydrothermal Vent, etc.
-- **Volcanic (61-75):** Lava Field, Caldera, Geyser Basin, etc.
-- **Exotic (76-90):** Crystal Forest, Ammonia Sea, Dark Energy Nexus, etc.
+### 10 Motherships
 
----
-
-## LIFEFORMS (8 Types) ✅
-
-| Lifeform | Field Bonus | Special |
-|----------|-------------|---------|
-| Humans | 0 | Balanced bonuses |
-| Rock'tal | +5 | Defense +20% |
-| Mechas | +10 | Research +25% |
-| Kaelesh | +15 | Exploration +30% |
-| **Cetus** | **+25** | **Best for size!** |
-| Vortex | +8 | Energy +50% |
-| Zephyr | +12 | Fleet speed +35% |
-| Crystalline | +7 | Crystal +40% |
+| Ship | Class | Tier | Hull | Special |
+|------|-------|------|------|---------|
+| Exodus Ark | Colony Ark | 8 | 500K | 10M population |
+| Fortress Station | Battle Station | 9 | 1M | Massive firepower |
+| Genesis Worldship | Worldship | 10 | 5M | Artificial world |
+| Harbinger Dreadmaw | Super Dreadnought | 10 | 2M | Planet destroyer |
+| Infinity Carrier | Mega Carrier | 9 | 800K | 5000 fighters |
+| Nexus Command | Command Citadel | 8 | 600K | Fleet +50% |
+| Prometheus Forge | Factory Ship | 8 | 400K | Mobile shipyard |
+| Harvester | Mining Platform | 7 | 300K | 5x mining |
+| Sanctum | Research Station | 8 | 250K | Research +100% |
+| Dominion Starbase | Starbase | 9 | 700K | Multi-purpose |
 
 ---
 
-## PLAYER CLASSES (3 Types) ✅
+## COMMANDER SYSTEM ✅
 
-| Class | Bonus |
-|-------|-------|
-| Collector | +25% resources |
-| General | +20% attack/defense |
-| **Discoverer** | **+10% planet size** |
+### Commander Classes (6)
+| Class | Primary Stat | Focus |
+|-------|-------------|-------|
+| Tactician | Strategy | Battlefield |
+| Warrior | Combat | Frontline |
+| Diplomat | Charisma | Negotiations |
+| Scientist | Intelligence | Research |
+| Economist | Management | Resources |
+| Explorer | Exploration | Discovery |
 
----
+### Commander Skills (24)
+#### Combat Skills
+- Rapid Fire, Precision Targeting, Armor Piercing
+- Shield Bypass, Critical Strike
 
-## SPACE STATIONS (8 Types) ✅
+#### Defense Skills
+- Fortification, Damage Control, Shield Mastery
+- Evasive Maneuvers
 
-1. **Orbital Station** - 50 fields, resource processing
-2. **Starbase** - 150 fields, military operations
-3. **Moonbase** - 100 fields, sensor range
-4. **Trading Post** - 75 fields, trade bonuses
-5. **Research Station** - 60 fields, tech bonus
-6. **Defense Platform** - 40 fields, 2x defense power
-7. **Shipyard Station** - 120 fields, build speed
-8. **Colony Hub** - 80 fields, colony management
+#### Economy Skills
+- Efficient Mining, Crystal Refinement
+- Deuterium Synthesis, Energy Efficiency, Trade Routes
 
----
+#### Research Skills
+- Accelerated Research, Tech Insight, Innovation
 
-## MOON SYSTEM ✅
+#### Fleet Skills
+- Fleet Logistics, Hangar Efficiency, Cargo Optimization
 
-- **Creation:** From combat debris (1% per 100k debris, max 20%)
-- **Size:** 2,000-8,947 km diameter
-- **Fields:** 1 base + diameter × 0.01
+#### Exploration Skills
+- Pathfinding, Artifact Discovery, Planet Assessment
 
-### Moon Facilities:
-- Lunar Base (+3 fields/level)
-- Sensor Phalanx
-- Jump Gate
-- Moon Shipyard
-- Moon Defense Platform
+### Commander Ranks (10)
+1. Ensign (0 XP)
+2. Lieutenant (1,000 XP)
+3. Commander (5,000 XP)
+4. Captain (15,000 XP)
+5. Commodore (35,000 XP)
+6. Rear Admiral (75,000 XP)
+7. Vice Admiral (150,000 XP)
+8. Admiral (300,000 XP)
+9. Fleet Admiral (600,000 XP)
+10. Grand Admiral (1,200,000 XP) - +40% bonus
 
----
-
-## COMBAT SYSTEM (OGame-style) ✅
-
-### Rounds: 1-15 turns
-- Shield regeneration: 5%/round
-- Debris rate: 30%
-- Retreat chance: 3%/round
-- Critical hit: 5%
-
-### Ships (14 types):
-Light Fighter, Heavy Fighter, Cruiser, Battleship, Battlecruiser, Bomber, Destroyer, Deathstar, Small Cargo, Large Cargo, Colony Ship, Recycler, Espionage Probe, Solar Satellite
-
-### Defense (8 types):
-Rocket Launcher, Light Laser, Heavy Laser, Gauss Cannon, Ion Cannon, Plasma Turret, Small Shield Dome, Large Shield Dome
-
-### Features:
-- **Rapidfire system** - Chain attacks
-- **Planet stealing** - Conquer non-homeworld planets
-- **Moon creation** - From combat debris
-- **Combat reports** - Detailed battle logs
+### Commander Equipment
+- Tactical Visor, Command Neural Link
+- Battle Armor, Stealth Suit
+- Energy Gauntlets, Tactical Boots
+- Command Insignia, Ancient Artifact
 
 ---
 
-## EMPIRE LIMITS ✅
+## GOVERNMENT SYSTEM ✅
 
-- **Min planets:** 1
-- **Max planets:** 15 (base), 25 (with bonuses)
-- **Max moons:** 15
-- **Max stations:** 10
-- **Max empire fields:** 999,999
-- **Page sizes:** 15-100 per page
+### Government Types (10)
+
+| Type | Stability | Bonus | Penalty |
+|------|-----------|-------|---------|
+| Democracy | 70 | +20% happiness, +10% research | -10% military speed |
+| Autocracy | 60 | +20% military, +15% build | -15% happiness |
+| Oligarchy | 65 | +25% trade, +15% resources | -10% happiness |
+| Technocracy | 75 | +30% research, +20% efficiency | -10% military |
+| Theocracy | 80 | +15% happiness, +25% unity | -15% research |
+| Military Junta | 55 | +35% military, +25% defense | -20% happiness |
+| Corporate State | 60 | +30% trade, +20% resources | -15% happiness |
+| Hive Mind | 95 | +50% unity, +30% efficiency | -30% diplomacy |
+| Federation | 70 | +25% diplomacy, +20% alliance | -10% decision speed |
+| Anarchy | 30 | +50% freedom, +30% raids | -30% stability |
+
+### Government Policies (10)
+- Military Focus, Research Grants, Trade Agreements
+- Propaganda, Welfare State, Police State
+- Free Market, Isolationism, Expansionism
+- Environmentalism
 
 ---
 
-## API ENDPOINTS
+## POPULATION SYSTEM ✅
+
+### Population Classes (6)
+| Class | Productivity | Bonus |
+|-------|-------------|-------|
+| Workers | 1.0x | Metal/Crystal |
+| Scientists | 2.0x | Research |
+| Soldiers | 1.5x | Defense/Attack |
+| Merchants | 1.8x | Credits/Trade |
+| Administrators | 1.5x | Efficiency |
+| Colonists | 0.8x | Colonization |
+
+### Population Needs (7)
+1. Food (Priority 1)
+2. Water (Priority 1)
+3. Housing (Priority 2)
+4. Healthcare (Priority 3)
+5. Education (Priority 4)
+6. Entertainment (Priority 5)
+7. Luxury Goods (Priority 6)
+
+### Happiness Factors (13)
+- Base: 50
+- Needs satisfied: +5 to +10 each
+- War penalty: -20
+- Peace bonus: +10
+- Victory/Defeat: ±10-15
+
+---
+
+## PLANET SCANNER SYSTEM ✅
+
+### Scanner Levels (10)
+| Level | Range | Accuracy | Detail |
+|-------|-------|----------|--------|
+| 1 | 5 systems | 70% | Basic |
+| 2 | 10 systems | 75% | Basic |
+| 3 | 20 systems | 80% | Standard |
+| 4 | 35 systems | 85% | Standard |
+| 5 | 50 systems | 88% | Detailed |
+| 6 | 75 systems | 90% | Detailed |
+| 7 | 100 systems | 92% | Advanced |
+| 8 | 150 systems | 94% | Advanced |
+| 9 | 200 systems | 96% | Complete |
+| 10 | 999 systems | 99% | Complete |
+
+### Scan Detail Levels
+- **Basic:** Position, type, estimated size
+- **Standard:** + temperature, habitability
+- **Detailed:** + exact size, resources, biome
+- **Advanced:** + moon chance, special features
+- **Complete:** + strategic value, colonization cost
+
+---
+
+## SPACE STATION FIELDS ✅
+
+### Station Field Limits
+| Station | Base | Max | Per Upgrade |
+|---------|------|-----|-------------|
+| Orbital | 50 | 200 | 10 |
+| Starbase | 150 | 500 | 15 |
+| Moonbase | 100 | 300 | 12 |
+| Trading Post | 75 | 250 | 10 |
+| Research | 60 | 200 | 8 |
+| Defense | 40 | 150 | 6 |
+| Shipyard | 120 | 400 | 15 |
+| Colony Hub | 80 | 250 | 10 |
+
+### Moon Fields
+- Base: 1 field
+- Per 1000km diameter: +3 fields
+- Lunar Base: +3 fields/level (max 8)
+- Maximum: 200 fields
+
+### Starbase Facilities (10)
+- Command Center, Hangar Bay, Shield Generator
+- Weapons Array, Cargo Hold, Crew Quarters
+- Medical Bay, Research Lab, Trading Hub
+- Defense Grid
+
+---
+
+## API ENDPOINTS SUMMARY
+
+### Starships
+- `GET /api/starships` - All 90 ships
+- `GET /api/starships/{id}` - Ship details
+- `GET /api/starships/class/{class}` - By class
+- `GET /api/starships/type/{type}` - By type
+- `GET /api/starships/tier/{tier}` - By tier
+- `GET /api/motherships` - All 10 motherships
+
+### Universes
+- `GET /api/universes` - All 9 universes
+- `GET /api/universes/{id}` - Universe details
+- `GET /api/universes/{id}/galaxies` - 30 galaxies
+
+### Commander
+- `GET /api/commander` - Player's commander
+- `POST /api/commander/level-up` - Level up
+- `POST /api/commander/learn-skill` - Learn skill
+
+### Government
+- `GET /api/government` - Player's government
+- `POST /api/government/change` - Change type
+- `POST /api/government/policy` - Set policy
+
+### Population
+- `GET /api/population` - Planet population
+- `POST /api/population/allocate` - Allocate workers
+
+### Scanner
+- `POST /api/scanner/scan` - Scan coordinates
+- `GET /api/scanner/range` - Scanner capability
 
 ### Config
-- `/api/config/planet-classes` - 12 planet classes
-- `/api/config/planet-types` - 12 types with subtypes
-- `/api/config/biomes` - 90 biomes
-- `/api/config/lifeforms` - 8 lifeforms
-- `/api/config/player-classes` - 3 classes
-- `/api/config/station-types` - 8 stations
-- `/api/config/field-sizes` - 12 categories
-- `/api/config/combat` - Combat system config
-
-### Gameplay
-- `/api/planets` - Planet management (paginated)
-- `/api/planets/colonize` - Colonization
-- `/api/planets/select/{id}` - Switch planets
-- `/api/moons` - Moon management
-- `/api/stations` - Station management
-- `/api/combat/attack` - Attack players
-- `/api/combat/steal-planet` - Planet stealing
-- `/api/combat/simulate` - Combat preview
-- `/api/combat/reports` - Battle reports
+- `GET /api/config/all` - All configuration
 
 ---
 
-## Testing Results
+## TESTING RESULTS
 
-- **Backend:** 95.5% pass rate
-- **Frontend:** 95% pass rate
-- **All v1.5 features verified working**
+- **Backend:** 94.7% pass rate
+- **All 90 starships:** ✅
+- **All 10 motherships:** ✅
+- **9 universes × 30 galaxies:** ✅
+- **Commander system:** ✅
+- **Government system:** ✅
+- **Population system:** ✅
+- **Scanner system:** ✅
 
 ---
 
-## Next Action Items
+## NEXT ACTIONS
 
-1. Frontend integration for new planet system UI
-2. Add visual planet class/type indicators
-3. Implement station building UI
-4. Combat replay visualization
-5. Moon management interface
+1. Frontend UI for starship browser
+2. Commander management interface
+3. Government policy UI
+4. Population allocation screen
+5. Enhanced scanner visualization
 
-## Future Enhancements
+## FUTURE ENHANCEMENTS
 
-- WebSocket real-time updates
-- Mobile responsive design
-- Achievement system
-- Daily login rewards
+- Real-time WebSocket updates
+- Mothership construction UI
+- Alliance war system
 - Seasonal events
+- Achievement system
