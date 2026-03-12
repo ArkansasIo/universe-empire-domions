@@ -29,6 +29,22 @@ from game_config import (
     TERRAFORMER_CONFIG, EMPIRE_LIMITS, ALLIANCE_BONUSES, calculate_max_planet_fields
 )
 
+# Import starship configuration
+from starship_config import (
+    STARSHIP_CLASSES, STARSHIP_TYPES, WEAPON_SYSTEMS, ENGINE_SYSTEMS,
+    SHIELD_SYSTEMS, ARMOR_SYSTEMS, ALL_STARSHIPS, MOTHERSHIPS
+)
+
+# Import universe configuration
+from universe_config import (
+    UNIVERSE_CONFIG, UNIVERSES, GALAXIES_BY_UNIVERSE,
+    COMMANDER_CLASSES, COMMANDER_STATS, COMMANDER_SKILLS, COMMANDER_EQUIPMENT, COMMANDER_RANKS,
+    GOVERNMENT_TYPES, GOVERNMENT_POLICIES,
+    POPULATION_CONFIG, POPULATION_CLASSES, POPULATION_NEEDS, HAPPINESS_FACTORS,
+    SCANNER_CONFIG, SCANNER_LEVELS, SCAN_DETAIL_LEVELS,
+    STATION_FIELD_CONFIG, MOON_FIELD_CONFIG, STARBASE_FACILITIES
+)
+
 load_dotenv()
 
 # MongoDB Configuration
@@ -2355,6 +2371,746 @@ async def get_ogame_ships(request: Request):
 @app.get("/api/ogame/defense")
 async def get_ogame_defense(request: Request):
     return DEFENSE_COSTS
+
+
+# ==================== STARSHIP ENDPOINTS ====================
+
+@app.get("/api/starships")
+async def get_all_starships(request: Request):
+    """Get all 90 starships with full details"""
+    return ALL_STARSHIPS
+
+
+@app.get("/api/starships/{ship_id}")
+async def get_starship(ship_id: str, request: Request):
+    """Get specific starship details"""
+    ship = ALL_STARSHIPS.get(ship_id)
+    if not ship:
+        raise HTTPException(status_code=404, detail="Starship not found")
+    return ship
+
+
+@app.get("/api/starships/class/{ship_class}")
+async def get_starships_by_class(ship_class: str, request: Request):
+    """Get all starships of a specific class"""
+    ships = {k: v for k, v in ALL_STARSHIPS.items() if v.get("class") == ship_class}
+    return ships
+
+
+@app.get("/api/starships/type/{ship_type}")
+async def get_starships_by_type(ship_type: str, request: Request):
+    """Get all starships of a specific type"""
+    ships = {k: v for k, v in ALL_STARSHIPS.items() if v.get("type") == ship_type}
+    return ships
+
+
+@app.get("/api/starships/tier/{tier}")
+async def get_starships_by_tier(tier: int, request: Request):
+    """Get all starships of a specific tier"""
+    ships = {k: v for k, v in ALL_STARSHIPS.items() if v.get("tier") == tier}
+    return ships
+
+
+@app.get("/api/motherships")
+async def get_all_motherships(request: Request):
+    """Get all motherships"""
+    return MOTHERSHIPS
+
+
+@app.get("/api/motherships/{mothership_id}")
+async def get_mothership(mothership_id: str, request: Request):
+    """Get specific mothership details"""
+    ship = MOTHERSHIPS.get(mothership_id)
+    if not ship:
+        raise HTTPException(status_code=404, detail="Mothership not found")
+    return ship
+
+
+@app.get("/api/config/starship-classes")
+async def get_starship_classes(request: Request):
+    """Get all starship classes"""
+    return STARSHIP_CLASSES
+
+
+@app.get("/api/config/starship-types")
+async def get_starship_types(request: Request):
+    """Get all starship types"""
+    return STARSHIP_TYPES
+
+
+@app.get("/api/config/weapon-systems")
+async def get_weapon_systems(request: Request):
+    """Get all weapon systems"""
+    return WEAPON_SYSTEMS
+
+
+@app.get("/api/config/engine-systems")
+async def get_engine_systems(request: Request):
+    """Get all engine systems"""
+    return ENGINE_SYSTEMS
+
+
+@app.get("/api/config/shield-systems")
+async def get_shield_systems(request: Request):
+    """Get all shield systems"""
+    return SHIELD_SYSTEMS
+
+
+@app.get("/api/config/armor-systems")
+async def get_armor_systems(request: Request):
+    """Get all armor systems"""
+    return ARMOR_SYSTEMS
+
+
+# ==================== UNIVERSE ENDPOINTS ====================
+
+@app.get("/api/universes")
+async def get_all_universes(request: Request):
+    """Get all 9 universes"""
+    return UNIVERSES
+
+
+@app.get("/api/universes/{universe_id}")
+async def get_universe(universe_id: int, request: Request):
+    """Get specific universe details"""
+    universe = UNIVERSES.get(f"universe_{universe_id}")
+    if not universe:
+        raise HTTPException(status_code=404, detail="Universe not found")
+    return universe
+
+
+@app.get("/api/universes/{universe_id}/galaxies")
+async def get_universe_galaxies(universe_id: int, request: Request):
+    """Get all 30 galaxies in a universe"""
+    galaxies = GALAXIES_BY_UNIVERSE.get(f"universe_{universe_id}")
+    if not galaxies:
+        raise HTTPException(status_code=404, detail="Universe not found")
+    return galaxies
+
+
+@app.get("/api/config/universe")
+async def get_universe_config(request: Request):
+    """Get universe configuration"""
+    return UNIVERSE_CONFIG
+
+
+# ==================== COMMANDER ENDPOINTS ====================
+
+@app.get("/api/config/commander-classes")
+async def get_commander_classes(request: Request):
+    """Get all commander classes"""
+    return COMMANDER_CLASSES
+
+
+@app.get("/api/config/commander-stats")
+async def get_commander_stats(request: Request):
+    """Get commander stat effects"""
+    return COMMANDER_STATS
+
+
+@app.get("/api/config/commander-skills")
+async def get_commander_skills(request: Request):
+    """Get all commander skills"""
+    return COMMANDER_SKILLS
+
+
+@app.get("/api/config/commander-equipment")
+async def get_commander_equipment(request: Request):
+    """Get all commander equipment"""
+    return COMMANDER_EQUIPMENT
+
+
+@app.get("/api/config/commander-ranks")
+async def get_commander_ranks(request: Request):
+    """Get commander rank progression"""
+    return COMMANDER_RANKS
+
+
+@app.get("/api/commander")
+async def get_player_commander(request: Request):
+    """Get current player's commander"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    
+    player_state = player_states_collection.find_one({"userId": user_id})
+    if not player_state:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    commander = player_state.get("commander", {})
+    return commander
+
+
+@app.post("/api/commander/level-up")
+async def level_up_commander(request: Request):
+    """Level up commander with experience"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    
+    player_state = player_states_collection.find_one({"userId": user_id})
+    if not player_state:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    commander = player_state.get("commander", {})
+    current_exp = commander.get("experience", 0)
+    current_level = commander.get("level", 1)
+    
+    # Find next rank
+    next_rank = None
+    for rank in COMMANDER_RANKS:
+        if rank["rank"] == current_level + 1:
+            next_rank = rank
+            break
+    
+    if not next_rank:
+        return {"success": False, "message": "Max level reached"}
+    
+    if current_exp < next_rank["exp_required"]:
+        return {"success": False, "message": f"Need {next_rank['exp_required']} experience"}
+    
+    commander["level"] = current_level + 1
+    commander["rank_name"] = next_rank["name"]
+    commander["rank_bonus"] = next_rank["bonus"]
+    
+    player_states_collection.update_one(
+        {"userId": user_id},
+        {"$set": {"commander": commander}}
+    )
+    
+    return {"success": True, "newLevel": commander["level"], "rankName": next_rank["name"]}
+
+
+@app.post("/api/commander/learn-skill")
+async def learn_commander_skill(request: Request):
+    """Learn or upgrade a commander skill"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    data = await request.json()
+    
+    skill_id = data.get("skillId")
+    if skill_id not in COMMANDER_SKILLS:
+        raise HTTPException(status_code=400, detail="Invalid skill")
+    
+    player_state = player_states_collection.find_one({"userId": user_id})
+    commander = player_state.get("commander", {})
+    skills = commander.get("skills", {})
+    
+    current_level = skills.get(skill_id, 0)
+    max_level = COMMANDER_SKILLS[skill_id]["max_level"]
+    
+    if current_level >= max_level:
+        return {"success": False, "message": "Skill at max level"}
+    
+    # Cost skill points (simplified)
+    skill_points = commander.get("skillPoints", 0)
+    cost = current_level + 1
+    
+    if skill_points < cost:
+        return {"success": False, "message": f"Need {cost} skill points"}
+    
+    skills[skill_id] = current_level + 1
+    commander["skills"] = skills
+    commander["skillPoints"] = skill_points - cost
+    
+    player_states_collection.update_one(
+        {"userId": user_id},
+        {"$set": {"commander": commander}}
+    )
+    
+    return {"success": True, "skill": skill_id, "newLevel": current_level + 1}
+
+
+# ==================== GOVERNMENT ENDPOINTS ====================
+
+@app.get("/api/config/government-types")
+async def get_government_types(request: Request):
+    """Get all government types"""
+    return GOVERNMENT_TYPES
+
+
+@app.get("/api/config/government-policies")
+async def get_government_policies(request: Request):
+    """Get all government policies"""
+    return GOVERNMENT_POLICIES
+
+
+@app.get("/api/government")
+async def get_player_government(request: Request):
+    """Get current player's government"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    
+    player_state = player_states_collection.find_one({"userId": user_id})
+    if not player_state:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    return player_state.get("government", {})
+
+
+@app.post("/api/government/change")
+async def change_government(request: Request):
+    """Change government type"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    data = await request.json()
+    
+    new_type = data.get("governmentType")
+    if new_type not in GOVERNMENT_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid government type")
+    
+    gov_data = GOVERNMENT_TYPES[new_type]
+    
+    new_government = {
+        "type": new_type,
+        "name": gov_data["name"],
+        "subtype": data.get("subtype", gov_data["subtypes"][0]),
+        "stability": gov_data["stability_base"],
+        "corruption": gov_data["corruption_base"],
+        "bonuses": gov_data["bonuses"],
+        "penalties": gov_data["penalties"],
+        "policies": [],
+        "changedAt": get_timestamp()
+    }
+    
+    player_states_collection.update_one(
+        {"userId": user_id},
+        {"$set": {"government": new_government}}
+    )
+    
+    return {"success": True, "government": new_government}
+
+
+@app.post("/api/government/policy")
+async def set_government_policy(request: Request):
+    """Add or remove a government policy"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    data = await request.json()
+    
+    policy_id = data.get("policyId")
+    action = data.get("action", "add")  # add or remove
+    
+    if policy_id not in GOVERNMENT_POLICIES:
+        raise HTTPException(status_code=400, detail="Invalid policy")
+    
+    player_state = player_states_collection.find_one({"userId": user_id})
+    government = player_state.get("government", {})
+    policies = government.get("policies", [])
+    
+    if action == "add":
+        if len(policies) >= 5:
+            return {"success": False, "message": "Maximum 5 policies allowed"}
+        if policy_id not in policies:
+            policies.append(policy_id)
+    else:
+        if policy_id in policies:
+            policies.remove(policy_id)
+    
+    government["policies"] = policies
+    
+    player_states_collection.update_one(
+        {"userId": user_id},
+        {"$set": {"government": government}}
+    )
+    
+    return {"success": True, "policies": policies}
+
+
+# ==================== POPULATION ENDPOINTS ====================
+
+@app.get("/api/config/population")
+async def get_population_config(request: Request):
+    """Get population configuration"""
+    return {
+        "config": POPULATION_CONFIG,
+        "classes": POPULATION_CLASSES,
+        "needs": POPULATION_NEEDS,
+        "happiness_factors": HAPPINESS_FACTORS
+    }
+
+
+@app.get("/api/population")
+async def get_player_population(request: Request):
+    """Get current player's population on current planet"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    
+    player_state = player_states_collection.find_one({"userId": user_id})
+    if not player_state:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    planet_id = player_state.get("currentPlanetId")
+    planet = planets_collection.find_one({"_id": ObjectId(planet_id)}) if planet_id else None
+    
+    if not planet:
+        raise HTTPException(status_code=404, detail="Planet not found")
+    
+    population = planet.get("population", {
+        "total": 10000,
+        "workers": 5000,
+        "scientists": 1000,
+        "soldiers": 2000,
+        "merchants": 1000,
+        "administrators": 500,
+        "colonists": 500,
+        "happiness": 50,
+        "growth_rate": 0.02
+    })
+    
+    return population
+
+
+@app.post("/api/population/allocate")
+async def allocate_population(request: Request):
+    """Allocate population between classes"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    data = await request.json()
+    
+    player_state = player_states_collection.find_one({"userId": user_id})
+    planet_id = player_state.get("currentPlanetId")
+    planet = planets_collection.find_one({"_id": ObjectId(planet_id)})
+    
+    if not planet:
+        raise HTTPException(status_code=404, detail="Planet not found")
+    
+    population = planet.get("population", {})
+    total = population.get("total", 10000)
+    
+    # Validate allocation
+    new_allocation = data.get("allocation", {})
+    allocation_total = sum(new_allocation.values())
+    
+    if allocation_total > total:
+        raise HTTPException(status_code=400, detail="Allocation exceeds total population")
+    
+    for class_name, count in new_allocation.items():
+        if class_name in POPULATION_CLASSES:
+            population[class_name] = count
+    
+    planets_collection.update_one(
+        {"_id": ObjectId(planet_id)},
+        {"$set": {"population": population}}
+    )
+    
+    return {"success": True, "population": population}
+
+
+# ==================== PLANET SCANNER ENDPOINTS ====================
+
+@app.get("/api/config/scanner")
+async def get_scanner_config(request: Request):
+    """Get scanner configuration"""
+    return {
+        "config": SCANNER_CONFIG,
+        "levels": SCANNER_LEVELS,
+        "detail_levels": SCAN_DETAIL_LEVELS
+    }
+
+
+@app.post("/api/scanner/scan")
+async def scan_planet(request: Request):
+    """Scan a planet for detailed information"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    data = await request.json()
+    
+    target_coords = data.get("coordinates")
+    if not target_coords:
+        raise HTTPException(status_code=400, detail="Coordinates required")
+    
+    player_state = player_states_collection.find_one({"userId": user_id})
+    if not player_state:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    # Get scanner level (from research or buildings)
+    research = player_state.get("research", {})
+    scanner_level = min(research.get("espionageTechnology", 0) + 1, 10)
+    
+    scanner_config = SCANNER_LEVELS.get(scanner_level, SCANNER_LEVELS[1])
+    detail_level = scanner_config["detail_level"]
+    accuracy = scanner_config["accuracy"]
+    
+    # Parse coordinates
+    galaxy, system, position = parse_coordinates(target_coords)
+    
+    # Check if planet exists
+    existing_planet = planets_collection.find_one({"coordinates": target_coords})
+    
+    # Generate scan result
+    random.seed(galaxy * 100000 + system * 100 + position)
+    
+    pos_config = PLANET_POSITION_SIZE.get(position, PLANET_POSITION_SIZE[8])
+    base_fields = random.randint(pos_config["min"], pos_config["max"])
+    temperature = random.randint(pos_config["temp_min"], pos_config["temp_max"])
+    
+    planet_class = random.choice(list(PLANET_CLASSES.keys()))
+    planet_type = random.choice(list(PLANET_TYPES.keys()))
+    
+    # Determine biome
+    suitable_biomes = [b for b in BIOMES if b["temp_range"][0] <= temperature <= b["temp_range"][1]]
+    biome = random.choice(suitable_biomes) if suitable_biomes else BIOMES[0]
+    
+    # Build scan result based on detail level
+    scan_result = {
+        "coordinates": target_coords,
+        "position": position,
+        "scanAccuracy": accuracy,
+        "detailLevel": detail_level,
+        "occupied": existing_planet is not None
+    }
+    
+    if existing_planet:
+        scan_result["owner"] = existing_planet.get("userId")
+        scan_result["planetName"] = existing_planet.get("name")
+    
+    available_fields = SCAN_DETAIL_LEVELS.get(detail_level, [])
+    
+    if "planet_type" in available_fields:
+        scan_result["planetClass"] = planet_class
+        scan_result["planetType"] = planet_type
+    
+    if "estimated_size" in available_fields:
+        scan_result["estimatedSize"] = f"{pos_config['min']}-{pos_config['max']}"
+    
+    if "exact_size" in available_fields or "size_range" in available_fields:
+        # Add some variance based on accuracy
+        variance = int(base_fields * (1 - accuracy) * 0.5)
+        scan_result["fieldRange"] = [base_fields - variance, base_fields + variance]
+    
+    if "temperature" in available_fields or "temperature_range" in available_fields:
+        scan_result["temperature"] = temperature
+    
+    if "habitability" in available_fields:
+        scan_result["habitability"] = PLANET_CLASSES[planet_class]["habitability"]
+    
+    if "biome" in available_fields:
+        scan_result["biome"] = biome["name"]
+        scan_result["biomeId"] = biome["id"]
+    
+    if "resources_estimate" in available_fields or "resources" in available_fields:
+        resource_mod = PLANET_CLASSES[planet_class]["resource_mod"]
+        scan_result["resourcePotential"] = {
+            "metal": "high" if resource_mod > 1.2 else ("medium" if resource_mod > 0.9 else "low"),
+            "crystal": "medium",
+            "deuterium": "high" if temperature < -50 else "medium"
+        }
+    
+    if "moon_chance" in available_fields:
+        scan_result["moonChance"] = 0.01 if random.random() > 0.7 else 0
+    
+    if "special_features" in available_fields:
+        features = []
+        if random.random() > 0.9:
+            features.append("Ancient Ruins")
+        if random.random() > 0.95:
+            features.append("Rare Minerals")
+        if random.random() > 0.98:
+            features.append("Artifact Site")
+        scan_result["specialFeatures"] = features
+    
+    if "strategic_value" in available_fields:
+        value = base_fields * PLANET_CLASSES[planet_class]["habitability"] * PLANET_CLASSES[planet_class]["resource_mod"]
+        scan_result["strategicValue"] = int(value)
+    
+    if "colonization_cost" in available_fields:
+        scan_result["colonizationCost"] = {
+            "colonyShip": 1,
+            "estimatedResources": {
+                "metal": 10000,
+                "crystal": 20000,
+                "deuterium": 10000
+            }
+        }
+    
+    return scan_result
+
+
+@app.get("/api/scanner/range")
+async def get_scanner_range(request: Request):
+    """Get current scanner range based on player's technology"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    
+    player_state = player_states_collection.find_one({"userId": user_id})
+    research = player_state.get("research", {}) if player_state else {}
+    
+    scanner_level = min(research.get("espionageTechnology", 0) + 1, 10)
+    scanner_config = SCANNER_LEVELS.get(scanner_level, SCANNER_LEVELS[1])
+    
+    return {
+        "level": scanner_level,
+        "range": scanner_config["range"],
+        "accuracy": scanner_config["accuracy"],
+        "detailLevel": scanner_config["detail_level"]
+    }
+
+
+# ==================== STATION FIELDS ENDPOINTS ====================
+
+@app.get("/api/config/station-fields")
+async def get_station_field_config(request: Request):
+    """Get station field configuration"""
+    return {
+        "stations": STATION_FIELD_CONFIG,
+        "moons": MOON_FIELD_CONFIG,
+        "starbase_facilities": STARBASE_FACILITIES
+    }
+
+
+@app.post("/api/stations/{station_id}/expand")
+async def expand_station_fields(station_id: str, request: Request):
+    """Expand station fields"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    
+    station = stations_collection.find_one({"_id": ObjectId(station_id), "userId": user_id})
+    if not station:
+        raise HTTPException(status_code=404, detail="Station not found")
+    
+    station_type = station.get("type")
+    field_config = STATION_FIELD_CONFIG.get(station_type)
+    
+    if not field_config:
+        raise HTTPException(status_code=400, detail="Invalid station type")
+    
+    current_fields = station.get("maxFields", field_config["base_fields"])
+    max_fields = field_config["max_fields"]
+    
+    if current_fields >= max_fields:
+        return {"success": False, "message": "Station at maximum fields"}
+    
+    # Get player resources
+    player_state = player_states_collection.find_one({"userId": user_id})
+    planet_id = player_state.get("currentPlanetId")
+    planet = planets_collection.find_one({"_id": ObjectId(planet_id)})
+    
+    if not planet:
+        raise HTTPException(status_code=404, detail="Planet not found")
+    
+    resources = planet.get("resources", {})
+    cost = field_config["field_expansion_cost"]
+    
+    # Check resources
+    for resource, amount in cost.items():
+        if resources.get(resource, 0) < amount:
+            raise HTTPException(status_code=400, detail=f"Not enough {resource}")
+    
+    # Deduct resources
+    for resource, amount in cost.items():
+        resources[resource] -= amount
+    
+    new_fields = min(current_fields + field_config["fields_per_upgrade"], max_fields)
+    
+    planets_collection.update_one(
+        {"_id": ObjectId(planet_id)},
+        {"$set": {"resources": resources}}
+    )
+    
+    stations_collection.update_one(
+        {"_id": ObjectId(station_id)},
+        {"$set": {"maxFields": new_fields}}
+    )
+    
+    return {"success": True, "newFields": new_fields, "maxFields": max_fields}
+
+
+@app.post("/api/stations/{station_id}/build-facility")
+async def build_station_facility(station_id: str, request: Request):
+    """Build a facility on a station"""
+    session = require_auth(request)
+    user_id = session["userId"]
+    data = await request.json()
+    
+    facility_id = data.get("facilityId")
+    if facility_id not in STARBASE_FACILITIES:
+        raise HTTPException(status_code=400, detail="Invalid facility")
+    
+    station = stations_collection.find_one({"_id": ObjectId(station_id), "userId": user_id})
+    if not station:
+        raise HTTPException(status_code=404, detail="Station not found")
+    
+    facility_config = STARBASE_FACILITIES[facility_id]
+    facilities = station.get("facilities", {})
+    current_level = facilities.get(facility_id, 0)
+    
+    if current_level >= facility_config["max_level"]:
+        return {"success": False, "message": "Facility at max level"}
+    
+    # Check available fields
+    current_fields = station.get("currentFields", 0)
+    max_fields = station.get("maxFields", 50)
+    fields_needed = facility_config["fields_required"]
+    
+    if current_fields + fields_needed > max_fields:
+        return {"success": False, "message": "Not enough station fields"}
+    
+    facilities[facility_id] = current_level + 1
+    
+    stations_collection.update_one(
+        {"_id": ObjectId(station_id)},
+        {"$set": {
+            "facilities": facilities,
+            "currentFields": current_fields + fields_needed
+        }}
+    )
+    
+    return {"success": True, "facility": facility_id, "newLevel": current_level + 1}
+
+
+# ==================== MOON FIELD ENDPOINTS ====================
+
+@app.get("/api/moons/{moon_id}/fields")
+async def get_moon_fields(moon_id: str, request: Request):
+    """Get moon field information"""
+    session = require_auth(request)
+    
+    moon = moons_collection.find_one({"_id": ObjectId(moon_id)})
+    if not moon:
+        raise HTTPException(status_code=404, detail="Moon not found")
+    
+    diameter = moon.get("diameter", 5000)
+    base_fields = MOON_FIELD_CONFIG["base_fields"]
+    diameter_fields = (diameter // 1000) * MOON_FIELD_CONFIG["field_per_1000km_diameter"]
+    lunar_base_level = moon.get("facilities", {}).get("lunarBase", 0)
+    lunar_base_fields = lunar_base_level * MOON_FIELD_CONFIG["lunar_base_fields_per_level"]
+    
+    total_fields = base_fields + diameter_fields + lunar_base_fields
+    
+    return {
+        "diameter": diameter,
+        "baseFields": base_fields,
+        "diameterFields": diameter_fields,
+        "lunarBaseLevel": lunar_base_level,
+        "lunarBaseFields": lunar_base_fields,
+        "totalFields": min(total_fields, MOON_FIELD_CONFIG["max_fields"]),
+        "maxFields": MOON_FIELD_CONFIG["max_fields"],
+        "currentFields": moon.get("currentFields", 0)
+    }
+
+
+# ==================== ADDITIONAL CONFIG ENDPOINTS ====================
+
+@app.get("/api/config/all")
+async def get_all_config(request: Request):
+    """Get all game configuration in one request"""
+    return {
+        "universe": UNIVERSE_CONFIG,
+        "universes": UNIVERSES,
+        "planetClasses": PLANET_CLASSES,
+        "planetTypes": PLANET_TYPES,
+        "biomes": BIOMES[:10],  # First 10 for preview
+        "biomeCount": len(BIOMES),
+        "lifeforms": LIFEFORMS,
+        "playerClasses": PLAYER_CLASSES,
+        "commanderClasses": COMMANDER_CLASSES,
+        "governmentTypes": {k: {"name": v["name"], "description": v["description"]} for k, v in GOVERNMENT_TYPES.items()},
+        "starshipClasses": STARSHIP_CLASSES,
+        "starshipCount": len(ALL_STARSHIPS),
+        "mothershipCount": len(MOTHERSHIPS),
+        "stationTypes": list(STATION_FIELD_CONFIG.keys()),
+        "combatConfig": COMBAT_CONFIG,
+        "empireLimits": EMPIRE_LIMITS
+    }
 
 
 # Run the application

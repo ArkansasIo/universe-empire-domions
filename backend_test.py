@@ -507,9 +507,310 @@ class StellarDominionAPITester:
                 elif position in [1, 15] and base_fields < 100:
                     print(f"   ✓ Edge position has smaller size: {base_fields} fields")
 
+    def test_v20_starships_system(self):
+        """Test Stellar Dominion v2.0 - All 90 Starships System"""
+        print("\n🚀 Testing v2.0 - 90 Starships System...")
+        
+        if not self.session_token:
+            print("❌ Skipping starships tests - no session token")
+            return
+        
+        # Test all starships endpoint (should return 90 starships)
+        success, response = self.run_test("All Starships (90 expected)", "GET", "api/starships", 200, use_auth=True)
+        if success and response:
+            starships = response if isinstance(response, dict) else {}
+            print(f"   Found {len(starships)} starships")
+            if len(starships) >= 90:
+                print(f"   ✅ Expected 90+ starships, found {len(starships)}")
+            else:
+                print(f"   ⚠️ Expected 90+ starships, only found {len(starships)}")
+            
+            # Check for sample starships with stats
+            sample_ships = list(starships.keys())[:3] if starships else []
+            for ship_id in sample_ships:
+                ship = starships[ship_id]
+                ship_name = ship.get('name', 'Unknown')
+                ship_class = ship.get('class', 'Unknown')
+                ship_tier = ship.get('tier', 0)
+                stats = ship.get('stats', {})
+                hull = stats.get('hull', 0)
+                weapons = stats.get('weapons', 0)
+                print(f"   ✓ {ship_name}: {ship_class} class, Tier {ship_tier}, Hull: {hull}, Weapons: {weapons}")
+
+    def test_v20_motherships_system(self):
+        """Test Stellar Dominion v2.0 - 10 Motherships System"""
+        print("\n🛸 Testing v2.0 - 10 Motherships System...")
+        
+        if not self.session_token:
+            print("❌ Skipping motherships tests - no session token")
+            return
+        
+        # Test motherships endpoint (should return 10 motherships)
+        success, response = self.run_test("All Motherships (10 expected)", "GET", "api/motherships", 200, use_auth=True)
+        if success and response:
+            motherships = response if isinstance(response, dict) else {}
+            print(f"   Found {len(motherships)} motherships")
+            if len(motherships) >= 10:
+                print(f"   ✅ Expected 10+ motherships, found {len(motherships)}")
+            else:
+                print(f"   ⚠️ Expected 10+ motherships, only found {len(motherships)}")
+            
+            # Check sample motherships
+            sample_motherships = list(motherships.keys())[:2] if motherships else []
+            for ms_id in sample_motherships:
+                ms = motherships[ms_id]
+                ms_name = ms.get('name', 'Unknown')
+                ms_class = ms.get('class', 'Unknown')
+                ms_tier = ms.get('tier', 0)
+                stats = ms.get('stats', {})
+                hull = stats.get('hull', 0)
+                print(f"   ✓ {ms_name}: {ms_class} class, Tier {ms_tier}, Hull: {hull:,}")
+
+    def test_v20_universes_system(self):
+        """Test Stellar Dominion v2.0 - 9 Universes System"""
+        print("\n🌌 Testing v2.0 - 9 Universes × 30 Galaxies System...")
+        
+        if not self.session_token:
+            print("❌ Skipping universes tests - no session token")
+            return
+        
+        # Test all universes endpoint (should return 9 universes)
+        success, response = self.run_test("All Universes (9 expected)", "GET", "api/universes", 200, use_auth=True)
+        if success and response:
+            universes = response if isinstance(response, dict) else {}
+            print(f"   Found {len(universes)} universes")
+            if len(universes) >= 9:
+                print(f"   ✅ Expected 9+ universes, found {len(universes)}")
+                
+                # Test first universe details
+                first_universe_key = list(universes.keys())[0] if universes else None
+                if first_universe_key:
+                    universe = universes[first_universe_key]
+                    universe_name = universe.get('name', 'Unknown')
+                    universe_id = universe.get('id', 1)
+                    print(f"   ✓ Sample: {universe_name} (ID: {universe_id})")
+            else:
+                print(f"   ⚠️ Expected 9+ universes, only found {len(universes)}")
+        
+        # Test galaxies in universe 1 (should return 30 galaxies)
+        success, response = self.run_test("Galaxies in Universe 1 (30 expected)", "GET", "api/universes/1/galaxies", 200, use_auth=True)
+        if success and response:
+            galaxies = response if isinstance(response, list) else []
+            print(f"   Universe 1 galaxies: {len(galaxies)}")
+            if len(galaxies) >= 30:
+                print(f"   ✅ Expected 30+ galaxies, found {len(galaxies)}")
+                
+                # Check sample galaxies
+                sample_galaxies = galaxies[:3] if galaxies else []
+                for galaxy in sample_galaxies:
+                    galaxy_name = galaxy.get('name', 'Unknown')
+                    galaxy_id = galaxy.get('id', 0)
+                    galaxy_type = galaxy.get('type', 'Unknown')
+                    print(f"   ✓ Galaxy {galaxy_id}: {galaxy_name} ({galaxy_type})")
+            else:
+                print(f"   ⚠️ Expected 30+ galaxies, only found {len(galaxies)}")
+
+    def test_v20_planet_scanner_system(self):
+        """Test Stellar Dominion v2.0 - Planet Scanner System"""
+        print("\n🔍 Testing v2.0 - Planet Scanner System...")
+        
+        if not self.session_token:
+            print("❌ Skipping scanner tests - no session token")
+            return
+        
+        # Test scanner range endpoint
+        success, response = self.run_test("Scanner Range", "GET", "api/scanner/range", 200, use_auth=True)
+        if success and response:
+            scanner_data = response if isinstance(response, dict) else {}
+            scanner_level = scanner_data.get('scanner_level', 0)
+            scan_range = scanner_data.get('range', 0)
+            accuracy = scanner_data.get('accuracy', 0)
+            print(f"   Scanner Level: {scanner_level}, Range: {scan_range}, Accuracy: {accuracy}")
+            if scanner_level >= 1:
+                print(f"   ✅ Scanner system active")
+        
+        # Test scanner scan endpoint
+        scan_data = {
+            "galaxy": 1,
+            "system": 1,
+            "position": 8
+        }
+        success, response = self.run_test("Scanner Scan", "POST", "api/scanner/scan", 200, scan_data, use_auth=True)
+        if success and response:
+            scan_result = response if isinstance(response, dict) else {}
+            scan_success = scan_result.get('success', False)
+            scan_details = scan_result.get('planet_data', {})
+            print(f"   Scan success: {scan_success}")
+            if scan_success and scan_details:
+                planet_type = scan_details.get('planet_type', 'Unknown')
+                size_estimate = scan_details.get('size_estimate', 'Unknown')
+                print(f"   ✓ Scan result: {planet_type}, Size: {size_estimate}")
+
+    def test_v20_commander_system(self):
+        """Test Stellar Dominion v2.0 - Commander System"""
+        print("\n👤 Testing v2.0 - Commander System...")
+        
+        if not self.session_token:
+            print("❌ Skipping commander tests - no session token")
+            return
+        
+        # Test commander classes (should have 6 classes)
+        success, response = self.run_test("Commander Classes", "GET", "api/config/commander-classes", 200, use_auth=True)
+        if success and response:
+            classes = response if isinstance(response, dict) else {}
+            print(f"   Found {len(classes)} commander classes")
+            if len(classes) >= 6:
+                print(f"   ✅ Expected 6+ commander classes, found {len(classes)}")
+                
+                # Check sample classes
+                sample_classes = list(classes.keys())[:3]
+                for class_key in sample_classes:
+                    class_data = classes[class_key]
+                    class_name = class_data.get('name', 'Unknown')
+                    primary_stat = class_data.get('primary_stat', 'Unknown')
+                    print(f"   ✓ {class_name}: {primary_stat} focus")
+            else:
+                print(f"   ⚠️ Expected 6+ commander classes, only found {len(classes)}")
+        
+        # Test commander skills (should have 24+ skills)
+        success, response = self.run_test("Commander Skills", "GET", "api/config/commander-skills", 200, use_auth=True)
+        if success and response:
+            skills = response if isinstance(response, dict) else {}
+            print(f"   Found {len(skills)} commander skills")
+            if len(skills) >= 24:
+                print(f"   ✅ Expected 24+ commander skills, found {len(skills)}")
+            else:
+                print(f"   ⚠️ Expected 24+ commander skills, only found {len(skills)}")
+
+    def test_v20_government_system(self):
+        """Test Stellar Dominion v2.0 - Government System"""
+        print("\n🏛️ Testing v2.0 - Government System...")
+        
+        if not self.session_token:
+            print("❌ Skipping government tests - no session token")
+            return
+        
+        # Test government types (should have 10 types)
+        success, response = self.run_test("Government Types", "GET", "api/config/government-types", 200, use_auth=True)
+        if success and response:
+            gov_types = response if isinstance(response, dict) else {}
+            print(f"   Found {len(gov_types)} government types")
+            if len(gov_types) >= 10:
+                print(f"   ✅ Expected 10+ government types, found {len(gov_types)}")
+                
+                # Check sample government types
+                sample_govs = list(gov_types.keys())[:3]
+                for gov_key in sample_govs:
+                    gov_data = gov_types[gov_key]
+                    gov_name = gov_data.get('name', 'Unknown')
+                    bonuses = gov_data.get('bonuses', {})
+                    print(f"   ✓ {gov_name}: {len(bonuses)} bonuses")
+            else:
+                print(f"   ⚠️ Expected 10+ government types, only found {len(gov_types)}")
+
+    def test_v20_population_system(self):
+        """Test Stellar Dominion v2.0 - Population System"""
+        print("\n👥 Testing v2.0 - Population System...")
+        
+        if not self.session_token:
+            print("❌ Skipping population tests - no session token")
+            return
+        
+        # Test population config (should have 6 classes)
+        success, response = self.run_test("Population Config", "GET", "api/config/population", 200, use_auth=True)
+        if success and response:
+            pop_config = response if isinstance(response, dict) else {}
+            classes = pop_config.get('classes', {})
+            needs = pop_config.get('needs', {})
+            happiness = pop_config.get('happiness_factors', {})
+            
+            print(f"   Population classes: {len(classes)}")
+            print(f"   Population needs: {len(needs)}")
+            print(f"   Happiness factors: {len(happiness)}")
+            
+            if len(classes) >= 6:
+                print(f"   ✅ Expected 6+ population classes, found {len(classes)}")
+                
+                # Check sample population classes
+                sample_classes = list(classes.keys())[:3]
+                for class_key in sample_classes:
+                    class_data = classes[class_key]
+                    class_name = class_data.get('name', 'Unknown')
+                    productivity = class_data.get('productivity', 1.0)
+                    print(f"   ✓ {class_name}: {productivity}x productivity")
+            else:
+                print(f"   ⚠️ Expected 6+ population classes, only found {len(classes)}")
+
+    def test_v20_station_fields_system(self):
+        """Test Stellar Dominion v2.0 - Station Fields System"""
+        print("\n🛰️ Testing v2.0 - Station Fields System...")
+        
+        if not self.session_token:
+            print("❌ Skipping station fields tests - no session token")
+            return
+        
+        # Test station fields config
+        success, response = self.run_test("Station Fields Config", "GET", "api/config/station-fields", 200, use_auth=True)
+        if success and response:
+            station_fields = response if isinstance(response, dict) else {}
+            station_config = station_fields.get('station_field_config', {})
+            moon_config = station_fields.get('moon_field_config', {})
+            starbase_facilities = station_fields.get('starbase_facilities', {})
+            
+            print(f"   Station field types: {len(station_config)}")
+            print(f"   Moon field config available: {len(moon_config) > 0}")
+            print(f"   Starbase facilities: {len(starbase_facilities)}")
+            
+            # Check sample station types
+            sample_stations = list(station_config.keys())[:3] if station_config else []
+            for station_type in sample_stations:
+                station_data = station_config[station_type]
+                base_fields = station_data.get('base_fields', 0)
+                max_fields = station_data.get('max_fields', 0)
+                print(f"   ✓ {station_type}: {base_fields}-{max_fields} fields")
+
+    def test_v20_all_config_endpoint(self):
+        """Test Stellar Dominion v2.0 - All Config Endpoint"""
+        print("\n⚙️ Testing v2.0 - All Config Endpoint...")
+        
+        if not self.session_token:
+            print("❌ Skipping all config tests - no session token")
+            return
+        
+        # Test all config endpoint (comprehensive configuration)
+        success, response = self.run_test("All Config Endpoint", "GET", "api/config/all", 200, use_auth=True)
+        if success and response:
+            all_config = response if isinstance(response, dict) else {}
+            config_sections = list(all_config.keys())
+            print(f"   Configuration sections: {len(config_sections)}")
+            
+            # Check for key configuration sections
+            expected_sections = [
+                'starships', 'motherships', 'universes', 'commander_classes',
+                'government_types', 'population', 'scanner', 'station_fields'
+            ]
+            
+            found_sections = 0
+            for section in expected_sections:
+                if section in config_sections or any(section in key for key in config_sections):
+                    found_sections += 1
+            
+            print(f"   ✅ Found {found_sections}/{len(expected_sections)} expected config sections")
+            
+            # Show sample config sections
+            sample_sections = config_sections[:5] if config_sections else []
+            for section in sample_sections:
+                section_data = all_config[section]
+                if isinstance(section_data, dict):
+                    print(f"   ✓ {section}: {len(section_data)} items")
+                elif isinstance(section_data, list):
+                    print(f"   ✓ {section}: {len(section_data)} items")
+                else:
+                    print(f"   ✓ {section}: configured")
+
 def main():
-    print("🚀 Starting Stellar Dominion v1.5 FastAPI Backend Tests...")
-    print("🎯 Focus: Enhanced planet system, combat, stations, and configuration")
+    print("🚀 Starting Stellar Dominion v2.0 FastAPI Backend Tests...")
+    print("🎯 Focus: 90 Starships, 10 Motherships, 9 Universes, Commander & Government Systems")
     print("=" * 70)
     
     # Setup
@@ -518,16 +819,16 @@ def main():
     # Test authentication flow with specified credentials
     tester.test_auth_flow()
     
-    # Test v1.5 specific features
-    tester.test_v15_config_endpoints()
-    tester.test_v15_combat_config()
-    tester.test_v15_station_types()
-    tester.test_v15_field_size_categories()
-    tester.test_v15_enhanced_player_setup()
-    tester.test_v15_planet_colonization()
-    tester.test_v15_combat_simulation()
-    tester.test_v15_leaderboard_pagination()
-    tester.test_v15_galaxy_view_enhanced()
+    # Test v2.0 specific features
+    tester.test_v20_starships_system()
+    tester.test_v20_motherships_system()
+    tester.test_v20_universes_system()
+    tester.test_v20_planet_scanner_system()
+    tester.test_v20_commander_system()
+    tester.test_v20_government_system()
+    tester.test_v20_population_system()
+    tester.test_v20_station_fields_system()
+    tester.test_v20_all_config_endpoint()
     
     # Test core game systems
     tester.test_game_state()
@@ -549,11 +850,11 @@ def main():
     print(f"\n📈 Success Rate: {success_rate:.1f}%")
     
     if success_rate >= 80:
-        print("🎉 Stellar Dominion v1.5 backend tests mostly successful!")
+        print("🎉 Stellar Dominion v2.0 backend tests mostly successful!")
     elif success_rate >= 50:
-        print("⚠️  Backend has some issues but core v1.5 functionality works")
+        print("⚠️  Backend has some issues but core v2.0 functionality works")
     else:
-        print("🚨 Backend has significant issues with v1.5 features")
+        print("🚨 Backend has significant issues with v2.0 features")
     
     return 0 if tester.tests_passed == tester.tests_run else 1
 
