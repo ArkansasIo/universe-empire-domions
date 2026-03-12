@@ -219,6 +219,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
               location={location}
               defaultOpen
               items={[
+                { href: "/empire-view", icon: LayoutDashboard, label: "Empire View" },
                 { href: "/resources", icon: Pickaxe, label: "Resources" },
                 { href: "/facilities", icon: Factory, label: "Facilities" },
                 { href: "/megastructures", icon: CircleDot, label: "Megastructures" },

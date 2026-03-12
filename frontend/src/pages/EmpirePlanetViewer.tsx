@@ -112,9 +112,51 @@ const formatNumber = (num: number): string => {
 type ViewMode = "resources" | "buildings" | "ships" | "defense" | "production" | "overview";
 
 export default function EmpirePlanetViewer() {
-  const { resources: gameResources, buildings: gameBuildings, units: gameUnits } = useGame();
-  
-  const [planets] = useState<PlanetData[]>(() => generatePlanets(12));
+  const { resources: gameResources, buildings: gameBuildings, units: gameUnits, planetName: homePlanetName, coordinates: homeCoords } = useGame();
+
+  // Merge real homeworld data into the generated planet list
+  const [planets] = useState<PlanetData[]>(() => {
+    const generated = generatePlanets(12);
+    // Override first planet with real player data
+    generated[0] = {
+      ...generated[0],
+      name: homePlanetName || "Homeworld",
+      coordinates: homeCoords ? `[${homeCoords}]` : generated[0].coordinates,
+      resources: {
+        metal: gameResources.metal,
+        crystal: gameResources.crystal,
+        deuterium: gameResources.deuterium,
+        energy: gameResources.energy,
+      },
+      buildings: {
+        metalMine: gameBuildings.metalMine ?? 0,
+        crystalMine: gameBuildings.crystalMine ?? 0,
+        deuteriumSynthesizer: gameBuildings.deuteriumSynthesizer ?? 0,
+        solarPlant: gameBuildings.solarPlant ?? 0,
+        roboticsFactory: gameBuildings.roboticsFactory ?? 0,
+        shipyard: gameBuildings.shipyard ?? 0,
+        researchLab: gameBuildings.researchLab ?? 0,
+        naniteFactory: (gameBuildings as any).naniteFactory ?? 0,
+        terraformer: (gameBuildings as any).terraformer ?? 0,
+      },
+      ships: {
+        lightFighter: gameUnits.lightFighter ?? 0,
+        heavyFighter: gameUnits.heavyFighter ?? 0,
+        cruiser: gameUnits.cruiser ?? 0,
+        battleship: gameUnits.battleship ?? 0,
+        smallCargo: gameUnits.smallCargo ?? 0,
+        largeCargo: gameUnits.largeCargo ?? 0,
+        colonyShip: gameUnits.colonyShip ?? 0,
+        recycler: gameUnits.recycler ?? 0,
+      },
+      production: {
+        metal: Math.floor(30 * (gameBuildings.metalMine ?? 0) * Math.pow(1.1, gameBuildings.metalMine ?? 0)),
+        crystal: Math.floor(20 * (gameBuildings.crystalMine ?? 0) * Math.pow(1.1, gameBuildings.crystalMine ?? 0)),
+        deuterium: Math.floor(10 * (gameBuildings.deuteriumSynthesizer ?? 0) * Math.pow(1.02, gameBuildings.deuteriumSynthesizer ?? 0)),
+      },
+    };
+    return generated;
+  });
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
   const [sortBy, setSortBy] = useState<string>("coordinates");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
