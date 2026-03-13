@@ -6,6 +6,8 @@ import { createServer } from "http";
 import { logger } from "./logger";
 import { ConsoleMenu } from "./consoleMenu";
 import { setupAuth } from "./basicAuth";
+import { registerAccountRoutes } from "./routes-account";
+import { registerGuildRoutes } from "./routes-guilds";
 
 if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = "production";
@@ -182,6 +184,8 @@ import { seedOgameCatalogIfNeeded } from "./services/ogameCatalogService";
   registerMegastructureRoutes(app);
   registerUnitSystemsRoutes(app);
   registerGovernmentLeaderRoutes(app);
+  registerAccountRoutes(app);
+  registerGuildRoutes(app);
   app.use(turnSystemRoutes);
   app.use(researchXPRoutes);
   app.use(recommendationsRoutes);

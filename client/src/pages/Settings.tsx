@@ -1,5 +1,6 @@
 import GameLayout from "@/components/layout/GameLayout";
 import { useGame } from "@/lib/gameContext";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,9 +16,39 @@ import {
   User as UserIcon, Languages, Zap, Users
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@tanstack/react-query";
+
+type AccountSettingsResponse = {
+   id: string;
+   username: string;
+   email: string;
+   displayName: string;
+   profileImageUrl: string;
+   commanderTitle: string;
+   bioMessage: string;
+   twoFactorEnabled: boolean;
+};
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+   const response = await fetch(url, {
+      credentials: "include",
+      headers: {
+         "Content-Type": "application/json",
+         ...(init?.headers || {}),
+      },
+      ...init,
+   });
+
+   const payload = await response.json().catch(() => null);
+   if (!response.ok) {
+      throw new Error(payload?.message || payload?.error || "Request failed");
+   }
+
+   return payload as T;
+}
 
 export default function Settings() {
   const { config, updateConfig, cronJobs, toggleCronJob, runCronJob, isAdmin, isActualAdmin, adminRole, toggleAdmin, username, logout } = useGame();
@@ -25,6 +56,10 @@ export default function Settings() {
   const [displayName, setDisplayName] = useState(username || "Commander");
   const [commanderTitle, setCommanderTitle] = useState("commander");
   const [bioMessage, setBioMessage] = useState("");
+   const [accountEmail, setAccountEmail] = useState("");
+   const [profileImageUrl, setProfileImageUrl] = useState("");
+   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+   const { toast } = useToast();
   
   const [notifications, setNotifications] = useState({
     attackAlerts: true,
@@ -49,6 +84,136 @@ export default function Settings() {
     alertSounds: true,
     ambientSounds: false
   });
+
+   const { data: accountSettings } = useQuery<AccountSettingsResponse>({
+      queryKey: ["account-settings"],
+      queryFn: () => fetchJson<AccountSettingsResponse>("/api/account/settings"),
+   });
+
+   useEffect(() => {
+      if (!accountSettings) {
+         return;
+      }
+
+      setDisplayName(accountSettings.displayName || username || "Commander");
+      setCommanderTitle(accountSettings.commanderTitle || "commander");
+      setBioMessage(accountSettings.bioMessage || "");
+      setAccountEmail(accountSettings.email || "");
+      setProfileImageUrl(accountSettings.profileImageUrl || "");
+      setTwoFactorEnabled(Boolean(accountSettings.twoFactorEnabled));
+   }, [accountSettings, username]);
+
+   const saveProfileMutation = useMutation({
+      mutationFn: () => fetchJson("/api/account/profile", {
+         method: "PATCH",
+         body: JSON.stringify({ displayName, commanderTitle, bioMessage, profileImageUrl }),
+      }),
+      onSuccess: () => {
+         toast({ title: "Profile updated", description: "Commander profile settings saved." });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Unable to save profile", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const changeEmailMutation = useMutation({
+      mutationFn: (email: string) => fetchJson("/api/account/email", {
+         method: "POST",
+         body: JSON.stringify({ email }),
+      }),
+      onSuccess: () => {
+         toast({ title: "Email updated", description: "Your account email has been updated." });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Unable to update email", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const changePasswordMutation = useMutation({
+      mutationFn: (payload: { currentPassword: string; newPassword: string }) => fetchJson("/api/account/password", {
+         method: "POST",
+         body: JSON.stringify(payload),
+      }),
+      onSuccess: () => {
+         toast({ title: "Password updated", description: "Your password has been changed." });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Unable to update password", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const enableTwoFactorMutation = useMutation({
+      mutationFn: () => fetchJson("/api/account/2fa/enable", { method: "POST" }),
+      onSuccess: () => {
+         setTwoFactorEnabled(true);
+         toast({ title: "2FA enabled", description: "Two-factor protection is now active for this account." });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Unable to enable 2FA", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const exportAccountData = async () => {
+      try {
+         const exportData = await fetchJson<any>("/api/account/export");
+         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+         const downloadUrl = URL.createObjectURL(blob);
+         const link = document.createElement("a");
+         link.href = downloadUrl;
+         link.download = `stellar-dominion-account-${exportData.user?.username || "export"}.json`;
+         document.body.appendChild(link);
+         link.click();
+         link.remove();
+         URL.revokeObjectURL(downloadUrl);
+         toast({ title: "Export ready", description: "Your account export has been downloaded." });
+      } catch (error) {
+         toast({ title: "Unable to export account", description: (error as Error).message, variant: "destructive" });
+      }
+   };
+
+   const handleChangeEmail = () => {
+      const nextEmail = window.prompt("Enter your new email address", accountEmail || "");
+      if (!nextEmail) {
+         return;
+      }
+      setAccountEmail(nextEmail);
+      changeEmailMutation.mutate(nextEmail);
+   };
+
+   const handleChangePassword = () => {
+      const currentPassword = window.prompt("Enter your current password");
+      if (!currentPassword) {
+         return;
+      }
+      const newPassword = window.prompt("Enter your new password (minimum 6 characters)");
+      if (!newPassword) {
+         return;
+      }
+      changePasswordMutation.mutate({ currentPassword, newPassword });
+   };
+
+   const handleDeleteAccount = async () => {
+      const confirmText = window.prompt('Type DELETE to confirm permanent account removal');
+      if (confirmText !== "DELETE") {
+         return;
+      }
+
+      const currentPassword = window.prompt("Enter your current password to permanently delete the account");
+      if (!currentPassword) {
+         return;
+      }
+
+      try {
+         await fetchJson("/api/account", {
+            method: "DELETE",
+            body: JSON.stringify({ currentPassword, confirmText }),
+         });
+         toast({ title: "Account deleted", description: "Your account has been permanently removed." });
+         setLocation("/");
+      } catch (error) {
+         toast({ title: "Unable to delete account", description: (error as Error).message, variant: "destructive" });
+      }
+   };
 
   return (
     <GameLayout>
@@ -104,7 +269,17 @@ export default function Settings() {
                              <div className="font-orbitron font-bold text-lg text-slate-900">{username || "Commander"}</div>
                              <div className="text-sm text-slate-500">Active since {new Date().toLocaleDateString()}</div>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => alert("Avatar customization coming soon!")}>Change Avatar</Button>
+                          <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => {
+                               const nextUrl = window.prompt("Enter avatar image URL", profileImageUrl || "");
+                               if (nextUrl === null) return;
+                               setProfileImageUrl(nextUrl.trim());
+                             }}
+                          >
+                             Change Avatar
+                          </Button>
                        </div>
                        
                        <Separator />
@@ -135,7 +310,7 @@ export default function Settings() {
                           </div>
                        </div>
                        
-                       <Button className="w-full" onClick={() => alert("Profile updated: " + displayName)}>
+                       <Button className="w-full" onClick={() => saveProfileMutation.mutate()} disabled={saveProfileMutation.isPending}>
                           <Save className="w-4 h-4 mr-2" /> Save Profile Changes
                        </Button>
                     </CardContent>
@@ -154,10 +329,10 @@ export default function Settings() {
                                 <Mail className="w-5 h-5 text-slate-400" />
                                 <div>
                                    <div className="font-medium text-slate-900">Email Address</div>
-                                   <div className="text-xs text-slate-500">*****@email.com</div>
+                                   <div className="text-xs text-slate-500">{accountEmail || "No email set"}</div>
                                 </div>
                              </div>
-                             <Button variant="ghost" size="sm" onClick={() => alert("Email change feature coming soon!")}>Change</Button>
+                             <Button variant="ghost" size="sm" onClick={handleChangeEmail} disabled={changeEmailMutation.isPending}>Change</Button>
                           </div>
                           
                           <div className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100">
@@ -168,7 +343,7 @@ export default function Settings() {
                                    <div className="text-xs text-slate-500">Last changed 30 days ago</div>
                                 </div>
                              </div>
-                             <Button variant="ghost" size="sm" onClick={() => alert("Password change feature coming soon!")}>Change</Button>
+                             <Button variant="ghost" size="sm" onClick={handleChangePassword} disabled={changePasswordMutation.isPending}>Change</Button>
                           </div>
                           
                           <div className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100">
@@ -176,10 +351,12 @@ export default function Settings() {
                                 <Smartphone className="w-5 h-5 text-slate-400" />
                                 <div>
                                    <div className="font-medium text-slate-900">Two-Factor Authentication</div>
-                                   <div className="text-xs text-red-500">Not enabled</div>
+                                   <div className={cn("text-xs", twoFactorEnabled ? "text-green-600" : "text-red-500")}>{twoFactorEnabled ? "Enabled" : "Not enabled"}</div>
                                 </div>
                              </div>
-                             <Button variant="outline" size="sm" onClick={() => alert("2FA setup coming soon!")}>Enable</Button>
+                             <Button variant="outline" size="sm" onClick={() => enableTwoFactorMutation.mutate()} disabled={enableTwoFactorMutation.isPending || twoFactorEnabled}>
+                                {twoFactorEnabled ? "Enabled" : "Enable"}
+                             </Button>
                           </div>
                           
                           <Separator />
@@ -209,13 +386,13 @@ export default function Settings() {
                           </CardTitle>
                        </CardHeader>
                        <CardContent className="space-y-3">
-                          <Button variant="outline" className="w-full justify-start text-slate-600" onClick={() => alert("Account data export downloading...")}>
+                          <Button variant="outline" className="w-full justify-start text-slate-600" onClick={exportAccountData}>
                              <Download className="w-4 h-4 mr-2" /> Export Account Data
                           </Button>
                           <Button variant="outline" className="w-full justify-start text-orange-600 hover:bg-orange-50" onClick={logout}>
                              <LogOut className="w-4 h-4 mr-2" /> Logout from All Devices
                           </Button>
-                          <Button variant="outline" className="w-full justify-start text-red-600 hover:bg-red-50" onClick={() => confirm("Are you sure? This cannot be undone!") && alert("Account deletion scheduled...")}>
+                          <Button variant="outline" className="w-full justify-start text-red-600 hover:bg-red-50" onClick={handleDeleteAccount}>
                              <Trash2 className="w-4 h-4 mr-2" /> Delete Account Permanently
                           </Button>
                        </CardContent>
