@@ -3,6 +3,61 @@ import { db } from "./db";
 import { playerStates } from "../shared/schema";
 import { eq } from "drizzle-orm";
 
+interface SubPlaneState {
+  moonModules: Record<string, number>;
+  stationModules: Record<string, number>;
+  moonLevel: number;
+  stationLevel: number;
+}
+
+type SubPlaneType = "moon" | "station";
+
+const SUB_PLANE_STATE: Record<string, SubPlaneState> = {};
+
+const MOON_MODULES: Record<string, { label: string; baseCost: { metal: number; crystal: number; deuterium: number } }> = {
+  scannerArray: { label: "Scanner Array", baseCost: { metal: 550, crystal: 380, deuterium: 120 } },
+  shieldGrid: { label: "Shield Grid", baseCost: { metal: 700, crystal: 260, deuterium: 180 } },
+  resourceRelay: { label: "Resource Relay", baseCost: { metal: 400, crystal: 450, deuterium: 240 } },
+};
+
+const STATION_MODULES: Record<string, { label: string; baseCost: { metal: number; crystal: number; deuterium: number } }> = {
+  logisticsCore: { label: "Logistics Core", baseCost: { metal: 900, crystal: 500, deuterium: 320 } },
+  shipDock: { label: "Ship Dock", baseCost: { metal: 1200, crystal: 450, deuterium: 400 } },
+  defenseMatrix: { label: "Defense Matrix", baseCost: { metal: 1100, crystal: 600, deuterium: 350 } },
+};
+
+function getOrCreateSubPlaneState(planetId: string, planet: any): SubPlaneState {
+  if (!SUB_PLANE_STATE[planetId]) {
+    const baseMoonLevel = Math.max(1, Math.floor((planet?.buildings?.deuteriumSynthesizer || 0) / 2) + 1);
+    const baseStationLevel = Math.max(1, Math.floor((planet?.buildings?.roboticsFactory || 0) / 2) + 1);
+    SUB_PLANE_STATE[planetId] = {
+      moonModules: {
+        scannerArray: baseMoonLevel,
+        shieldGrid: Math.max(1, baseMoonLevel - 1),
+        resourceRelay: baseMoonLevel,
+      },
+      stationModules: {
+        logisticsCore: baseStationLevel,
+        shipDock: Math.max(1, baseStationLevel - 1),
+        defenseMatrix: baseStationLevel,
+      },
+      moonLevel: baseMoonLevel,
+      stationLevel: baseStationLevel,
+    };
+  }
+
+  return SUB_PLANE_STATE[planetId];
+}
+
+function getUpgradeCost(baseCost: { metal: number; crystal: number; deuterium: number }, currentLevel: number) {
+  const multiplier = Math.pow(1.45, currentLevel);
+  return {
+    metal: Math.floor(baseCost.metal * multiplier),
+    crystal: Math.floor(baseCost.crystal * multiplier),
+    deuterium: Math.floor(baseCost.deuterium * multiplier),
+  };
+}
+
 // Sample planet database (in production, this would be in a database)
 const PLANET_DATABASE: {[key: string]: any} = {
   "P001": {
@@ -314,6 +369,161 @@ export function registerPlanetRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching planets:", error);
       res.status(500).json({ error: "Failed to fetch planets" });
+    }
+  });
+
+  app.get("/api/planets/:id/sub-planes", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const planetId = req.params.id;
+      const planet = PLANET_DATABASE[planetId];
+
+      if (!planet) {
+        return res.status(404).json({ error: "Planet not found" });
+      }
+
+      const state = getOrCreateSubPlaneState(planetId, planet);
+      const moonStructures = Object.entries(MOON_MODULES).map(([key, module]) => ({
+        key,
+        label: module.label,
+        level: state.moonModules[key] || 0,
+        nextCost: getUpgradeCost(module.baseCost, state.moonModules[key] || 0),
+      }));
+      const stationModules = Object.entries(STATION_MODULES).map(([key, module]) => ({
+        key,
+        label: module.label,
+        level: state.stationModules[key] || 0,
+        nextCost: getUpgradeCost(module.baseCost, state.stationModules[key] || 0),
+      }));
+
+      const moonLevel = Object.values(state.moonModules).reduce((sum, value) => sum + value, 0);
+      const stationLevel = Object.values(state.stationModules).reduce((sum, value) => sum + value, 0);
+
+      state.moonLevel = moonLevel;
+      state.stationLevel = stationLevel;
+
+      res.json({
+        moon: {
+          exists: Boolean(planet.colonized),
+          name: `${planet.name} Moon Base`,
+          level: moonLevel,
+          stability: Math.min(100, 45 + moonLevel * 3),
+          structures: moonStructures,
+          bonuses: {
+            surveillance: moonLevel * 2,
+            stealth: moonLevel,
+            resourceAmplification: Math.floor(moonLevel * 1.5),
+          },
+        },
+        station: {
+          exists: Boolean(planet.colonized),
+          name: `${planet.name} Orbital Station`,
+          level: stationLevel,
+          integrity: Math.min(100, 40 + stationLevel * 2),
+          modules: stationModules,
+          bonuses: {
+            logistics: stationLevel * 2,
+            shipCapacity: stationLevel * 20,
+            defenseCoordination: Math.floor(stationLevel * 1.2),
+          },
+        },
+        commandSummary: {
+          defenseRating: (planet.defenses || 0) + stationLevel * 8 + moonLevel * 5,
+          logisticsRating: stationLevel * 3,
+          productionBonus: Math.floor((moonLevel + stationLevel) / 2),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching sub-plane data:", error);
+      res.status(500).json({ error: "Failed to fetch sub-plane data" });
+    }
+  });
+
+  app.post("/api/planets/:id/sub-planes/:type/upgrade", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const planetId = req.params.id;
+      const type = req.params.type as SubPlaneType;
+      const moduleKey = String(req.body?.moduleKey || "");
+      const planet = PLANET_DATABASE[planetId];
+
+      if (!planet) {
+        return res.status(404).json({ error: "Planet not found" });
+      }
+
+      if (!planet.colonized) {
+        return res.status(400).json({ error: "Planet must be colonized before managing sub-planes" });
+      }
+
+      if (type !== "moon" && type !== "station") {
+        return res.status(400).json({ error: "Invalid sub-plane type" });
+      }
+
+      const userId = req.session!.userId!;
+      const playerState = await db.query.playerStates.findFirst({
+        where: eq(playerStates.userId, userId),
+      });
+
+      if (!playerState) {
+        return res.status(404).json({ error: "Player state not found" });
+      }
+
+      const moduleCatalog = type === "moon" ? MOON_MODULES : STATION_MODULES;
+      const moduleDefinition = moduleCatalog[moduleKey];
+      if (!moduleDefinition) {
+        return res.status(400).json({ error: "Invalid module key" });
+      }
+
+      const state = getOrCreateSubPlaneState(planetId, planet);
+      const currentLevel = type === "moon" ? state.moonModules[moduleKey] || 0 : state.stationModules[moduleKey] || 0;
+      const nextLevel = currentLevel + 1;
+      const cost = getUpgradeCost(moduleDefinition.baseCost, currentLevel);
+
+      const resources = playerState.resources as any;
+      if (
+        resources.metal < cost.metal ||
+        resources.crystal < cost.crystal ||
+        resources.deuterium < cost.deuterium
+      ) {
+        return res.status(400).json({
+          error: "Insufficient resources",
+          required: cost,
+          available: resources,
+        });
+      }
+
+      const newResources = {
+        ...resources,
+        metal: resources.metal - cost.metal,
+        crystal: resources.crystal - cost.crystal,
+        deuterium: resources.deuterium - cost.deuterium,
+      };
+
+      await db
+        .update(playerStates)
+        .set({
+          resources: newResources,
+          updatedAt: new Date(),
+        })
+        .where(eq(playerStates.userId, userId));
+
+      if (type === "moon") {
+        state.moonModules[moduleKey] = nextLevel;
+      } else {
+        state.stationModules[moduleKey] = nextLevel;
+      }
+
+      state.moonLevel = Object.values(state.moonModules).reduce((sum, value) => sum + value, 0);
+      state.stationLevel = Object.values(state.stationModules).reduce((sum, value) => sum + value, 0);
+
+      res.json({
+        message: `${moduleDefinition.label} upgraded to level ${nextLevel}`,
+        type,
+        moduleKey,
+        level: nextLevel,
+        cost,
+      });
+    } catch (error) {
+      console.error("Error upgrading sub-plane module:", error);
+      res.status(500).json({ error: "Failed to upgrade sub-plane module" });
     }
   });
 }

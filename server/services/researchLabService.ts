@@ -13,6 +13,7 @@ import {
   RESEARCH_QUEUE_RULES,
   RESEARCH_ACCELERATION,
   RESEARCH_FAILURE,
+  getTechById,
 } from "@shared/config";
 import { storage } from "../storage";
 import type { PlayerState } from "@shared/schema";
@@ -21,6 +22,28 @@ import type { PlayerState } from "@shared/schema";
  * Research Lab Service - Main research queue management
  */
 export class ResearchLabService {
+  private static normalizeQueue(queue: ResearchQueuedItem[]): ResearchQueuedItem[] {
+    const normalized = [...queue]
+      .sort((a, b) => a.queuePosition - b.queuePosition)
+      .map((item, index) => ({
+        ...item,
+        queuePosition: index,
+      }));
+
+    return normalized.map((item, index) => {
+      if (item.status === "completed" || item.status === "failed" || item.status === "cancelled") {
+        return item;
+      }
+      if (item.status === "paused") {
+        return item;
+      }
+      return {
+        ...item,
+        status: index === 0 ? "researching" : "queued",
+      };
+    });
+  }
+
   /**
    * Get available labs for a player
    */
@@ -100,40 +123,79 @@ export class ResearchLabService {
       if (!playerState) return null;
 
       const queue: ResearchQueuedItem[] = (playerState.researchQueue as any) || [];
+
+      const tech = getTechById(techId);
+      if (!tech) {
+        throw new Error(`Unknown techId: ${techId}`);
+      }
+
+      if (queue.some((item) => item.techId === techId && ["queued", "researching", "paused"].includes(item.status))) {
+        throw new Error("Technology already queued");
+      }
       
       // Check queue limit
       if (queue.length >= RESEARCH_QUEUE_RULES.MAX_QUEUE_ITEMS) {
         throw new Error("Queue is full");
       }
 
+      const speedMultiplier = await this.calculateSpeedMultiplier(userId);
+      const priorityMultiplier = RESEARCH_QUEUE_RULES.PRIORITY_MULTIPLIERS[priority] || 1;
+      const effectiveSpeed = Math.max(0.1, speedMultiplier * priorityMultiplier);
+
+      const lab = await this.getActiveLab(userId);
+      const resourceBase = tech.materialsNeeded || {};
+      const costReductionMultiplier = Math.max(0.1, lab?.costReductionMultiplier || 1);
+
+      const metalCost = Math.max(
+        0,
+        Math.floor((Number(resourceBase.metal || 0) + Math.max(0, Number(tech.industrialCost || 0))) * costReductionMultiplier)
+      );
+      const crystalCost = Math.max(
+        0,
+        Math.floor((Number(resourceBase.crystal || 0) + Math.floor(Math.max(0, Number(tech.researchCost || 0)) * 0.5)) * costReductionMultiplier)
+      );
+      const deuteriumCost = Math.max(
+        0,
+        Math.floor((Number(resourceBase.deuterium || 0) + Math.max(0, Number(tech.energyCost || 0))) * costReductionMultiplier)
+      );
+
+      const baseTurns = Math.max(1, Math.ceil(Number(tech.researchTime || 1)));
+      const adjustedTurns = Math.max(1, Math.ceil(baseTurns / effectiveSpeed));
+      const scientists = Math.max(1, Math.ceil(Number(tech.researchCost || 1) / 20));
+
+      const status: ResearchQueuedItem["status"] = queue.length === 0 ? "researching" : "queued";
+
       // Create queue item
       const queueItem: ResearchQueuedItem = {
         id: `queue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         queuePosition: queue.length,
         enqueuedAt: Date.now(),
-        status: "queued",
+        status,
         priority,
         techId,
-        techName: techId, // Would be resolved from config
-        techBranch: "armor", // Would be resolved from config
-        techLevel: 1, // Would be resolved from config
+        techName: tech.name,
+        techBranch: tech.branch,
+        techLevel: tech.level,
         progressPercent: 0,
-        turnsRemaining: 100, // Placeholder
+        turnsRemaining: adjustedTurns,
         turnsElapsed: 0,
-        totalTurnsRequired: 100,
+        totalTurnsRequired: adjustedTurns,
         costBreakdown: {
-          scientists: 10,
-          resources: { metal: 100, crystal: 50, deuterium: 0 },
-          baseTime: 100,
-          adjustedTime: 100,
+          scientists,
+          resources: { metal: metalCost, crystal: crystalCost, deuterium: deuteriumCost },
+          baseTime: baseTurns,
+          adjustedTime: adjustedTurns,
         },
-        speedModifier: 1,
-        costModifier: 1,
-        bonusesApplied: [],
+        speedModifier: Number(effectiveSpeed.toFixed(3)),
+        costModifier: Number(costReductionMultiplier.toFixed(3)),
+        bonusesApplied: [
+          `lab:${lab?.id || "none"}`,
+          `priority:${priority}`,
+        ],
       };
 
       queue.push(queueItem);
-      playerState.researchQueue = queue;
+      playerState.researchQueue = this.normalizeQueue(queue);
 
       await storage.updatePlayerState(userId, playerState);
       return queueItem;
@@ -164,9 +226,11 @@ export class ResearchLabService {
       const playerState = await storage.getPlayerState(userId);
       if (!playerState) return false;
 
-      (playerState as any).researchQueue = ((playerState as any).researchQueue || []).filter(
+      const updatedQueue = (((playerState as any).researchQueue || []) as ResearchQueuedItem[]).filter(
         (item: any) => item.id !== queueItemId
       );
+
+      (playerState as any).researchQueue = this.normalizeQueue(updatedQueue);
 
       await storage.updatePlayerState(userId, playerState);
       return true;
@@ -184,18 +248,17 @@ export class ResearchLabService {
       const playerState = await storage.getPlayerState(userId);
       if (!playerState) return false;
 
-      const queue = (playerState as any).researchQueue || [];
-      const item = (queue as any).find((q: any) => q.id === queueItemId);
+      const queue = ((playerState as any).researchQueue || []) as ResearchQueuedItem[];
+      const item = queue.find((q: any) => q.id === queueItemId);
       if (!item) return false;
 
+      const boundedPosition = Math.max(0, Math.min(newPosition, Math.max(0, queue.length - 1)));
+
       // Remove and re-insert
-      (queue as any).splice((queue as any).indexOf(item), 1);
-      (queue as any).splice(newPosition, 0, item);
+      queue.splice(queue.indexOf(item), 1);
+      queue.splice(boundedPosition, 0, item);
 
-      // Update positions
-      (queue as any).forEach((q: any, idx: number) => { q.queuePosition = idx; });
-
-      (playerState as any).researchQueue = queue;
+      (playerState as any).researchQueue = this.normalizeQueue(queue);
       await storage.updatePlayerState(userId, playerState);
       return true;
     } catch (error) {

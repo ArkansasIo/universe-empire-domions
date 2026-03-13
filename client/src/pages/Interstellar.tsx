@@ -10,15 +10,22 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { DESTINATIONS, Destination } from "@/lib/interstellarData";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Interstellar() {
   const [, setLocation] = useLocation();
   const { coordinates, resources, travelTo } = useGame();
+   const { toast } = useToast();
   const [selectedDest, setSelectedDest] = useState<string>("");
   const [stargateAddress, setStargateAddress] = useState("");
   const [isDialing, setIsDialing] = useState(false);
 
-  const currentDest = DESTINATIONS.find(d => d.coordinates === coordinates);
+   const deuteriumReserve = Number((resources as any)?.deuterium ?? 0);
+   const safeCoordinates = typeof coordinates === "string" && coordinates.length > 0 ? coordinates : "1:1:100:3";
+   const STARGATE_COST = 5000;
+   const JUMPGATE_COST = 500;
+
+   const currentDest = DESTINATIONS.find(d => d.coordinates === safeCoordinates);
   const target = DESTINATIONS.find(d => d.id === selectedDest);
 
   const calculateCost = (dist: number) => {
@@ -26,24 +33,44 @@ export default function Interstellar() {
   };
 
   const handleJump = () => {
-     if (!target) return;
+     if (!target) {
+        toast({ title: "No destination selected", description: "Select a target system first.", variant: "destructive" });
+        return;
+     }
      const cost = calculateCost(target.distance);
+     if (deuteriumReserve < cost) {
+        toast({ title: "Insufficient deuterium", description: `Need ${cost.toLocaleString()} deuterium for this jump.`, variant: "destructive" });
+        return;
+     }
      travelTo(target.name, target.coordinates, { deuterium: cost });
   };
 
   const handleGateJump = (dest: Destination) => {
-     // Gates are free/cheap but instant
-     travelTo(dest.name, dest.coordinates, { deuterium: 500 }); // Flat fee
+     if (deuteriumReserve < JUMPGATE_COST) {
+        toast({ title: "Insufficient deuterium", description: `Jump Gate requires ${JUMPGATE_COST} deuterium.`, variant: "destructive" });
+        return;
+     }
+     travelTo(dest.name, dest.coordinates, { deuterium: JUMPGATE_COST });
   };
 
   const handleStargateDial = () => {
+     const normalizedAddress = stargateAddress.replace(/[^0-9]/g, "");
+     if (!normalizedAddress) {
+        toast({ title: "Address required", description: "Enter a Stargate address before dialing.", variant: "destructive" });
+        return;
+     }
+     if (deuteriumReserve < STARGATE_COST) {
+        toast({ title: "Insufficient deuterium", description: `Stargate dial requires ${STARGATE_COST.toLocaleString()} deuterium.`, variant: "destructive" });
+        return;
+     }
+
      setIsDialing(true);
      setTimeout(() => {
         setIsDialing(false);
-        if (stargateAddress === "777") {
-           travelTo("Unknown Sector", "9:999:9", { deuterium: 5000 });
+        if (normalizedAddress === "777" || normalizedAddress === "777777777") {
+           travelTo("Unknown Sector", "9:999:9", { deuterium: STARGATE_COST });
         } else {
-           alert("Chevron 7... Will not lock! Invalid address.");
+           toast({ title: "Dial failed", description: "Chevron 7 will not lock. Invalid address.", variant: "destructive" });
         }
      }, 3000);
   };
@@ -67,13 +94,13 @@ export default function Interstellar() {
               <div className="text-2xl font-orbitron font-bold text-blue-400 flex items-center gap-2">
                  <MapPin className="w-6 h-6" />
                  {currentDest ? currentDest.name : "Deep Space"} 
-                 <span className="text-slate-500 text-lg ml-2">[{coordinates}]</span>
+                 <span className="text-slate-500 text-lg ml-2">[{safeCoordinates}]</span>
               </div>
            </div>
            <div className="text-right">
               <div className="text-sm text-slate-400 uppercase tracking-widest mb-1">Fuel Reserves</div>
               <div className="text-xl font-mono text-green-400 flex items-center justify-end gap-2">
-                 <Database className="w-4 h-4" /> {resources.deuterium.toLocaleString()}
+                 <Database className="w-4 h-4" /> {deuteriumReserve.toLocaleString()}
               </div>
            </div>
         </div>
@@ -173,7 +200,7 @@ export default function Interstellar() {
                                 </div>
                                 <div>
                                    <div className="text-xs text-slate-500 uppercase">Fuel Cost</div>
-                                   <div className={cn("text-xl font-mono", resources.deuterium >= calculateCost(target.distance) ? "text-green-600" : "text-red-600")}>
+                                   <div className={cn("text-xl font-mono", deuteriumReserve >= calculateCost(target.distance) ? "text-green-600" : "text-red-600")}>
                                       {calculateCost(target.distance).toLocaleString()} Deut
                                    </div>
                                 </div>
@@ -190,7 +217,7 @@ export default function Interstellar() {
                              
                              <Button 
                                 className="w-full h-12 text-lg font-orbitron bg-blue-600 hover:bg-blue-700"
-                                disabled={resources.deuterium < calculateCost(target.distance)}
+                                disabled={deuteriumReserve < calculateCost(target.distance)}
                                 onClick={handleJump}
                              >
                                 <Zap className="w-5 h-5 mr-2" /> ENGAGE HYPERDRIVE
@@ -256,11 +283,11 @@ export default function Interstellar() {
                              variant="outline" 
                              className="h-24 flex flex-col items-start justify-center gap-1 border-slate-200 hover:border-purple-400 hover:bg-purple-50"
                              onClick={() => handleGateJump(gate)}
-                             disabled={gate.coordinates === coordinates}
+                             disabled={gate.coordinates === safeCoordinates || deuteriumReserve < JUMPGATE_COST}
                           >
                              <div className="font-orbitron font-bold text-lg text-slate-900">{gate.name}</div>
                              <div className="text-xs text-slate-500 font-mono">[{gate.coordinates}]</div>
-                             {gate.coordinates === coordinates && <div className="text-xs text-green-600 font-bold mt-1">CURRENT LOCATION</div>}
+                             {gate.coordinates === safeCoordinates && <div className="text-xs text-green-600 font-bold mt-1">CURRENT LOCATION</div>}
                           </Button>
                        ))}
                     </div>
@@ -292,14 +319,14 @@ export default function Interstellar() {
                           <Input 
                              placeholder="XXX-XXX-XXX" 
                              className="bg-slate-800 border-slate-700 text-center font-mono text-xl tracking-widest text-white uppercase"
-                             maxLength={9}
+                             maxLength={11}
                              value={stargateAddress}
                              onChange={(e) => setStargateAddress(e.target.value)}
                           />
                           <Button 
                              className="bg-blue-600 hover:bg-blue-500 font-bold px-8"
                              onClick={handleStargateDial}
-                             disabled={isDialing || !stargateAddress}
+                             disabled={isDialing || !stargateAddress.trim() || deuteriumReserve < STARGATE_COST}
                           >
                              DIAL
                           </Button>

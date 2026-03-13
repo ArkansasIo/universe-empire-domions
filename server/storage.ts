@@ -521,6 +521,28 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private miningOpsTableReady = false;
+
+  private async ensureMiningOperationsTable(): Promise<void> {
+    if (this.miningOpsTableReady) return;
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS mining_operations (
+        id varchar PRIMARY KEY,
+        user_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        resource_type varchar NOT NULL,
+        amount_per_hour integer NOT NULL DEFAULT 0,
+        status varchar NOT NULL DEFAULT 'active',
+        started_at timestamp NOT NULL DEFAULT now(),
+        ends_at timestamp,
+        metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+        created_at timestamp NOT NULL DEFAULT now()
+      )
+    `);
+
+    this.miningOpsTableReady = true;
+  }
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -1729,13 +1751,63 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(resourceFields).where(eq(resourceFields.territoryId, territoryId));
   }
   
-  // Mining operations (stubbed - table not yet created)
+  // Mining operations
   async getActiveMiningOperations(userId: string): Promise<any[]> {
-    return [];
+    await this.ensureMiningOperationsTable();
+
+    const result = await db.execute(sql`
+      SELECT id, user_id, resource_type, amount_per_hour, status, started_at, ends_at, metadata, created_at
+      FROM mining_operations
+      WHERE user_id = ${userId}
+        AND status = 'active'
+        AND (ends_at IS NULL OR ends_at > now())
+      ORDER BY started_at DESC
+    `);
+
+    return result.rows as any[];
   }
   
   async createMiningOperation(op: any): Promise<any> {
-    return op;
+    await this.ensureMiningOperationsTable();
+
+    const now = Date.now();
+    const id = op.id ?? `mining_${now}_${Math.floor(Math.random() * 100000)}`;
+    const startedAt = op.startedAt ? new Date(op.startedAt) : new Date();
+    const endsAt = op.endsAt ? new Date(op.endsAt) : null;
+
+    const insertResult = await db.execute(sql`
+      INSERT INTO mining_operations (
+        id,
+        user_id,
+        resource_type,
+        amount_per_hour,
+        status,
+        started_at,
+        ends_at,
+        metadata
+      ) VALUES (
+        ${id},
+        ${String(op.userId)},
+        ${String(op.resourceType ?? "metal")},
+        ${Number(op.amountPerHour ?? 0)},
+        ${String(op.status ?? "active")},
+        ${startedAt},
+        ${endsAt},
+        ${op.metadata ?? {}}
+      )
+      RETURNING id, user_id, resource_type, amount_per_hour, status, started_at, ends_at, metadata, created_at
+    `);
+
+    return (insertResult.rows?.[0] as any) ?? {
+      id,
+      userId: op.userId,
+      resourceType: op.resourceType ?? "metal",
+      amountPerHour: Number(op.amountPerHour ?? 0),
+      status: op.status ?? "active",
+      startedAt,
+      endsAt,
+      metadata: op.metadata ?? {},
+    };
   }
   
   // Durability operations

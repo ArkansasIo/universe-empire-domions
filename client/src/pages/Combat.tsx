@@ -10,9 +10,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Combat() {
   const { units, resources, research, buildings } = useGame();
+  const { toast } = useToast();
   const [targetId, setTargetId] = useState("");
   const [combatType, setCombatType] = useState<"raid" | "attack" | "spy" | "sabotage">("attack");
   const [selectedUnits, setSelectedUnits] = useState<{ [key: string]: number }>({});
@@ -65,7 +67,7 @@ export default function Combat() {
       setSelectedUnits({});
     },
     onError: (error: any) => {
-      alert(`Attack failed: ${error.message}`);
+      toast({ title: "Attack failed", description: error.message, variant: "destructive" });
     },
   });
 

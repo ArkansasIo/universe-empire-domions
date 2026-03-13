@@ -1,10 +1,40 @@
 import { Router } from "express";
 import { db } from "./db";
-import { playerStates } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import { battles, playerStates, users } from "../shared/schema";
+import { desc, eq, inArray, or } from "drizzle-orm";
 import { simulateBattle, calculateVictoryResources } from "./combatEngine";
 import { isAuthenticated as authenticateRequest } from "./basicAuth";
 import type { Request, Response } from "express";
+
+function toUnitCountMap(units: Record<string, any>): Record<string, number> {
+  return Object.entries(units || {}).reduce((acc, [unitType, value]) => {
+    if (typeof value === "number") {
+      acc[unitType] = value;
+      return acc;
+    }
+
+    if (typeof value === "object" && value && typeof (value as any).count === "number") {
+      acc[unitType] = (value as any).count;
+      return acc;
+    }
+
+    acc[unitType] = 0;
+    return acc;
+  }, {} as Record<string, number>);
+}
+
+function calculateUnitLosses(startUnits: Record<string, number>, remainingUnits: Record<string, number>): Record<string, number> {
+  const allUnitTypes = new Set([...Object.keys(startUnits || {}), ...Object.keys(remainingUnits || {})]);
+  const losses: Record<string, number> = {};
+
+  for (const unitType of Array.from(allUnitTypes)) {
+    const started = startUnits[unitType] ?? 0;
+    const remaining = remainingUnits[unitType] ?? 0;
+    losses[unitType] = Math.max(0, started - remaining);
+  }
+
+  return losses;
+}
 
 export function registerCombatRoutes(app: Router) {
   /**
@@ -132,6 +162,7 @@ export function registerCombatRoutes(app: Router) {
       }
 
       // Simulate battle
+      const defenderUnitsAtStart = toUnitCountMap(defender.units as Record<string, any>);
       const battleResult = simulateBattle(
         {
           units: Object.entries(attackUnits || {}).reduce((acc, [type, count]) => {
@@ -150,6 +181,12 @@ export function registerCombatRoutes(app: Router) {
           bonusMultiplier: 1 + ((defender.research as any)?.defenseTech || 0) * 0.02,
         }
       );
+
+      const attackerUnitsAfterBattle = toUnitCountMap(battleResult.attackerUnits as Record<string, any>);
+      const defenderUnitsAfterBattle = toUnitCountMap(battleResult.defenderUnits as Record<string, any>);
+      const attackerLosses = calculateUnitLosses(attackUnits as Record<string, number>, attackerUnitsAfterBattle);
+      const defenderLosses = calculateUnitLosses(defenderUnitsAtStart, defenderUnitsAfterBattle);
+      const winnerTag = battleResult.winner === "attacker" ? "attacker" : "defender";
 
       // Process results
       if (battleResult.winner === "attacker") {
@@ -207,9 +244,34 @@ export function registerCombatRoutes(app: Router) {
           })
           .where(eq(playerStates.userId, targetId));
 
+        const battleRecord = await db
+          .insert(battles)
+          .values({
+            attackerId: userId,
+            defenderId: targetId,
+            type: "attack",
+            status: "completed",
+            attackerCoordinates: attacker.coordinates,
+            defenderCoordinates: defender.coordinates,
+            winner: winnerTag,
+            attackerFleet: attackUnits as Record<string, number>,
+            defenderFleet: defenderUnitsAtStart,
+            attackerLosses,
+            defenderLosses,
+            loot: plunder,
+            debris: {
+              metal: Math.floor(((plunder.metal || 0) + (plunder.crystal || 0)) * 0.1),
+              crystal: Math.floor((plunder.deuterium || 0) * 0.05),
+            },
+            rounds: battleResult.rounds,
+            completedAt: new Date(),
+          })
+          .returning();
+
         res.json({
           success: true,
           winner: "attacker",
+          battleId: battleRecord[0]?.id,
           battleResult,
           plunder,
           newAttackerUnits,
@@ -231,9 +293,34 @@ export function registerCombatRoutes(app: Router) {
           })
           .where(eq(playerStates.userId, userId));
 
+        const battleRecord = await db
+          .insert(battles)
+          .values({
+            attackerId: userId,
+            defenderId: targetId,
+            type: "attack",
+            status: "completed",
+            attackerCoordinates: attacker.coordinates,
+            defenderCoordinates: defender.coordinates,
+            winner: winnerTag,
+            attackerFleet: attackUnits as Record<string, number>,
+            defenderFleet: defenderUnitsAtStart,
+            attackerLosses,
+            defenderLosses,
+            loot: { metal: 0, crystal: 0, deuterium: 0 },
+            debris: {
+              metal: Math.floor((Object.values(attackerLosses).reduce((sum, value) => sum + value, 0)) * 10),
+              crystal: Math.floor((Object.values(defenderLosses).reduce((sum, value) => sum + value, 0)) * 5),
+            },
+            rounds: battleResult.rounds,
+            completedAt: new Date(),
+          })
+          .returning();
+
         res.json({
           success: true,
           winner: "defender",
+          battleId: battleRecord[0]?.id,
           battleResult,
           plunder: { metal: 0, crystal: 0, deuterium: 0 },
           newAttackerUnits,
@@ -354,30 +441,54 @@ export function registerCombatRoutes(app: Router) {
       const userId = (req as any).session?.userId;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
-      // Return mock battle history (can be expanded to store in DB)
-      const mockBattles = [
-        {
-          id: "battle_001",
-          timestamp: new Date(Date.now() - 86400000),
-          opponent: "Enemy Player 1",
-          result: "victory",
-          unitsCasualties: 15,
-          plunder: { metal: 5000, crystal: 3000, deuterium: 1000 },
-        },
-        {
-          id: "battle_002",
-          timestamp: new Date(Date.now() - 172800000),
-          opponent: "Enemy Player 2",
-          result: "defeat",
-          unitsCasualties: 42,
-          plunder: { metal: 0, crystal: 0, deuterium: 0 },
-        },
-      ];
+      const playerBattles = await db
+        .select()
+        .from(battles)
+        .where(or(eq(battles.attackerId, userId), eq(battles.defenderId, userId)))
+        .orderBy(desc(battles.createdAt))
+        .limit(50);
+
+      const opponentIds = Array.from(
+        new Set(
+          playerBattles.map((battle) => (battle.attackerId === userId ? battle.defenderId : battle.attackerId))
+        )
+      );
+
+      const opponentRows = opponentIds.length
+        ? await db.select({ id: users.id, username: users.username }).from(users).where(inArray(users.id, opponentIds))
+        : [];
+
+      const opponentNameById = new Map(opponentRows.map((opponent) => [opponent.id, opponent.username || "Unknown Commander"]));
+
+      const normalizedBattles = playerBattles.map((battle) => {
+        const isAttacker = battle.attackerId === userId;
+        const opponentId = isAttacker ? battle.defenderId : battle.attackerId;
+        const result = battle.winner === "draw"
+          ? "draw"
+          : (battle.winner === (isAttacker ? "attacker" : "defender") ? "victory" : "defeat");
+        const losses = isAttacker ? (battle.attackerLosses as Record<string, number> | null) : (battle.defenderLosses as Record<string, number> | null);
+        const unitsCasualties = Object.values(losses || {}).reduce((sum, count) => sum + Number(count || 0), 0);
+
+        return {
+          id: battle.id,
+          timestamp: battle.completedAt || battle.createdAt,
+          opponent: opponentNameById.get(opponentId) || "Unknown Commander",
+          result,
+          unitsCasualties,
+          plunder: (battle.loot as Record<string, number> | null) || { metal: 0, crystal: 0, deuterium: 0 },
+          rounds: battle.rounds || 0,
+          coordinates: isAttacker ? battle.defenderCoordinates : battle.attackerCoordinates,
+          battleType: battle.type,
+        };
+      });
+
+      const totalVictories = normalizedBattles.filter((battle) => battle.result === "victory").length;
+      const totalDefeats = normalizedBattles.filter((battle) => battle.result === "defeat").length;
 
       res.json({
-        battles: mockBattles,
-        totalVictories: 1,
-        totalDefeats: 1,
+        battles: normalizedBattles,
+        totalVictories,
+        totalDefeats,
       });
     } catch (error) {
       console.error("[combat-history] Error:", error);

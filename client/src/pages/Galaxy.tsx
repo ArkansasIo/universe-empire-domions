@@ -20,6 +20,8 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { getPlanetDetails } from "@/lib/planetUtils";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 type SystemObject = {
   type: "planet" | "asteroid" | "nebula" | "blackhole" | "station" | "empty";
@@ -32,6 +34,8 @@ type SystemObject = {
 };
 
 export default function Galaxy() {
+   const { toast } = useToast();
+   const [, setLocation] = useLocation();
   const [universe, setUniverse] = useState("uni1");
   const [galaxy, setGalaxy] = useState(1);
   const [sector, setSector] = useState(4); 
@@ -236,17 +240,23 @@ export default function Galaxy() {
                       <TableCell className="text-right">
                          {data.type !== "empty" && !isMe && (
                             <div className="flex justify-end gap-2">
-                               <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" onClick={() => alert("Scanning " + data.name)}>
+                                              <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" onClick={() => toast({ title: "Deep scan started", description: `Scanning ${data.name}...` })}>
                                  <Search className="w-4 h-4" />
                                </Button>
                                {(data.type === "planet" || data.type === "station") && (
                                  <>
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" onClick={() => alert("Messaging " + data.name)}><MessageSquare className="w-4 h-4" /></Button>
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-red-50 hover:text-red-600" onClick={() => alert("Attacking " + data.name)}><ShieldAlert className="w-4 h-4" /></Button>
+                                                      <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" onClick={() => setLocation("/messages")}><MessageSquare className="w-4 h-4" /></Button>
+                                                      <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-red-50 hover:text-red-600" onClick={() => {
+                                                         setLocation("/fleet");
+                                                         toast({ title: "Attack prep", description: `Opening Fleet Command for target ${data.name}.` });
+                                                      }}><ShieldAlert className="w-4 h-4" /></Button>
                                  </>
                                )}
                                {(data.type === "asteroid" || data.type === "blackhole") && (
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-yellow-50 hover:text-yellow-600" onClick={() => alert("Launching fleet to " + data.name)}><Rocket className="w-4 h-4" /></Button>
+                                                   <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-yellow-50 hover:text-yellow-600" onClick={() => {
+                                                      setLocation("/fleet");
+                                                      toast({ title: "Fleet routing", description: `Preparing expedition route to ${data.name}.` });
+                                                   }}><Rocket className="w-4 h-4" /></Button>
                                )}
                             </div>
                          )}

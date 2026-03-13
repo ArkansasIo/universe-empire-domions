@@ -65,6 +65,7 @@ const EmpireView = lazy(() => import("@/pages/EmpireView"));
 const ResearchLab = lazy(() => import("@/pages/ResearchLab"));
 const GameAssetsGallery = lazy(() => import("@/pages/GameAssetsGallery"));
 const PlanetDetail = lazy(() => import("@/pages/PlanetDetail"));
+const PlanetCommand = lazy(() => import("@/pages/PlanetCommand"));
 const OgameCompendium = lazy(() => import("@/pages/OgameCompendium"));
 
 function LoadingSplash() {
@@ -221,6 +222,7 @@ function RouterContent() {
       <Route path="/empire-planets" component={EmpirePlanetViewer} />
       <Route path="/empire-view" component={EmpireView} />
       <Route path="/planet/:id" component={PlanetDetail} />
+      <Route path="/planet-command" component={PlanetCommand} />
       <Route path="/research-lab" component={ResearchLab} />
       <Route path="/ogame-compendium" component={OgameCompendium} />
       <Route path="/assets-gallery" component={GameAssetsGallery} />

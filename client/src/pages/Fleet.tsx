@@ -16,9 +16,11 @@ import {
 import { useState } from "react";
 import { unitData } from "@/lib/unitData";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Fleet() {
   const { units, activeMissions, dispatchFleet } = useGame();
+   const { toast } = useToast();
   
   const [selectedUnits, setSelectedUnits] = useState<{[key: string]: number}>({});
   const [targetGalaxy, setTargetGalaxy] = useState("1");
@@ -26,6 +28,29 @@ export default function Fleet() {
   const [targetPlanet, setTargetPlanet] = useState("8");
   const [missionType, setMissionType] = useState<any>("attack");
   const [targetType, setTargetType] = useState("planet");
+
+   const loadTemplate = (template: "attack" | "colony") => {
+      if (template === "attack") {
+         setMissionType("attack");
+         setSelectedUnits((prev) => ({
+            ...prev,
+            lightFighter: Math.min(units.lightFighter || 0, 50),
+            cruiser: Math.min(units.cruiser || 0, 10),
+            smallCargo: Math.min(units.smallCargo || 0, 20),
+         }));
+         toast({ title: "Template loaded", description: "Raiding Party Alpha applied." });
+         return;
+      }
+
+      setMissionType("colonize");
+      setSelectedUnits((prev) => ({
+         ...prev,
+         colonist: Math.min(units.colonist || 0, 1),
+         lightFighter: Math.min(units.lightFighter || 0, 5),
+         largeCargo: Math.min(units.largeCargo || 0, 2),
+      }));
+      toast({ title: "Template loaded", description: "Colony Ship I applied." });
+   };
 
   const handleUnitChange = (id: string, value: string) => {
      const num = parseInt(value) || 0;
@@ -54,7 +79,7 @@ export default function Fleet() {
      });
 
      if (totalCount === 0) {
-        alert("Select at least one ship!");
+        toast({ title: "No ships selected", description: "Select at least one ship before launch.", variant: "destructive" });
         return;
      }
 
@@ -66,6 +91,7 @@ export default function Fleet() {
      });
 
      setSelectedUnits({});
+     toast({ title: "Fleet launched", description: `${missionType} mission dispatched to ${targetGalaxy}:${targetSystem}:${targetPlanet}.` });
   };
 
   const getUnitClass = (id: string) => {
@@ -476,7 +502,7 @@ export default function Fleet() {
                          <span>Est. Power: 15,000</span>
                          <span>80 ships</span>
                        </div>
-                       <Button className="w-full mt-4" variant="outline" onClick={() => alert("Loading Attack Fleet template...")} data-testid="button-load-template-alpha">Load Template</Button>
+                       <Button className="w-full mt-4" variant="outline" onClick={() => loadTemplate("attack")} data-testid="button-load-template-alpha">Load Template</Button>
                     </CardContent>
                  </Card>
 
@@ -498,7 +524,7 @@ export default function Fleet() {
                          <span>Est. Power: 2,500</span>
                          <span>8 ships</span>
                        </div>
-                       <Button className="w-full mt-4" variant="outline" onClick={() => alert("Loading Colony Ship template...")} data-testid="button-load-template-colony">Load Template</Button>
+                       <Button className="w-full mt-4" variant="outline" onClick={() => loadTemplate("colony")} data-testid="button-load-template-colony">Load Template</Button>
                     </CardContent>
                  </Card>
 

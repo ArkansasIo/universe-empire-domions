@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sword, Shield, Zap } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const rarityColors: Record<string, string> = {
   common: "bg-slate-600",
@@ -15,6 +16,7 @@ const rarityColors: Record<string, string> = {
 };
 
 export default function RaidBosses() {
+  const { toast } = useToast();
   const [selectedRarity, setSelectedRarity] = useState<string | null>(null);
 
   const { data: bosses = [] } = useQuery({
@@ -23,6 +25,28 @@ export default function RaidBosses() {
   });
 
   const filtered = selectedRarity ? bosses.filter((b: any) => b.rarity === selectedRarity) : bosses;
+
+  const challengeMutation = useMutation({
+    mutationFn: async (boss: any) => {
+      const response = await fetch(`/api/bosses/${boss.id}/challenge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ bossName: boss.name, recommendedLevel: boss.recommendedLevel }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message || body.error || "Failed to challenge boss");
+      }
+      return response.json();
+    },
+    onSuccess: (data, boss) => {
+      toast({ title: "Raid launched", description: `${boss.name} engaged. ${data.message || "Battle in progress."}` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Challenge failed", description: error.message, variant: "destructive" });
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6">
@@ -101,7 +125,11 @@ export default function RaidBosses() {
                   </div>
                 )}
 
-                <Button className="w-full" onClick={() => alert("Challenging " + boss.name + "!")} data-testid={`button-challenge-boss-${boss.id}`}>
+                <Button
+                  className="w-full"
+                  onClick={() => challengeMutation.mutate(boss)}
+                  data-testid={`button-challenge-boss-${boss.id}`}
+                >
                   Challenge Boss
                 </Button>
               </CardContent>

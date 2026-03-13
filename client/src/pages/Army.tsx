@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Users, Swords, Star, Shield, Activity, Plus, Zap, Wand2, Heart, Package } from "lucide-react";
 import { generateTroopName, getRandomTitle, MILITARY_RANKS, TROOP_NAMES, WEAPONS, ARMOR, HELMETS, SHIELDS } from "@/lib/militaryData";
 import { getTroopStats, getClassBuffs, getTypeBuffs, DEBUFFS, calculateCombatPower } from "@/lib/militaryAttributes";
@@ -114,9 +116,55 @@ const MOCK_TROOPS: Troop[] = [
 ];
 
 export default function Army() {
+  const { toast } = useToast();
   const [troops, setTroops] = useState<Troop[]>(MOCK_TROOPS);
   const [selectedSquadFilter, setSelectedSquadFilter] = useState("all");
   const [newTroopName, setNewTroopName] = useState("");
+
+  const manageTroopMutation = useMutation({
+    mutationFn: async ({ troopId, troopName }: { troopId: string; troopName: string }) => {
+      const response = await fetch("/api/army/manage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ troopId, troopName, action: "equip" }),
+      });
+      if (!response.ok) throw new Error("Failed to open troop management");
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      toast({ title: "Troop management ready", description: `Loadout console opened for ${variables.troopName}.` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Action failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deployTroopMutation = useMutation({
+    mutationFn: async ({ troopId, troopName, deploymentType }: { troopId: string; troopName: string; deploymentType: string }) => {
+      const response = await fetch("/api/army/deploy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ troopId, troopName, deploymentType }),
+      });
+      if (!response.ok) throw new Error("Failed to deploy troop");
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      setTroops((prev) =>
+        prev.map((troop) =>
+          troop.id === variables.troopId
+            ? { ...troop, status: "resting", morale: Math.max(0, troop.morale - 5) }
+            : troop,
+        ),
+      );
+      toast({ title: "Deployment launched", description: `${variables.troopName} deployed to ${variables.deploymentType}.` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Deployment failed", description: error.message, variant: "destructive" });
+    },
+  });
 
   const getTroopTypeIcon = (type: string) => {
     const icons: { [key: string]: string } = {
@@ -430,10 +478,22 @@ export default function Army() {
                           ))}
                         </div>
                         <div className="flex gap-2 mt-3">
-                          <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => alert("Opening equipment for " + troop.name)} data-testid={`button-manage-${troop.id}`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-xs"
+                            onClick={() => manageTroopMutation.mutate({ troopId: troop.id, troopName: troop.name })}
+                            data-testid={`button-manage-${troop.id}`}
+                          >
                             Equip
                           </Button>
-                          <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => alert("Deploying " + troop.name)} data-testid={`button-deploy-${troop.id}`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-xs"
+                            onClick={() => deployTroopMutation.mutate({ troopId: troop.id, troopName: troop.name, deploymentType: "field" })}
+                            data-testid={`button-deploy-${troop.id}`}
+                          >
                             Deploy
                           </Button>
                         </div>
@@ -458,7 +518,13 @@ export default function Army() {
                           <p className="text-xs text-slate-600">{troop.troopClass} - Level {troop.level}</p>
                         </div>
                       </div>
-                      <Button size="sm" onClick={() => alert("Deploying " + troop.name)} data-testid={`button-deploy-active-${troop.id}`}>Deploy</Button>
+                      <Button
+                        size="sm"
+                        onClick={() => deployTroopMutation.mutate({ troopId: troop.id, troopName: troop.name, deploymentType: "active-line" })}
+                        data-testid={`button-deploy-active-${troop.id}`}
+                      >
+                        Deploy
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -482,7 +548,13 @@ export default function Army() {
                     </div>
                   ))}
                 </div>
-                <Button className="w-full mt-4" onClick={() => alert("Deploying Strike Squadron!")} data-testid="button-deploy-squad">Deploy Squad</Button>
+                <Button
+                  className="w-full mt-4"
+                  onClick={() => deployTroopMutation.mutate({ troopId: "strike-squad", troopName: "Strike Squadron", deploymentType: "squad-operation" })}
+                  data-testid="button-deploy-squad"
+                >
+                  Deploy Squad
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

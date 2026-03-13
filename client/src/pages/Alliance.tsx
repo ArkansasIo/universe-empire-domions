@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import { MOCK_ALLIANCES } from "@/lib/allianceData";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const diplomacyStates = [
   { id: "war", name: "At War", color: "text-red-600 bg-red-50 border-red-200" },
@@ -37,6 +38,7 @@ const mockWars = [
 
 export default function Alliance() {
   const { alliance, createAlliance, joinAlliance, leaveAlliance } = useGame();
+   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [createName, setCreateName] = useState("");
   const [createTag, setCreateTag] = useState("");
@@ -263,16 +265,16 @@ export default function Alliance() {
                                 <Input placeholder="e.g. NOVA" className="bg-slate-50 font-mono" />
                              </div>
                              <div className="grid grid-cols-2 gap-2">
-                                <Button variant="outline" className="border-green-200 text-green-600 hover:bg-green-50" onClick={() => alert("Alliance proposal sent!")}>
+                                <Button variant="outline" className="border-green-200 text-green-600 hover:bg-green-50" onClick={() => toast({ title: "Proposal sent", description: "Alliance proposal transmitted to target faction." })}>
                                    <Handshake className="w-4 h-4 mr-2" /> Propose Alliance
                                 </Button>
-                                <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50" onClick={() => alert("Opening diplomatic talks...")}>
+                                <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50" onClick={() => toast({ title: "Diplomatic channel opened", description: "Formal talks initiated." })}>
                                    <MessageSquare className="w-4 h-4 mr-2" /> Open Talks
                                 </Button>
-                                <Button variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50" onClick={() => alert("Warning issued!")}>
+                                <Button variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50" onClick={() => toast({ title: "Warning issued", description: "Strategic warning sent to target alliance." })}>
                                    <Flag className="w-4 h-4 mr-2" /> Issue Warning
                                 </Button>
-                                <Button variant="destructive" onClick={() => alert("War declared! Hostilities commence.")}>
+                                <Button variant="destructive" onClick={() => toast({ title: "War declaration sent", description: "Hostility state updated to active war.", variant: "destructive" })}>
                                    <Swords className="w-4 h-4 mr-2" /> Declare War
                                 </Button>
                              </div>
@@ -386,7 +388,7 @@ export default function Alliance() {
                           className="bg-slate-50 border-slate-200"
                           data-testid="input-search-alliance"
                        />
-                       <Button onClick={() => alert("Searching for: " + (searchQuery || "all alliances"))} data-testid="button-search-alliance">Search</Button>
+                       <Button onClick={() => toast({ title: "Alliance search", description: `Searching for ${searchQuery || "all alliances"}.` })} data-testid="button-search-alliance">Search</Button>
                     </div>
 
                     <div className="space-y-4">

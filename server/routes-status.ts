@@ -32,9 +32,9 @@ export function registerStatusRoutes(app: Express) {
   /**
    * GET /api/status - Get current server status and metrics
    */
-  app.get('/api/status', isAuthenticated, (req: Request, res: Response) => {
+  app.get('/api/status', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const metrics = statusService.getSystemMetrics();
+      const metrics = await statusService.getSystemMetrics();
       res.json({
         success: true,
         data: metrics,
@@ -51,13 +51,13 @@ export function registerStatusRoutes(app: Express) {
   /**
    * GET /api/status/health - Perform health check
    */
-  app.get('/api/status/health', (req: Request, res: Response) => {
+  app.get('/api/status/health', async (req: Request, res: Response) => {
     try {
-      const metrics = statusService.getSystemMetrics();
+      const metrics = await statusService.getSystemMetrics();
       const healthCheck = metrics.healthCheck;
 
       // Return 503 if unhealthy for external monitoring
-      const statusCode = healthCheck.status === 'healthy' ? 200 : healthCheck.status === 'degraded' ? 503 : 503;
+      const statusCode = healthCheck.status === 'healthy' ? 200 : 503;
 
       res.status(statusCode).json({
         success: true,

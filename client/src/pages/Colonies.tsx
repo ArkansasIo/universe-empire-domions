@@ -10,8 +10,12 @@ import { Link } from "wouter";
 import { SOL_SYSTEM_COLONIES, EMPIRE_SLOTS_LIMIT } from "@/lib/empireManager";
 import { cn } from "@/lib/utils";
 import Navigation from "./Navigation";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export default function Colonies() {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedColony, setSelectedColony] = useState<string | null>("1:1:100:3");
   const ownedColonies = SOL_SYSTEM_COLONIES.filter(c => c.owner);
   const emptySlots = SOL_SYSTEM_COLONIES.filter(c => !c.owner);
@@ -180,7 +184,11 @@ export default function Colonies() {
                       </div>
                     </div>
 
-                    <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => alert("Starting colonization of " + slot.name + "!")} data-testid={`btn-colonize-${slot.id}`}>
+                    <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => {
+                      setSelectedColony(slot.coordinates);
+                      toast({ title: "Colonization planning", description: `${slot.name} selected. Configure a colony fleet in Fleet Command.` });
+                      setLocation("/fleet");
+                    }} data-testid={`btn-colonize-${slot.id}`}>
                       Colonize
                     </Button>
                   </CardContent>

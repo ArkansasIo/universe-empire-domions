@@ -8,6 +8,7 @@ import { ConsoleMenu } from "./consoleMenu";
 import { setupAuth } from "./basicAuth";
 import { registerAccountRoutes } from "./routes-account";
 import { registerGuildRoutes } from "./routes-guilds";
+import { ServerStatusService } from "./services/serverStatusService";
 
 if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = "production";
@@ -15,6 +16,7 @@ if (!process.env.NODE_ENV) {
 
 const app = express();
 const httpServer = createServer(app);
+const statusService = ServerStatusService.getInstance();
 
 declare module "http" {
   interface IncomingMessage {
@@ -75,6 +77,8 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
+      statusService.recordRequest(res.statusCode, duration);
+
       // Determine status category
       let statusLabel = "";
       let level: "info" | "success" | "error" | "warn" = "info";
@@ -145,6 +149,8 @@ import autoBuyResourcesRoutes from "./routes-autobuyresources";
 import tradingRoutes from "./routes-trading";
 import assetsRoutes from "./routes-assets";
 import ogameRoutes from "./routes-ogame";
+import friendsRoutes from "./routes-friends";
+import worldActionsRoutes from "./routes-worldactions";
 import { seedOgameCatalogIfNeeded } from "./services/ogameCatalogService";
 
 (async () => {
@@ -196,6 +202,8 @@ import { seedOgameCatalogIfNeeded } from "./services/ogameCatalogService";
   app.use('/api/trading', tradingRoutes);
   app.use('/api/assets', assetsRoutes);
   app.use('/api/ogame', ogameRoutes);
+  app.use('/api/friends', friendsRoutes);
+  app.use(worldActionsRoutes);
 
   // Error handling middleware
   app.use((err: any, req: any, res: any, next: any) => {

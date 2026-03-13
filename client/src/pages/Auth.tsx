@@ -8,6 +8,13 @@ import { Rocket, Shield, Info, Loader2, Eye, EyeOff, Copy, Check } from "lucide-
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 
+const GAME_VERSION = "1.0.0";
+const UNIVERSE_ID = "Nexus-Alpha";
+
+function getBuildChannel() {
+  return import.meta.env.MODE === "production" ? "Production" : "Development";
+}
+
 export default function Auth() {
   const { isLoading, login } = useGame();
   const queryClient = useQueryClient();
@@ -22,6 +29,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [tempPassword, setTempPassword] = useState("");
   const [copied, setCopied] = useState(false);
+  const buildChannel = getBuildChannel();
 
   // Load saved credentials from localStorage
   useEffect(() => {
@@ -101,7 +109,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4 pb-16 relative overflow-hidden">
       {error?.includes("Database is temporarily") && (
         <div className="fixed top-4 right-4 z-50 max-w-sm">
           <div className="bg-yellow-900 border-2 border-yellow-500 text-yellow-100 px-4 py-3 rounded-lg shadow-xl">
@@ -383,12 +391,22 @@ export default function Auth() {
                Privacy Policy
              </Link>
            </div>
-           <div className="text-xs text-slate-500 space-y-1 text-center">
-             <span className="block">Version 0.1.0 // Universe: Nexus-Alpha</span>
-             <span className="block text-slate-600">Developed by Stephen</span>
-           </div>
         </CardFooter>
       </Card>
+
+      <div className="fixed bottom-0 inset-x-0 border-t border-slate-300 bg-white/95 backdrop-blur-sm z-20">
+        <div className="max-w-4xl mx-auto px-4 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-600">
+          <span className="font-semibold text-slate-700">Stellar Dominion</span>
+          <span>•</span>
+          <span>Version {GAME_VERSION}</span>
+          <span>•</span>
+          <span>{buildChannel}</span>
+          <span>•</span>
+          <span>Universe {UNIVERSE_ID}</span>
+          <span>•</span>
+          <span>Developed by Stephen</span>
+        </div>
+      </div>
     </div>
   );
 }

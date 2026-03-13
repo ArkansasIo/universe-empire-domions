@@ -225,6 +225,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
                 { href: "/megastructures", icon: CircleDot, label: "Megastructures" },
                 { href: "/stations", icon: Satellite, label: "Stations" },
                 { href: "/colonies", icon: Home, label: "Colonies" },
+                { href: "/planet-command", icon: Globe, label: "Planet Command" },
                 { href: "/empire-progression", icon: Crown, label: "Kardashev Scale" },
               ]}
             />

@@ -779,13 +779,19 @@ export default function Settings() {
                             Manage local game data and server snapshots.
                          </div>
                          
-                         <Button variant="outline" className="w-full justify-start" onClick={() => alert("Backup snapshot created successfully!")}>
+                         <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: "Backup created", description: "Snapshot has been queued successfully." })}>
                             <Save className="w-4 h-4 mr-2" /> Create Backup Snapshot
                          </Button>
-                         <Button variant="outline" className="w-full justify-start" onClick={() => confirm("This will erase all universe data! Continue?") && alert("Universe reset in progress...")}>
+                         <Button variant="outline" className="w-full justify-start" onClick={() => {
+                           if (!confirm("This will erase all universe data! Continue?")) return;
+                           toast({ title: "Universe reset", description: "Reset operation has been queued.", variant: "destructive" });
+                         }}>
                             <RefreshCw className="w-4 h-4 mr-2" /> Reset Universe (Wipe Data)
                          </Button>
-                         <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => confirm("Restart server now?") && alert("Server restarting...")}>
+                         <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                           if (!confirm("Restart server now?")) return;
+                           toast({ title: "Server restart", description: "Restart command dispatched.", variant: "destructive" });
+                         }}>
                             <Power className="w-4 h-4 mr-2" /> Force Server Restart
                          </Button>
                       </CardContent>

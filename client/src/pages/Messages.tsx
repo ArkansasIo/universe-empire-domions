@@ -395,7 +395,7 @@ export default function Messages() {
 
   const handleSend = () => {
      if (!composeTo || !composeSubject || !composeBody) {
-        alert("Please fill in all fields.");
+        toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
         return;
      }
      sendMessage(composeTo, composeSubject, composeBody);

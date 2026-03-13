@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Compass, Zap, AlertTriangle, Database, Star, Trophy } from "lucide-react";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { SPACE_ANOMALIES, generateAnomalyForCoordinates } from "@/lib/spaceAnomalies";
 import { WARP_GATES, TRADE_ROUTES, calculateWarpTime, calculateWarpCost } from "@/lib/warpNetwork";
 import { ACHIEVEMENTS, QUESTS } from "@/lib/achievementsSystem";
@@ -13,8 +15,71 @@ import { cn } from "@/lib/utils";
 import Navigation from "./Navigation";
 
 export default function Exploration() {
+  const { toast } = useToast();
   const [selectedAnomaly, setSelectedAnomaly] = useState<string | null>(null);
   const [selectedQuest, setSelectedQuest] = useState<string | null>(null);
+  const [scannedAnomalies, setScannedAnomalies] = useState<Set<string>>(new Set());
+
+  const scanMutation = useMutation({
+    mutationFn: async (anomaly: any) => {
+      const response = await fetch("/api/exploration/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          anomalyId: anomaly.id,
+          anomalyName: anomaly.name,
+          hazardLevel: anomaly.hazardLevel,
+          rewards: anomaly.rewards,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to scan anomaly");
+      }
+      return response.json();
+    },
+    onSuccess: (data, anomaly) => {
+      setScannedAnomalies((prev) => new Set(prev).add(anomaly.id));
+      toast({
+        title: "Anomaly scanned",
+        description: `${anomaly.name}: +${data.gained.metal}M, +${data.gained.crystal}C, +${data.gained.deuterium}D`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Scan failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const gateMutation = useMutation({
+    mutationFn: async ({ gate, action }: { gate: any; action: "jump" | "capture" }) => {
+      const response = await fetch("/api/exploration/warp-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          gateId: gate.id,
+          gateName: gate.name,
+          action,
+          energyCost: gate.energyCost,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Failed warp action");
+      }
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      toast({
+        title: variables.action === "jump" ? "Warp jump executed" : "Warp gate captured",
+        description: `${variables.gate.name} operation completed.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Warp action failed", description: error.message, variant: "destructive" });
+    },
+  });
 
   const rarityColors = {
     common: "bg-slate-100 text-slate-900",
@@ -101,12 +166,17 @@ export default function Exploration() {
                             </div>
                           </div>
                         </div>
-                        {!anomaly.discovered && (
-                          <Button size="sm" className="w-full mt-2 bg-orange-600 hover:bg-orange-700" onClick={() => alert("Scanning anomaly...")} data-testid={`btn-scan-anomaly-${anomaly.id}`}>
+                        {!anomaly.discovered && !scannedAnomalies.has(anomaly.id) && (
+                          <Button
+                            size="sm"
+                            className="w-full mt-2 bg-orange-600 hover:bg-orange-700"
+                            onClick={() => scanMutation.mutate(anomaly)}
+                            data-testid={`btn-scan-anomaly-${anomaly.id}`}
+                          >
                             <Compass className="w-3 h-3 mr-1" /> Scan
                           </Button>
                         )}
-                        {anomaly.discovered && (
+                        {(anomaly.discovered || scannedAnomalies.has(anomaly.id)) && (
                           <div className="text-xs text-green-600 font-bold text-center mt-2">✓ Discovered</div>
                         )}
                       </CardContent>
@@ -151,7 +221,13 @@ export default function Exploration() {
                             <div className="font-bold mb-1">Linked Gates: {gate.linkedGates.length}</div>
                           </div>
                         )}
-                        <Button size="sm" className="w-full mt-2" variant={gate.owned ? "outline" : "default"} onClick={() => alert(gate.owned ? "Jumping to " + gate.name : "Capturing " + gate.name)} data-testid={`btn-gate-${gate.id}`}>
+                        <Button
+                          size="sm"
+                          className="w-full mt-2"
+                          variant={gate.owned ? "outline" : "default"}
+                          onClick={() => gateMutation.mutate({ gate, action: gate.owned ? "jump" : "capture" })}
+                          data-testid={`btn-gate-${gate.id}`}
+                        >
                           {gate.owned ? "Jump" : "Capture"}
                         </Button>
                       </CardContent>

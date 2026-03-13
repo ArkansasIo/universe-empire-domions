@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { ShieldAlert, Users, Activity, Server, Database, Ban, Lock, Eye, Terminal, RefreshCw, AlertTriangle } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Admin() {
   const { config, updateConfig, resources, addEvent } = useGame();
+   const { toast } = useToast();
   
   const [mockUsers, setMockUsers] = useState([
      { id: "1", name: "Commander", email: "player@example.com", status: "active", role: "admin", lastLogin: "Just now", ip: "192.168.1.1" },
@@ -129,7 +131,18 @@ export default function Admin() {
                  <CardContent>
                     <div className="flex justify-between mb-4">
                        <Input placeholder="Search users..." className="max-w-sm bg-slate-50" />
-                       <Button variant="outline" onClick={() => alert("Exporting user data to CSV...")}><Users className="w-4 h-4 mr-2" /> Export CSV</Button>
+                       <Button variant="outline" onClick={() => {
+                          const header = "id,name,email,status,role,lastLogin,ip";
+                          const rows = mockUsers.map((u) => `${u.id},${u.name},${u.email},${u.status},${u.role},${u.lastLogin},${u.ip}`);
+                          const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `stellar-users-${Date.now()}.csv`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                          toast({ title: "Export complete", description: `${mockUsers.length} users exported to CSV.` });
+                       }}><Users className="w-4 h-4 mr-2" /> Export CSV</Button>
                     </div>
                     <Table>
                        <TableHeader>
@@ -166,7 +179,7 @@ export default function Admin() {
                                 <TableCell className="text-slate-500 text-sm">{user.lastLogin}</TableCell>
                                 <TableCell className="font-mono text-xs text-slate-500">{user.ip}</TableCell>
                                 <TableCell className="text-right space-x-2">
-                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => alert("Viewing user: " + user.name)}>
+                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => toast({ title: "User details", description: `${user.name} • ${user.email} • ${user.ip}` })}>
                                       <Eye className="w-4 h-4" />
                                    </Button>
                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-yellow-600" onClick={() => handleMute(user.id)}>

@@ -20,6 +20,7 @@ import {
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const ItemCard = ({ 
   item, 
@@ -710,11 +711,40 @@ const mockPriceChanges = [
 
 export default function Market() {
   const { resources, inventory, buyItem, sellItem } = useGame();
+  const { toast } = useToast();
   const [selectedVendorId, setSelectedVendorId] = useState(VENDORS[0].id);
   const [mode, setMode] = useState<"buy" | "sell">("buy");
   const [exchangeAmount, setExchangeAmount] = useState("1000");
   const [exchangeFrom, setExchangeFrom] = useState("metal");
   const [exchangeTo, setExchangeTo] = useState("crystal");
+
+  const exchangeMutation = useMutation({
+    mutationFn: async () => {
+      const amount = Math.floor(Number(exchangeAmount || 0));
+      const response = await fetch("/api/market/exchange", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ from: exchangeFrom, to: exchangeTo, amount }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Exchange failed");
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Exchange complete",
+        description: `Converted ${data.amount.toLocaleString()} ${data.from} into ${data.converted.toLocaleString()} ${data.to}.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Exchange failed", description: error.message, variant: "destructive" });
+    },
+  });
 
   const selectedVendor = VENDORS.find(v => v.id === selectedVendorId) || VENDORS[0];
   
@@ -972,7 +1002,22 @@ export default function Market() {
                           </div>
                        </div>
 
-                       <Button className="w-full" onClick={() => alert("Exchanging " + exchangeAmount + " resources!")} data-testid="button-exchange">
+                       <Button
+                         className="w-full"
+                         onClick={() => {
+                           const amount = Math.floor(Number(exchangeAmount || 0));
+                           if (exchangeFrom === exchangeTo) {
+                             toast({ title: "Invalid pair", description: "Choose two different resources.", variant: "destructive" });
+                             return;
+                           }
+                           if (!Number.isFinite(amount) || amount <= 0) {
+                             toast({ title: "Invalid amount", description: "Enter an amount greater than 0.", variant: "destructive" });
+                             return;
+                           }
+                           exchangeMutation.mutate();
+                         }}
+                         data-testid="button-exchange"
+                       >
                           <ArrowUpDown className="w-4 h-4 mr-2" /> Exchange Resources
                        </Button>
                     </CardContent>

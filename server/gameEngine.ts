@@ -294,6 +294,18 @@ export async function buildShips(userId: string, shipType: string, quantity: num
   };
 }
 
+export async function processCoreGameTick(userId: string) {
+  const resourceTick = await processResourceTick(userId);
+  const queueTick = await processConstructionQueue(userId);
+
+  return {
+    userId,
+    resourceTick,
+    queueTick,
+    processedAt: Date.now(),
+  };
+}
+
 class GameEngine {
   constructor() {
     console.log('Game engine started!');

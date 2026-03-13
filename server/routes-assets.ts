@@ -23,20 +23,6 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * Get asset by ID
- * GET /api/assets/:assetId
- */
-router.get('/:assetId', async (req, res) => {
-  try {
-    const asset = await GameAssetsService.getAsset(req.params.assetId);
-    if (!asset) return res.status(404).json({ success: false, error: 'Asset not found' });
-    res.json({ success: true, data: asset });
-  } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
-  }
-});
-
-/**
  * Get assets by category
  * GET /api/assets/category/:category
  */
@@ -403,6 +389,20 @@ router.post('/:assetId/rollback/:version', isAuthenticated, async (req, res) => 
     res.json({ success: true, data: asset });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/**
+ * Get asset by ID
+ * GET /api/assets/:assetId
+ */
+router.get('/:assetId', async (req, res) => {
+  try {
+    const asset = await GameAssetsService.getAsset(req.params.assetId);
+    if (!asset) return res.status(404).json({ success: false, error: 'Asset not found' });
+    res.json({ success: true, data: asset });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
 

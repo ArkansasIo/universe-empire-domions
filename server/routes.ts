@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, or, like, asc, sql } from "drizzle-orm";
 import { createHash } from "crypto";
 import { db } from "./db";
 import {
@@ -333,6 +333,289 @@ export function registerRoutes(app: any) {
 
   app.get("/api/knowledge/progress/:type", isAuthenticated, async (req: Request, res: any) => {
     res.json({ type: req.params.type, level: 1, progress: 0, mastery: 0 });
+  });
+
+  // ==== RAID BOSSES ====
+
+  app.get("/api/bosses", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const rarity = typeof req.query.rarity === "string" ? req.query.rarity : null;
+      const bosses = rarity
+        ? await storage.getBossesByRarity(rarity)
+        : await storage.getAllBosses();
+      res.json(bosses);
+    } catch (error: any) {
+      res.status(500).json({ message: error?.message || "Failed to fetch bosses" });
+    }
+  });
+
+  app.post("/api/bosses/:bossId/challenge", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const bossId = req.params.bossId;
+      const boss = await storage.getBossById(bossId);
+      if (!boss) return res.status(404).json({ message: "Boss not found" });
+
+      const player = await storage.getPlayerState(userId);
+      if (!player) return res.status(404).json({ message: "Player state not found" });
+
+      const currentResources = (player.resources as any) || { metal: 0, crystal: 0, deuterium: 0, energy: 0 };
+      const challengeCost = 500;
+      if (Number(currentResources.deuterium || 0) < challengeCost) {
+        return res.status(400).json({ message: "Insufficient deuterium to launch raid" });
+      }
+
+      const updatedResources = {
+        ...currentResources,
+        deuterium: Number(currentResources.deuterium || 0) - challengeCost,
+      };
+
+      await storage.updatePlayerState(userId, { resources: updatedResources } as any);
+
+      res.json({
+        success: true,
+        bossId,
+        bossName: boss.name,
+        challengeCost,
+        message: `Fleet dispatched against ${boss.name}`,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error?.message || "Failed to challenge boss" });
+    }
+  });
+
+  // ==== AUCTION HOUSE ====
+
+  app.get("/api/auctions", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const itemType = typeof req.query.itemType === "string" ? req.query.itemType : "all";
+      const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+      const sortBy = typeof req.query.sortBy === "string" ? req.query.sortBy : "newest";
+
+      const now = new Date();
+
+      await db
+        .update(auctionListings)
+        .set({ status: "expired" })
+        .where(and(eq(auctionListings.status, "active"), sql`${auctionListings.expiresAt} <= ${now}`));
+
+      const filters: any[] = [eq(auctionListings.status, "active")];
+      if (itemType !== "all") {
+        filters.push(eq(auctionListings.itemType, itemType));
+      }
+      if (search) {
+        filters.push(
+          or(
+            like(auctionListings.itemName, `%${search}%`),
+            like(auctionListings.itemDescription, `%${search}%`),
+            like(auctionListings.sellerName, `%${search}%`),
+          ),
+        );
+      }
+
+      let sortClause: any = desc(auctionListings.createdAt);
+      if (sortBy === "ending_soon") sortClause = asc(auctionListings.expiresAt);
+      if (sortBy === "price_low") sortClause = asc(sql`COALESCE(${auctionListings.currentBid}, ${auctionListings.startingPrice})`);
+      if (sortBy === "price_high") sortClause = desc(sql`COALESCE(${auctionListings.currentBid}, ${auctionListings.startingPrice})`);
+
+      const listings = await db
+        .select()
+        .from(auctionListings)
+        .where(and(...filters))
+        .orderBy(sortClause)
+        .limit(200);
+
+      res.json(listings);
+    } catch (error: any) {
+      res.status(500).json({ message: error?.message || "Failed to load auctions" });
+    }
+  });
+
+  app.post("/api/auctions", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const {
+        itemType,
+        itemId,
+        itemName,
+        itemDescription,
+        itemRarity,
+        quantity,
+        startingPrice,
+        buyoutPrice,
+        bidIncrement,
+        duration,
+      } = req.body || {};
+
+      if (!itemType || !itemName || Number(startingPrice) <= 0) {
+        return res.status(400).json({ message: "Invalid auction payload" });
+      }
+
+      const safeDuration = Math.max(1, Math.min(72, Number(duration) || 24));
+      const expiresAt = new Date(Date.now() + safeDuration * 60 * 60 * 1000);
+
+      const [created] = await db
+        .insert(auctionListings)
+        .values({
+          sellerId: userId,
+          sellerName: user.username || "Unknown Trader",
+          itemType: String(itemType),
+          itemId: String(itemId || itemName).toLowerCase().replace(/\s+/g, "_"),
+          itemName: String(itemName),
+          itemDescription: itemDescription ? String(itemDescription) : null,
+          itemRarity: String(itemRarity || "common"),
+          itemData: {},
+          quantity: Math.max(1, Number(quantity) || 1),
+          startingPrice: Math.max(1, Number(startingPrice) || 1),
+          buyoutPrice: Number(buyoutPrice) > 0 ? Number(buyoutPrice) : null,
+          currentBid: 0,
+          bidIncrement: Math.max(1, Number(bidIncrement) || 10),
+          duration: safeDuration,
+          expiresAt,
+          status: "active",
+        })
+        .returning();
+
+      res.json(created);
+    } catch (error: any) {
+      res.status(500).json({ message: error?.message || "Failed to create auction" });
+    }
+  });
+
+  app.get("/api/auctions/user/listings", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const listings = await db
+        .select()
+        .from(auctionListings)
+        .where(eq(auctionListings.sellerId, userId))
+        .orderBy(desc(auctionListings.createdAt))
+        .limit(200);
+
+      res.json(listings);
+    } catch (error: any) {
+      res.status(500).json({ message: error?.message || "Failed to load user listings" });
+    }
+  });
+
+  app.get("/api/auctions/user/bids", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const bids = await db
+        .select()
+        .from(auctionBids)
+        .where(eq(auctionBids.bidderId, userId))
+        .orderBy(desc(auctionBids.createdAt))
+        .limit(300);
+
+      const uniqueAuctionIds = Array.from(new Set(bids.map((bid) => bid.auctionId)));
+      if (uniqueAuctionIds.length === 0) {
+        return res.json([]);
+      }
+
+      const listings = await db
+        .select()
+        .from(auctionListings)
+        .where(or(...uniqueAuctionIds.map((id) => eq(auctionListings.id, id))))
+        .orderBy(desc(auctionListings.createdAt));
+
+      res.json(listings);
+    } catch (error: any) {
+      res.status(500).json({ message: error?.message || "Failed to load user bids" });
+    }
+  });
+
+  app.post("/api/auctions/:auctionId/bid", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const auctionId = req.params.auctionId;
+      const bidAmount = Number(req.body?.bidAmount || 0);
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const [listing] = await db.select().from(auctionListings).where(eq(auctionListings.id, auctionId));
+      if (!listing) return res.status(404).json({ message: "Auction not found" });
+      if (listing.status !== "active") return res.status(400).json({ message: "Auction is not active" });
+      if (listing.sellerId === userId) return res.status(400).json({ message: "Cannot bid on your own listing" });
+      if (new Date(listing.expiresAt).getTime() <= Date.now()) {
+        await db.update(auctionListings).set({ status: "expired" }).where(eq(auctionListings.id, auctionId));
+        return res.status(400).json({ message: "Auction has expired" });
+      }
+
+      const minimumBid = Math.max(
+        listing.startingPrice,
+        (listing.currentBid || 0) + Math.max(1, listing.bidIncrement || 1),
+      );
+      if (bidAmount < minimumBid) {
+        return res.status(400).json({ message: `Bid must be at least ${minimumBid}` });
+      }
+
+      await db.insert(auctionBids).values({
+        auctionId,
+        bidderId: userId,
+        bidderName: user.username || "Unknown Bidder",
+        bidAmount,
+      });
+
+      const [updated] = await db
+        .update(auctionListings)
+        .set({
+          currentBid: bidAmount,
+          currentBidderId: userId,
+          currentBidderName: user.username || "Unknown Bidder",
+          bidCount: (listing.bidCount || 0) + 1,
+        })
+        .where(eq(auctionListings.id, auctionId))
+        .returning();
+
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error?.message || "Failed to place bid" });
+    }
+  });
+
+  app.post("/api/auctions/:auctionId/buyout", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const auctionId = req.params.auctionId;
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const [listing] = await db.select().from(auctionListings).where(eq(auctionListings.id, auctionId));
+      if (!listing) return res.status(404).json({ message: "Auction not found" });
+      if (listing.status !== "active") return res.status(400).json({ message: "Auction is not active" });
+      if (listing.sellerId === userId) return res.status(400).json({ message: "Cannot buyout your own listing" });
+      if (!listing.buyoutPrice || listing.buyoutPrice <= 0) return res.status(400).json({ message: "Buyout not available" });
+
+      const [updated] = await db
+        .update(auctionListings)
+        .set({
+          status: "sold",
+          completedAt: new Date(),
+          currentBid: listing.buyoutPrice,
+          currentBidderId: userId,
+          currentBidderName: user.username || "Unknown Buyer",
+          bidCount: Math.max(1, listing.bidCount || 0),
+        })
+        .where(eq(auctionListings.id, auctionId))
+        .returning();
+
+      await db.insert(auctionBids).values({
+        auctionId,
+        bidderId: userId,
+        bidderName: user.username || "Unknown Buyer",
+        bidAmount: listing.buyoutPrice,
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error?.message || "Failed buyout" });
+    }
   });
 }
 

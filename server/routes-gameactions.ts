@@ -7,6 +7,7 @@ import {
   startBuilding,
   processConstructionQueue,
   buildShips,
+  processCoreGameTick,
   calculateProduction,
   calculateBuildingCost,
   calculateBuildTime,
@@ -24,6 +25,21 @@ function isAuthenticated(req: Request, res: Response, next: Function) {
 }
 
 export function registerGameActionRoutes(app: Express) {
+
+  app.post("/api/game/sync-tick", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session!.userId!;
+      const result = await processCoreGameTick(userId);
+
+      res.json({
+        message: "Core game tick synchronized",
+        ...result,
+      });
+    } catch (error) {
+      console.error("Error synchronizing game tick:", error);
+      res.status(500).json({ error: "Failed to synchronize game tick" });
+    }
+  });
   
   // Get current resource production rates
   app.get("/api/game/production", isAuthenticated, async (req: Request, res: Response) => {

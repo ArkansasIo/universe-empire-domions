@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Star, Zap, Droplets, Thermometer, Radio, Users } from "lucide-react";
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 const SAMPLE_PLANETS = [
   {
@@ -62,6 +63,8 @@ const SAMPLE_STARS = [
 ];
 
 export default function CelestialBrowser() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<"all" | "planets" | "stars">("all");
 
@@ -233,7 +236,7 @@ export default function CelestialBrowser() {
                   <Card key={planet.id} className="border-slate-200">
                     <CardContent className="pt-4">
                       <h4 className="font-bold mb-2">{planet.name}</h4>
-                      <Button size="sm" className="w-full" onClick={() => alert("Viewing details for " + planet.name)}>
+                      <Button size="sm" className="w-full" onClick={() => setLocation(`/planet/${planet.id}`)}>
                         View Details
                       </Button>
                     </CardContent>
@@ -249,7 +252,14 @@ export default function CelestialBrowser() {
                         <Star className="w-4 h-4 text-yellow-500" />
                         <h4 className="font-bold">{star.name}</h4>
                       </div>
-                      <Button size="sm" className="w-full" onClick={() => alert("Viewing star system " + star.name)}>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          toast({ title: "Star selected", description: `Opening Galaxy Map for ${star.name}.` });
+                          setLocation("/galaxy");
+                        }}
+                      >
                         View Star System
                       </Button>
                     </CardContent>

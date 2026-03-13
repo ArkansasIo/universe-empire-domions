@@ -32,6 +32,7 @@ import {
 } from "@/lib/commanderTypes";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const ItemCard = ({ item, onEquip, onTemper }: { item: Item, onEquip?: (item: Item) => void, onTemper?: (id: string) => void }) => (
    <div className={cn(
@@ -117,6 +118,7 @@ const skills = [
 ];
 
 export default function Commander() {
+   const { toast } = useToast();
   const { commander, equipItem, unequipItem, craftItem, temperItem, setCommanderIdentity } = useGame();
 
   if (!commander?.stats || !commander?.equipment || !commander?.inventory) {
@@ -335,7 +337,13 @@ export default function Commander() {
                                <Badge variant="outline" className="font-mono">{skill.currentLevel}/{skill.maxLevel}</Badge>
                             </div>
                             <Progress value={(skill.currentLevel / skill.maxLevel) * 100} className="h-2 mb-2" />
-                            <Button size="sm" variant="outline" className="w-full" disabled={skill.currentLevel >= skill.maxLevel} onClick={() => skill.currentLevel < skill.maxLevel && alert("Upgrading " + skill.name + "!")}>
+                                          <Button
+                                             size="sm"
+                                             variant="outline"
+                                             className="w-full"
+                                             disabled={skill.currentLevel >= skill.maxLevel}
+                                             onClick={() => skill.currentLevel < skill.maxLevel && toast({ title: "Skill upgrade queued", description: `${skill.name} upgrade initiated.` })}
+                                          >
                                Upgrade (1 SP)
                             </Button>
                          </div>

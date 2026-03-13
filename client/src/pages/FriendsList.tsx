@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Users, UserPlus, Heart, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function FriendsList() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: friends = [] } = useQuery({
     queryKey: ["friends"],
@@ -17,6 +20,61 @@ export default function FriendsList() {
   const { data: requests = [] } = useQuery({
     queryKey: ["friend-requests"],
     queryFn: () => fetch("/api/friends/requests").then(r => r.json()).catch(() => []),
+  });
+
+  const acceptRequestMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      const response = await fetch(`/api/friends/requests/${requestId}/accept`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to accept friend request");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-requests"] });
+      toast({ title: "Request accepted", description: "Friend added successfully." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Accept failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const rejectRequestMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      const response = await fetch(`/api/friends/requests/${requestId}/reject`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to reject friend request");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friend-requests"] });
+      toast({ title: "Request rejected", description: "Friend request declined." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Reject failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const removeFriendMutation = useMutation({
+    mutationFn: async (friendId: string) => {
+      const response = await fetch(`/api/friends/${friendId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to remove friend");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      toast({ title: "Friend removed", description: "Friend removed from your list." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Remove failed", description: error.message, variant: "destructive" });
+    },
   });
 
   const filtered = friends.filter((f: any) =>
@@ -72,10 +130,10 @@ export default function FriendsList() {
                       <p className="text-sm text-slate-400">{req.message}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => alert("Friend request accepted!")} data-testid={`button-accept-request-${req.id}`}>
+                      <Button size="sm" onClick={() => acceptRequestMutation.mutate(req.id)} data-testid={`button-accept-request-${req.id}`}>
                         Accept
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => alert("Friend request rejected!")} data-testid={`button-reject-request-${req.id}`}>
+                      <Button size="sm" variant="outline" onClick={() => rejectRequestMutation.mutate(req.id)} data-testid={`button-reject-request-${req.id}`}>
                         Reject
                       </Button>
                     </div>
@@ -128,6 +186,7 @@ export default function FriendsList() {
                     <Button
                       size="sm"
                       variant="ghost"
+                      onClick={() => removeFriendMutation.mutate(friend.friendId)}
                       data-testid={`button-remove-friend-${friend.id}`}
                     >
                       <Trash2 className="w-4 h-4" />

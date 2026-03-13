@@ -31,10 +31,10 @@ router.get('/', isAuthenticated, async (req, res) => {
 });
 
 /**
- * GET /api/achievements/:achievementId
+ * GET /api/achievements/details/:achievementId
  * Get specific achievement details
  */
-router.get('/:achievementId', async (req, res) => {
+router.get('/details/:achievementId', async (req, res) => {
   try {
     const { achievementId } = req.params;
     const achievement = await AchievementService.getAchievementDetails(achievementId);
