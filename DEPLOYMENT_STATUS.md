@@ -12,7 +12,7 @@
 ## Verified Systems
 - ✅ Authentication (login/register/logout)
 - ✅ Player state management
-- ✅ Empire progression (1-999 levels, 21 tiers)
+- ✅ Empire progression (1-999 levels, 99 tiers)
 - ✅ Bank system (deposits/withdrawals/transactions)
 - ✅ Currency management (Silver/Gold/Platinum)
 - ✅ Knowledge library (10 types, 4 classes, 5 tiers)

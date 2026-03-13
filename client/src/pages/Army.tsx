@@ -1,563 +1,353 @@
 import GameLayout from "@/components/layout/GameLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Swords, Star, Shield, Activity, Plus, Zap, Wand2, Heart, Package } from "lucide-react";
-import { generateTroopName, getRandomTitle, MILITARY_RANKS, TROOP_NAMES, WEAPONS, ARMOR, HELMETS, SHIELDS } from "@/lib/militaryData";
-import { getTroopStats, getClassBuffs, getTypeBuffs, DEBUFFS, calculateCombatPower } from "@/lib/militaryAttributes";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, Factory, Shield, Users } from "lucide-react";
+import { useMemo, useState } from "react";
 
-interface Equipment {
-  weapon: { name: string; rarity: string; damage: number; weight: number } | null;
-  armor: { name: string; rarity: string; defense: number; weight: number; evade: number } | null;
-  helmet: { name: string; rarity: string; defense: number } | null;
-  shield: { name: string; rarity: string; defense: number } | null;
-}
+type Domain = "troop" | "civilian" | "government" | "military";
 
-interface Troop {
+type UnitTemplate = {
   id: string;
   name: string;
-  title?: string;
-  troopType: "infantry" | "cavalry" | "mage" | "archer" | "support" | "siege";
-  troopClass: string;
-  rank: string;
-  level: number;
-  health: number;
-  maxHealth: number;
-  attack: number;
-  defense: number;
-  speed: number;
-  morale: number;
-  status: "active" | "wounded" | "resting" | "dead";
-  experience: number;
-  equipment: Equipment;
-  inventory: { item: string; quantity: number }[];
-  attributes?: { strength: number; endurance: number; dexterity: number; intelligence: number; wisdom: number; charisma: number };
-  buffs?: string[];
-  debuffs?: string[];
-  combatPower?: any;
+  domain: Domain;
+  unitType: string;
+  class: string;
+  subClass: string;
+  subType: string;
+  tier: number;
+  trainingTimeSec: number;
+  trainingCost: { metal: number; crystal: number; deuterium: number };
+};
+
+type UnitPoolEntry = {
+  untrained: number;
+  trained: number;
+  elite: number;
+};
+
+type UnitSummary = {
+  template: UnitTemplate;
+  pool: UnitPoolEntry;
+  total: number;
+};
+
+type UnitSystemResponse = {
+  success: boolean;
+  state: {
+    resources: { metal: number; crystal: number; deuterium: number };
+    trainingQueue: Array<{ id: string; unitId: string; quantity: number; toState: string; finishAt: number }>;
+    constructionYard: {
+      tier: number;
+      efficiency: number;
+      queue: Array<{ id: string; blueprintId: string; quantity: number; finishAt: number }>;
+      completedShips: Record<string, number>;
+    };
+  };
+  meta: {
+    buildings: Record<string, number>;
+    trainingFacilityLevel: number;
+    fieldCommandLevel: number;
+    civilianCapacity: number;
+    governmentCapacity: number;
+    militaryCapacity: number;
+  };
+  summaries: Record<Domain, UnitSummary[]>;
+};
+
+type BlueprintResponse = {
+  success: boolean;
+  blueprints: Array<{
+    id: string;
+    name: string;
+    class: string;
+    type: string;
+    tier: number;
+    yardTierRequired: number;
+    buildTimeSec: number;
+    resourceCost: { metal: number; crystal: number; deuterium: number };
+  }>;
+};
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    ...init,
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.message || payload?.error || "Request failed");
+  }
+  return payload as T;
 }
 
-const TROOP_TYPES = ["infantry", "cavalry", "mage", "archer", "support", "siege"];
-const TROOP_CLASSES = ["warrior", "knight", "berserker", "paladin", "ranger", "scout", "mage", "healer", "engineer"];
-const RANKS = MILITARY_RANKS;
-
-const MOCK_TROOPS: Troop[] = [
-  {
-    id: "1",
-    name: "Aldric Blackthorne",
-    title: "Blade Master",
-    troopType: "infantry",
-    troopClass: "warrior",
-    rank: "Knight",
-    level: 5,
-    health: 85,
-    maxHealth: 100,
-    attack: 18,
-    defense: 12,
-    speed: 8,
-    morale: 95,
-    status: "active",
-    experience: 2340,
-    equipment: {
-      weapon: { name: "Legendary Greatsword", rarity: "rare", damage: 25, weight: 12 },
-      armor: { name: "Full Plate", rarity: "rare", defense: 24, weight: 22, evade: -1 },
-      helmet: { name: "Dragon Scale Helm", rarity: "rare", defense: 6 },
-      shield: { name: "Knight's Shield", rarity: "rare", defense: 9 }
-    },
-    inventory: [
-      { item: "Health Potion", quantity: 5 },
-      { item: "Mana Potion", quantity: 3 },
-      { item: "Iron Ore", quantity: 10 }
-    ],
-    attributes: getTroopStats("warrior"),
-    buffs: ["Battle Cry", "Shield Wall"],
-    debuffs: [],
-    combatPower: calculateCombatPower("warrior", "infantry", getTroopStats("warrior"), 18, 12, 8, 5, 
-      { weapon: { name: "Legendary Greatsword", rarity: "rare", damage: 25, weight: 12 }, armor: { name: "Full Plate", rarity: "rare", defense: 24, weight: 22, evade: -1 }, helmet: { name: "Dragon Scale Helm", rarity: "rare", defense: 6 }, shield: { name: "Knight's Shield", rarity: "rare", defense: 9 } })
-  },
-  {
-    id: "2",
-    name: "Seraphina Swiftarrow",
-    title: "Sharpshooter",
-    troopType: "archer",
-    troopClass: "ranger",
-    rank: "Sergeant",
-    level: 3,
-    health: 100,
-    maxHealth: 100,
-    attack: 22,
-    defense: 6,
-    speed: 14,
-    morale: 85,
-    status: "active",
-    experience: 1200,
-    equipment: {
-      weapon: { name: "Elven Longbow", rarity: "rare", damage: 18, weight: 5 },
-      armor: { name: "Elven Garb", rarity: "rare", defense: 12, weight: 4, evade: 7 },
-      helmet: { name: "Steel Helm", rarity: "uncommon", defense: 4 },
-      shield: null
-    },
-    inventory: [
-      { item: "Arrow Bundle", quantity: 50 },
-      { item: "Health Potion", quantity: 3 },
-      { item: "Lockpick", quantity: 2 }
-    ],
-    attributes: getTroopStats("ranger"),
-    buffs: ["Focus Fire", "Eagle Eye"],
-    debuffs: ["Slow"],
-    combatPower: calculateCombatPower("ranger", "archer", getTroopStats("ranger"), 22, 6, 14, 3,
-      { weapon: { name: "Elven Longbow", rarity: "rare", damage: 18, weight: 5 }, armor: { name: "Elven Garb", rarity: "rare", defense: 12, weight: 4, evade: 7 }, helmet: { name: "Steel Helm", rarity: "uncommon", defense: 4 }, shield: null })
-  }
-];
+function formatResources(cost: { metal: number; crystal: number; deuterium: number }) {
+  return `${cost.metal.toLocaleString()}M / ${cost.crystal.toLocaleString()}C / ${cost.deuterium.toLocaleString()}D`;
+}
 
 export default function Army() {
   const { toast } = useToast();
-  const [troops, setTroops] = useState<Troop[]>(MOCK_TROOPS);
-  const [selectedSquadFilter, setSelectedSquadFilter] = useState("all");
-  const [newTroopName, setNewTroopName] = useState("");
+  const queryClient = useQueryClient();
+  const [activeDomain, setActiveDomain] = useState<Domain>("troop");
+  const [trainingAmount, setTrainingAmount] = useState<Record<string, string>>({});
+  const [constructionAmount, setConstructionAmount] = useState<Record<string, string>>({});
 
-  const manageTroopMutation = useMutation({
-    mutationFn: async ({ troopId, troopName }: { troopId: string; troopName: string }) => {
-      const response = await fetch("/api/army/manage", {
+  const unitSystemQuery = useQuery<UnitSystemResponse>({
+    queryKey: ["unit-system-state"],
+    queryFn: () => fetchJson<UnitSystemResponse>("/api/unit-systems/state"),
+    refetchInterval: 15000,
+  });
+
+  const blueprintsQuery = useQuery<BlueprintResponse>({
+    queryKey: ["unit-system-blueprints"],
+    queryFn: () => fetchJson<BlueprintResponse>("/api/unit-systems/blueprints"),
+  });
+
+  const refreshState = () => queryClient.invalidateQueries({ queryKey: ["unit-system-state"] });
+
+  const trainMutation = useMutation({
+    mutationFn: ({ unitId, quantity, toState }: { unitId: string; quantity: number; toState: "trained" | "elite" }) =>
+      fetchJson<{ message: string }>("/api/unit-systems/train", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ troopId, troopName, action: "equip" }),
-      });
-      if (!response.ok) throw new Error("Failed to open troop management");
-      return response.json();
-    },
-    onSuccess: (_data, variables) => {
-      toast({ title: "Troop management ready", description: `Loadout console opened for ${variables.troopName}.` });
+        body: JSON.stringify({ unitId, quantity, toState }),
+      }),
+    onSuccess: (data) => {
+      toast({ title: "Training queued", description: data.message });
+      refreshState();
     },
     onError: (error: Error) => {
-      toast({ title: "Action failed", description: error.message, variant: "destructive" });
+      toast({ title: "Training failed", description: error.message, variant: "destructive" });
     },
   });
 
-  const deployTroopMutation = useMutation({
-    mutationFn: async ({ troopId, troopName, deploymentType }: { troopId: string; troopName: string; deploymentType: string }) => {
-      const response = await fetch("/api/army/deploy", {
+  const untrainMutation = useMutation({
+    mutationFn: ({ unitId, quantity, fromState }: { unitId: string; quantity: number; fromState: "trained" | "elite" }) =>
+      fetchJson<{ message: string }>("/api/unit-systems/untrain", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ troopId, troopName, deploymentType }),
-      });
-      if (!response.ok) throw new Error("Failed to deploy troop");
-      return response.json();
-    },
-    onSuccess: (_data, variables) => {
-      setTroops((prev) =>
-        prev.map((troop) =>
-          troop.id === variables.troopId
-            ? { ...troop, status: "resting", morale: Math.max(0, troop.morale - 5) }
-            : troop,
-        ),
-      );
-      toast({ title: "Deployment launched", description: `${variables.troopName} deployed to ${variables.deploymentType}.` });
+        body: JSON.stringify({ unitId, quantity, fromState }),
+      }),
+    onSuccess: (data) => {
+      toast({ title: "Units reverted", description: data.message });
+      refreshState();
     },
     onError: (error: Error) => {
-      toast({ title: "Deployment failed", description: error.message, variant: "destructive" });
+      toast({ title: "Untrain failed", description: error.message, variant: "destructive" });
     },
   });
 
-  const getTroopTypeIcon = (type: string) => {
-    const icons: { [key: string]: string } = {
-      infantry: "🛡️",
-      cavalry: "🐴",
-      mage: "✨",
-      archer: "🏹",
-      support: "🏥",
-      siege: "🏰",
+  const constructMutation = useMutation({
+    mutationFn: ({ blueprintId, quantity }: { blueprintId: string; quantity: number }) =>
+      fetchJson<{ message: string }>("/api/unit-systems/yard/construct", {
+        method: "POST",
+        body: JSON.stringify({ blueprintId, quantity }),
+      }),
+    onSuccess: (data) => {
+      toast({ title: "Construction queued", description: data.message });
+      refreshState();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Construction failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const state = unitSystemQuery.data?.state;
+  const meta = unitSystemQuery.data?.meta;
+
+  const domainTotals = useMemo(() => {
+    const domainData = unitSystemQuery.data?.summaries;
+    if (!domainData) return { troop: 0, civilian: 0, government: 0, military: 0 };
+    return {
+      troop: domainData.troop.reduce((sum, item) => sum + item.total, 0),
+      civilian: domainData.civilian.reduce((sum, item) => sum + item.total, 0),
+      government: domainData.government.reduce((sum, item) => sum + item.total, 0),
+      military: domainData.military.reduce((sum, item) => sum + item.total, 0),
     };
-    return icons[type] || "⚔️";
-  };
-
-  const getRankColor = (rank: string) => {
-    const colors: { [key: string]: string } = {
-      recruit: "bg-slate-200",
-      soldier: "bg-blue-200",
-      veteran: "bg-purple-200",
-      elite: "bg-orange-200",
-      commander: "bg-red-200",
-      general: "bg-gold-200",
-    };
-    return colors[rank] || "bg-slate-200";
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: { [key: string]: string } = {
-      active: "bg-green-100 text-green-800",
-      wounded: "bg-yellow-100 text-yellow-800",
-      resting: "bg-blue-100 text-blue-800",
-      dead: "bg-red-100 text-red-800",
-    };
-    return colors[status] || "bg-slate-100";
-  };
-
-  const handleRecruit = async () => {
-    const troopType = TROOP_TYPES[Math.floor(Math.random() * TROOP_TYPES.length)] as any;
-    const troopClass = TROOP_CLASSES[Math.floor(Math.random() * TROOP_CLASSES.length)];
-    
-    const newTroop: Troop = {
-      id: Math.random().toString(),
-      name: newTroopName || generateTroopName(),
-      title: getRandomTitle(troopType),
-      troopType,
-      troopClass,
-      rank: "Squire",
-      level: 1,
-      health: 100,
-      maxHealth: 100,
-      attack: 8,
-      defense: 4,
-      speed: 6,
-      morale: 100,
-      status: "active",
-      experience: 0,
-      equipment: {
-        weapon: WEAPONS[troopType as keyof typeof WEAPONS]?.[0] || null,
-        armor: ARMOR.light[0] || null,
-        helmet: HELMETS[0] || null,
-        shield: ["infantry", "cavalry", "support", "siege"].includes(troopType) ? SHIELDS[0] : null
-      },
-      inventory: [
-        { item: "Health Potion", quantity: 2 },
-        { item: "Provisions", quantity: 5 }
-      ]
-    };
-
-    setTroops([...troops, newTroop]);
-    setNewTroopName("");
-  };
-
-  const totalTroops = troops.length;
-  const activeTroops = troops.filter(t => t.status === "active").length;
-  const averageMorale = Math.round(troops.reduce((sum, t) => sum + t.morale, 0) / troops.length);
+  }, [unitSystemQuery.data?.summaries]);
 
   return (
     <GameLayout>
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="space-y-6" data-testid="army-page">
         <div>
-          <h2 className="text-3xl font-orbitron font-bold text-slate-900">Army Management</h2>
-          <p className="text-muted-foreground font-rajdhani text-lg">Recruit, manage, and deploy your troops for battle.</p>
+          <h2 className="text-3xl font-orbitron font-bold text-slate-900">Unit Systems Command</h2>
+          <p className="text-muted-foreground font-rajdhani text-lg">
+            Train, untrain, field, and supervise troop, civilian, government, and military systems from one command menu.
+          </p>
         </div>
 
-        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-blue-600 font-bold">TOTAL TROOPS</p>
-                  <p className="text-3xl font-orbitron font-bold text-blue-900">{totalTroops}</p>
-                </div>
-                <Users className="w-8 h-8 text-blue-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-green-600 font-bold">ACTIVE</p>
-                  <p className="text-3xl font-orbitron font-bold text-green-900">{activeTroops}</p>
-                </div>
-                <Activity className="w-8 h-8 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-purple-600 font-bold">AVG MORALE</p>
-                  <p className="text-3xl font-orbitron font-bold text-purple-900">{averageMorale}%</p>
-                </div>
-                <Star className="w-8 h-8 text-purple-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-orange-600 font-bold">POWER LEVEL</p>
-                  <p className="text-3xl font-orbitron font-bold text-orange-900">{(totalTroops * 25).toLocaleString()}</p>
-                </div>
-                <Swords className="w-8 h-8 text-orange-400" />
-              </div>
-            </CardContent>
-          </Card>
+          <Card><CardContent className="pt-6"><div className="text-xs text-slate-500">Troops</div><div className="text-3xl font-bold">{domainTotals.troop}</div></CardContent></Card>
+          <Card><CardContent className="pt-6"><div className="text-xs text-slate-500">Civil</div><div className="text-3xl font-bold">{domainTotals.civilian}</div></CardContent></Card>
+          <Card><CardContent className="pt-6"><div className="text-xs text-slate-500">Government</div><div className="text-3xl font-bold">{domainTotals.government}</div></CardContent></Card>
+          <Card><CardContent className="pt-6"><div className="text-xs text-slate-500">Military</div><div className="text-3xl font-bold">{domainTotals.military}</div></CardContent></Card>
         </div>
 
-        {/* Recruit Section */}
-        <Card className="bg-white border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-900">
-              <Plus className="w-5 h-5 text-primary" /> Recruit New Troop
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter troop name (e.g., 'Ironforge the Brave')"
-                value={newTroopName}
-                onChange={(e) => setNewTroopName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleRecruit()}
-                data-testid="input-troop-name"
-              />
-              <Button onClick={handleRecruit} className="bg-primary hover:bg-primary/90" data-testid="button-recruit">
-                Recruit
-              </Button>
+        <Card>
+          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="rounded border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Field Systems</div>
+              <div className="mt-2 text-lg font-bold text-slate-900">Capacity {meta?.militaryCapacity ?? 0}</div>
+              <div className="text-xs text-slate-500">Shipyard {meta?.fieldCommandLevel ?? 0} drives field readiness and construction yard tier.</div>
             </div>
-            <p className="text-xs text-slate-500">Recruitment cost: 100 metal, 50 crystal</p>
+            <div className="rounded border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Training Complex</div>
+              <div className="mt-2 text-lg font-bold text-slate-900">Level {meta?.trainingFacilityLevel ?? 0}</div>
+              <div className="text-xs text-slate-500">Research Lab and Robotics Factory improve training and build throughput.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Construction Yard</div>
+              <div className="mt-2 text-lg font-bold text-slate-900">Tier {state?.constructionYard.tier ?? 0}</div>
+              <div className="text-xs text-slate-500">Efficiency {(state?.constructionYard.efficiency ?? 0).toFixed(2)}x</div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Troops List */}
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start">
-            <TabsTrigger value="all">All Troops ({totalTroops})</TabsTrigger>
-            <TabsTrigger value="active">Active ({activeTroops})</TabsTrigger>
-            <TabsTrigger value="squads">Squads (3)</TabsTrigger>
+        <Tabs value={activeDomain} onValueChange={(value) => setActiveDomain(value as Domain)}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="troop">Troops</TabsTrigger>
+            <TabsTrigger value="civilian">Civil</TabsTrigger>
+            <TabsTrigger value="government">Government</TabsTrigger>
+            <TabsTrigger value="military">Military</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="space-y-4">
-            <div className="grid gap-4">
-              {troops.map((troop) => (
-                <Card key={troop.id} className="bg-white border-slate-200 hover:border-primary/50 transition-colors">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {/* Identity */}
-                      <div>
-                        <div className="flex items-start gap-2">
-                          <span className="text-2xl">{getTroopTypeIcon(troop.troopType)}</span>
-                          <div className="flex-1">
-                            <h3 className="font-bold text-slate-900">{troop.name}</h3>
-                            {troop.title && <p className="text-xs text-primary italic">{troop.title}</p>}
-                            <p className="text-xs text-slate-600 capitalize">{troop.troopType} • {troop.troopClass}</p>
-                            <div className="flex gap-1 mt-1">
-                              <Badge className={`${getRankColor(troop.rank)} text-xs capitalize`}>{troop.rank}</Badge>
-                              <Badge className="bg-slate-100 text-xs">Lvl {troop.level}</Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+          {(["troop", "civilian", "government", "military"] as Domain[]).map((domain) => (
+            <TabsContent key={domain} value={domain} className="space-y-4 mt-4">
+              <Tabs defaultValue="training">
+                <TabsList className="grid w-full grid-cols-3 lg:w-[520px]">
+                  <TabsTrigger value="training">Training</TabsTrigger>
+                  <TabsTrigger value="field">Field</TabsTrigger>
+                  <TabsTrigger value="construction">Construction</TabsTrigger>
+                </TabsList>
 
-                      {/* Health & Status */}
-                      <div>
-                        <p className="text-xs font-bold text-slate-600 mb-2">HEALTH</p>
-                        <div className="bg-slate-100 rounded h-3 overflow-hidden mb-2">
-                          <div 
-                            className="bg-green-500 h-full transition-all"
-                            style={{ width: `${(troop.health / troop.maxHealth) * 100}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-slate-600">{troop.health}/{troop.maxHealth} HP</p>
-                        <Badge className={getStatusColor(troop.status)}>
-                          {troop.status.charAt(0).toUpperCase() + troop.status.slice(1)}
-                        </Badge>
-                      </div>
-
-                      {/* Stats */}
-                      <div>
-                        <p className="text-xs font-bold text-slate-600 mb-2">STATS</p>
-                        <div className="space-y-1 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">⚔️ Attack:</span>
-                            <span className="font-bold text-slate-900">{troop.attack}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">🛡️ Defense:</span>
-                            <span className="font-bold text-slate-900">{troop.defense}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">💨 Speed:</span>
-                            <span className="font-bold text-slate-900">{troop.speed}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">😊 Morale:</span>
-                            <span className="font-bold text-slate-900">{troop.morale}%</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Combat Power */}
-                      {troop.combatPower && (
-                        <div className="mb-3 p-2 bg-gradient-to-r from-purple-50 to-indigo-50 rounded border border-purple-200">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs font-bold text-purple-700">⚔️ COMBAT POWER</p>
-                            <Badge className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-xs font-bold">
-                              {troop.combatPower.powerRating}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="flex justify-between bg-white px-2 py-1 rounded">
-                              <span className="text-slate-600">Total:</span>
-                              <span className="font-bold text-purple-700">{troop.combatPower.totalCombatPower}</span>
-                            </div>
-                            <div className="flex justify-between bg-white px-2 py-1 rounded">
-                              <span className="text-slate-600">Attack:</span>
-                              <span className="font-bold text-red-600">{troop.combatPower.attackPower}</span>
-                            </div>
-                            <div className="flex justify-between bg-white px-2 py-1 rounded">
-                              <span className="text-slate-600">Defense:</span>
-                              <span className="font-bold text-blue-600">{troop.combatPower.defensePower}</span>
-                            </div>
-                            <div className="flex justify-between bg-white px-2 py-1 rounded">
-                              <span className="text-slate-600">Mobility:</span>
-                              <span className="font-bold text-green-600">{troop.combatPower.mobilityPower}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Attributes & Effects */}
-                      <div>
-                        <p className="text-xs font-bold text-slate-600 mb-2">ATTRIBUTES</p>
-                        <div className="space-y-1 text-xs">
-                          {troop.attributes && (
-                            <>
-                              <div className="flex justify-between text-slate-600">
-                                <span>💪 STR:</span>
-                                <span className="font-bold">{troop.attributes.strength}</span>
+                <TabsContent value="training" className="space-y-4 mt-4">
+                  {(unitSystemQuery.data?.summaries?.[domain] || []).map((entry) => {
+                    const amount = Math.max(1, Number(trainingAmount[entry.template.id] || 1));
+                    const totalPool = entry.pool.untrained + entry.pool.trained + entry.pool.elite;
+                    return (
+                      <Card key={entry.template.id} className="border-slate-200">
+                        <CardContent className="pt-6 space-y-4">
+                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-slate-900">{entry.template.name}</h3>
+                                <Badge variant="outline">Tier {entry.template.tier}</Badge>
+                                <Badge className="capitalize">{entry.template.class}</Badge>
                               </div>
-                              <div className="flex justify-between text-slate-600">
-                                <span>🛡️ END:</span>
-                                <span className="font-bold">{troop.attributes.endurance}</span>
-                              </div>
-                              <div className="flex justify-between text-slate-600">
-                                <span>⚡ DEX:</span>
-                                <span className="font-bold">{troop.attributes.dexterity}</span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                        {(troop.buffs?.length || 0) > 0 && (
-                          <div className="mt-2 pt-2 border-t border-slate-200">
-                            <p className="text-xs font-bold text-green-600 mb-1">✅ BUFFS</p>
-                            <div className="flex flex-wrap gap-1">
-                              {troop.buffs?.map((buff, i) => (
-                                <Badge key={i} className="bg-green-100 text-green-800 text-xs">{buff}</Badge>
-                              ))}
+                              <p className="text-xs text-slate-500">
+                                {entry.template.subClass} / {entry.template.subType} • Training cost {formatResources(entry.template.trainingCost)}
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-sm">
+                              <div className="rounded border p-2 text-center"><div className="text-xs text-slate-500">Untrained</div><div className="font-bold">{entry.pool.untrained}</div></div>
+                              <div className="rounded border p-2 text-center"><div className="text-xs text-slate-500">Trained</div><div className="font-bold">{entry.pool.trained}</div></div>
+                              <div className="rounded border p-2 text-center"><div className="text-xs text-slate-500">Elite</div><div className="font-bold">{entry.pool.elite}</div></div>
                             </div>
                           </div>
-                        )}
-                        {(troop.debuffs?.length || 0) > 0 && (
-                          <div className="mt-2 pt-2 border-t border-slate-200">
-                            <p className="text-xs font-bold text-red-600 mb-1">⚠️ DEBUFFS</p>
-                            <div className="flex flex-wrap gap-1">
-                              {troop.debuffs?.map((debuff, i) => (
-                                <Badge key={i} className="bg-red-100 text-red-800 text-xs">{debuff}</Badge>
-                              ))}
+                          <Progress value={totalPool > 0 ? ((entry.pool.trained + entry.pool.elite) / totalPool) * 100 : 0} />
+                          <div className="flex flex-col lg:flex-row gap-2">
+                            <Input
+                              value={trainingAmount[entry.template.id] || "1"}
+                              onChange={(event) => setTrainingAmount((prev) => ({ ...prev, [entry.template.id]: event.target.value }))}
+                              className="lg:max-w-[120px]"
+                            />
+                            <Button onClick={() => trainMutation.mutate({ unitId: entry.template.id, quantity: amount, toState: "trained" })}>Train</Button>
+                            <Button variant="outline" onClick={() => trainMutation.mutate({ unitId: entry.template.id, quantity: amount, toState: "elite" })}>Elite Train</Button>
+                            <Button variant="secondary" onClick={() => untrainMutation.mutate({ unitId: entry.template.id, quantity: amount, fromState: "trained" })}>Untrain Trained</Button>
+                            <Button variant="secondary" onClick={() => untrainMutation.mutate({ unitId: entry.template.id, quantity: amount, fromState: "elite" })}>Untrain Elite</Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </TabsContent>
+
+                <TabsContent value="field" className="space-y-4 mt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-slate-900"><Shield className="w-5 h-5" /> Field Menu</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {(unitSystemQuery.data?.summaries?.[domain] || []).slice(0, 3).map((entry) => (
+                        <div key={entry.template.id} className="rounded border border-slate-200 bg-slate-50 p-4">
+                          <div className="font-semibold text-slate-900">{entry.template.name}</div>
+                          <div className="text-xs text-slate-500 mt-1">Field-ready units: {entry.pool.trained + entry.pool.elite}</div>
+                          <div className="text-xs text-slate-500">Training time: {Math.floor(entry.template.trainingTimeSec / 60)}m each</div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-slate-900"><Users className="w-5 h-5" /> Active Training Queue</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {(state?.trainingQueue || []).length === 0 && <div className="text-sm text-slate-500">No active training orders.</div>}
+                      {(state?.trainingQueue || []).map((order) => (
+                        <div key={order.id} className="rounded border border-slate-200 p-3 flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-slate-900">{order.unitId}</div>
+                            <div className="text-xs text-slate-500">{order.quantity} units to {order.toState}</div>
+                          </div>
+                          <Badge variant="outline">{Math.max(0, Math.ceil((order.finishAt - Date.now()) / 1000))}s</Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="construction" className="space-y-4 mt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-slate-900"><Factory className="w-5 h-5" /> Military Yard Sub-Menu</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {(blueprintsQuery.data?.blueprints || []).slice(0, 8).map((blueprint) => {
+                        const amount = Math.max(1, Number(constructionAmount[blueprint.id] || 1));
+                        return (
+                          <div key={blueprint.id} className="rounded border border-slate-200 p-4 flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-slate-900">{blueprint.name}</span>
+                                <Badge variant="outline">Tier {blueprint.tier}</Badge>
+                              </div>
+                              <div className="text-xs text-slate-500">Yard {blueprint.yardTierRequired}+ • {formatResources(blueprint.resourceCost)}</div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Input
+                                value={constructionAmount[blueprint.id] || "1"}
+                                onChange={(event) => setConstructionAmount((prev) => ({ ...prev, [blueprint.id]: event.target.value }))}
+                                className="w-24"
+                              />
+                              <Button onClick={() => constructMutation.mutate({ blueprintId: blueprint.id, quantity: amount })}>Queue Build</Button>
                             </div>
                           </div>
-                        )}
-                      </div>
-
-                      {/* Inventory */}
-                      <div>
-                        <p className="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
-                          <Package className="w-3 h-3" /> INVENTORY
-                        </p>
-                        <div className="space-y-1 text-xs max-h-20 overflow-y-auto">
-                          {troop.inventory.map((item, idx) => (
-                            <div key={idx} className="flex justify-between text-slate-600">
-                              <span>{item.item}</span>
-                              <span className="font-bold">x{item.quantity}</span>
-                            </div>
-                          ))}
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-slate-900"><Building2 className="w-5 h-5" /> Completed Hulls</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {Object.keys(state?.constructionYard.completedShips || {}).length === 0 && <div className="text-sm text-slate-500">No completed ships available yet.</div>}
+                      {Object.entries(state?.constructionYard.completedShips || {}).map(([shipId, count]) => (
+                        <div key={shipId} className="rounded border border-slate-200 p-3 flex items-center justify-between">
+                          <span className="text-slate-900">{shipId}</span>
+                          <Badge>{count}</Badge>
                         </div>
-                        <div className="flex gap-2 mt-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 text-xs"
-                            onClick={() => manageTroopMutation.mutate({ troopId: troop.id, troopName: troop.name })}
-                            data-testid={`button-manage-${troop.id}`}
-                          >
-                            Equip
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 text-xs"
-                            onClick={() => deployTroopMutation.mutate({ troopId: troop.id, troopName: troop.name, deploymentType: "field" })}
-                            data-testid={`button-deploy-${troop.id}`}
-                          >
-                            Deploy
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="active" className="space-y-4">
-            <div className="grid gap-4">
-              {troops.filter(t => t.status === "active").map((troop) => (
-                <Card key={troop.id} className="bg-white border-slate-200">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{getTroopTypeIcon(troop.troopType)}</span>
-                        <div>
-                          <h3 className="font-bold text-slate-900">{troop.name}</h3>
-                          <p className="text-xs text-slate-600">{troop.troopClass} - Level {troop.level}</p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => deployTroopMutation.mutate({ troopId: troop.id, troopName: troop.name, deploymentType: "active-line" })}
-                        data-testid={`button-deploy-active-${troop.id}`}
-                      >
-                        Deploy
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="squads" className="space-y-4">
-            <Card className="bg-white border-slate-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-900">
-                  <Shield className="w-5 h-5" /> Strike Squadron
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {troops.slice(0, 2).map(t => (
-                    <div key={t.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                      <span>{getTroopTypeIcon(t.troopType)} {t.name}</span>
-                      <Badge>Commander</Badge>
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  className="w-full mt-4"
-                  onClick={() => deployTroopMutation.mutate({ troopId: "strike-squad", troopName: "Strike Squadron", deploymentType: "squad-operation" })}
-                  data-testid="button-deploy-squad"
-                >
-                  Deploy Squad
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </TabsContent>
+          ))}
         </Tabs>
       </div>
     </GameLayout>

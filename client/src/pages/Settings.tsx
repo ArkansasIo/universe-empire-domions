@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 type AccountSettingsResponse = {
    id: string;
@@ -30,6 +30,43 @@ type AccountSettingsResponse = {
    commanderTitle: string;
    bioMessage: string;
    twoFactorEnabled: boolean;
+};
+
+type PlayerOptions = {
+   notifications: {
+      attackAlerts: boolean;
+      buildComplete: boolean;
+      researchComplete: boolean;
+      fleetArrival: boolean;
+      messages: boolean;
+      allianceActivity: boolean;
+      browserNotifications: boolean;
+      emailNotifications: boolean;
+   };
+   display: {
+      darkMode: boolean;
+      compactView: boolean;
+      showAnimations: boolean;
+      showResourceRates: boolean;
+      language: string;
+      timeFormat: string;
+      numberFormat: string;
+   };
+   sound: {
+      enabled: boolean;
+      volume: number;
+      alertSounds: boolean;
+      ambientSounds: boolean;
+   };
+   privacy: {
+      hideOnlineStatus: boolean;
+      blockStrangers: boolean;
+   };
+};
+
+type PlayerOptionsResponse = {
+   success: boolean;
+   options: PlayerOptions;
 };
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -53,6 +90,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 export default function Settings() {
   const { config, updateConfig, cronJobs, toggleCronJob, runCronJob, isAdmin, isActualAdmin, adminRole, toggleAdmin, username, logout } = useGame();
   const [, setLocation] = useLocation();
+   const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState(username || "Commander");
   const [commanderTitle, setCommanderTitle] = useState("commander");
   const [bioMessage, setBioMessage] = useState("");
@@ -67,7 +105,9 @@ export default function Settings() {
     researchComplete: true,
     fleetArrival: true,
     messages: true,
-    allianceActivity: false
+      allianceActivity: false,
+      browserNotifications: true,
+      emailNotifications: true,
   });
   
   const [displaySettings, setDisplaySettings] = useState({
@@ -85,9 +125,19 @@ export default function Settings() {
     ambientSounds: false
   });
 
+   const [privacySettings, setPrivacySettings] = useState({
+      hideOnlineStatus: false,
+      blockStrangers: false,
+   });
+
    const { data: accountSettings } = useQuery<AccountSettingsResponse>({
       queryKey: ["account-settings"],
       queryFn: () => fetchJson<AccountSettingsResponse>("/api/account/settings"),
+   });
+
+   const { data: playerOptions } = useQuery<PlayerOptionsResponse>({
+      queryKey: ["player-options"],
+      queryFn: () => fetchJson<PlayerOptionsResponse>("/api/settings/player/options"),
    });
 
    useEffect(() => {
@@ -102,6 +152,23 @@ export default function Settings() {
       setProfileImageUrl(accountSettings.profileImageUrl || "");
       setTwoFactorEnabled(Boolean(accountSettings.twoFactorEnabled));
    }, [accountSettings, username]);
+
+   useEffect(() => {
+      if (!playerOptions?.options) {
+         return;
+      }
+
+      setNotifications(playerOptions.options.notifications);
+      setDisplaySettings({
+         darkMode: playerOptions.options.display.darkMode,
+         compactView: playerOptions.options.display.compactView,
+         showAnimations: playerOptions.options.display.showAnimations,
+         showResourceRates: playerOptions.options.display.showResourceRates,
+         language: playerOptions.options.display.language,
+      });
+      setSoundSettings(playerOptions.options.sound);
+      setPrivacySettings(playerOptions.options.privacy);
+   }, [playerOptions]);
 
    const saveProfileMutation = useMutation({
       mutationFn: () => fetchJson("/api/account/profile", {
@@ -150,6 +217,29 @@ export default function Settings() {
       },
       onError: (error: Error) => {
          toast({ title: "Unable to enable 2FA", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const savePlayerOptionsMutation = useMutation({
+      mutationFn: () => fetchJson<PlayerOptionsResponse>("/api/settings/player/options", {
+         method: "PUT",
+         body: JSON.stringify({
+            notifications,
+            display: {
+               ...displaySettings,
+               timeFormat: playerOptions?.options.display.timeFormat || "24h",
+               numberFormat: playerOptions?.options.display.numberFormat || "comma",
+            },
+            sound: soundSettings,
+            privacy: privacySettings,
+         }),
+      }),
+      onSuccess: () => {
+         toast({ title: "Options saved", description: "Settings menus and submenus updated." });
+         queryClient.invalidateQueries({ queryKey: ["player-options"] });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Unable to save options", description: error.message, variant: "destructive" });
       },
    });
 
@@ -366,7 +456,7 @@ export default function Settings() {
                                 <div className="font-medium text-slate-900">Hide Online Status</div>
                                 <div className="text-xs text-slate-500">Appear offline to other players</div>
                              </div>
-                             <Switch />
+                             <Switch checked={privacySettings.hideOnlineStatus} onCheckedChange={(value) => setPrivacySettings({ ...privacySettings, hideOnlineStatus: value })} />
                           </div>
                           
                           <div className="flex items-center justify-between">
@@ -374,8 +464,12 @@ export default function Settings() {
                                 <div className="font-medium text-slate-900">Block Messages from Strangers</div>
                                 <div className="text-xs text-slate-500">Only receive messages from allies</div>
                              </div>
-                             <Switch />
+                             <Switch checked={privacySettings.blockStrangers} onCheckedChange={(value) => setPrivacySettings({ ...privacySettings, blockStrangers: value })} />
                           </div>
+
+                          <Button variant="outline" className="w-full" onClick={() => savePlayerOptionsMutation.mutate()} disabled={savePlayerOptionsMutation.isPending}>
+                             <Save className="w-4 h-4 mr-2" /> Save Privacy Options
+                          </Button>
                        </CardContent>
                     </Card>
 
@@ -448,7 +542,7 @@ export default function Settings() {
                                 <div className="text-xs text-slate-500">Show desktop notifications</div>
                              </div>
                           </div>
-                          <Switch defaultChecked />
+                          <Switch checked={notifications.browserNotifications} onCheckedChange={(value) => setNotifications({ ...notifications, browserNotifications: value })} />
                        </div>
                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100">
                           <div className="flex items-center gap-3">
@@ -458,8 +552,12 @@ export default function Settings() {
                                 <div className="text-xs text-slate-500">Send important alerts via email</div>
                              </div>
                           </div>
-                          <Switch />
+                          <Switch checked={notifications.emailNotifications} onCheckedChange={(value) => setNotifications({ ...notifications, emailNotifications: value })} />
                        </div>
+
+                       <Button className="w-full" onClick={() => savePlayerOptionsMutation.mutate()} disabled={savePlayerOptionsMutation.isPending}>
+                          <Save className="w-4 h-4 mr-2" /> Save Notification Settings
+                       </Button>
                     </div>
                  </CardContent>
               </Card>
@@ -546,7 +644,7 @@ export default function Settings() {
                        
                        <div className="space-y-2">
                           <label className="text-sm font-bold text-slate-700">Time Format</label>
-                          <Select defaultValue="24h">
+                          <Select defaultValue={playerOptions?.options.display.timeFormat || "24h"}>
                              <SelectTrigger className="bg-slate-50 border-slate-200">
                                 <SelectValue />
                              </SelectTrigger>
@@ -559,7 +657,7 @@ export default function Settings() {
                        
                        <div className="space-y-2">
                           <label className="text-sm font-bold text-slate-700">Number Format</label>
-                          <Select defaultValue="comma">
+                          <Select defaultValue={playerOptions?.options.display.numberFormat || "comma"}>
                              <SelectTrigger className="bg-slate-50 border-slate-200">
                                 <SelectValue />
                              </SelectTrigger>
@@ -570,6 +668,10 @@ export default function Settings() {
                              </SelectContent>
                           </Select>
                        </div>
+
+                       <Button className="w-full" onClick={() => savePlayerOptionsMutation.mutate()} disabled={savePlayerOptionsMutation.isPending}>
+                          <Save className="w-4 h-4 mr-2" /> Save Display Settings
+                       </Button>
                     </CardContent>
                  </Card>
               </div>
@@ -638,6 +740,10 @@ export default function Settings() {
                           />
                        </div>
                     </div>
+
+                    <Button className="w-full" onClick={() => savePlayerOptionsMutation.mutate()} disabled={savePlayerOptionsMutation.isPending}>
+                       <Save className="w-4 h-4 mr-2" /> Save Sound Settings
+                    </Button>
                  </CardContent>
               </Card>
            </TabsContent>

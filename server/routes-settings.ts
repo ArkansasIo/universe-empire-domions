@@ -2,11 +2,85 @@ import type { Express, Request } from "express";
 import { storage } from "./storage";
 import { isAuthenticated } from "./basicAuth";
 
+const PLAYER_OPTIONS_PREFIX = "player_options";
+
+const DEFAULT_PLAYER_OPTIONS = {
+  notifications: {
+    attackAlerts: true,
+    buildComplete: true,
+    researchComplete: true,
+    fleetArrival: true,
+    messages: true,
+    allianceActivity: false,
+  },
+  display: {
+    darkMode: false,
+    compactView: false,
+    showAnimations: true,
+    showResourceRates: true,
+    language: "en",
+    timeFormat: "24h",
+    numberFormat: "comma",
+  },
+  sound: {
+    enabled: true,
+    volume: 50,
+    alertSounds: true,
+    ambientSounds: false,
+  },
+  privacy: {
+    hideOnlineStatus: false,
+    blockStrangerMessages: false,
+  },
+};
+
+function getPlayerOptionsKey(userId: string) {
+  return `${PLAYER_OPTIONS_PREFIX}:${userId}`;
+}
+
+function mergePlayerOptions(value: any) {
+  return {
+    notifications: { ...DEFAULT_PLAYER_OPTIONS.notifications, ...(value?.notifications || {}) },
+    display: { ...DEFAULT_PLAYER_OPTIONS.display, ...(value?.display || {}) },
+    sound: { ...DEFAULT_PLAYER_OPTIONS.sound, ...(value?.sound || {}) },
+    privacy: { ...DEFAULT_PLAYER_OPTIONS.privacy, ...(value?.privacy || {}) },
+  };
+}
+
 function getUserId(req: Request) {
   return (req.session as any)?.userId || "";
 }
 
 export function registerSettingsRoutes(app: Express) {
+  app.get("/api/settings/player/options", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const setting = await storage.getSetting(getPlayerOptionsKey(userId));
+      res.json(mergePlayerOptions(setting?.value));
+    } catch (error: any) {
+      console.error("Error fetching player options:", error);
+      res.status(500).json({ message: "Failed to fetch player options" });
+    }
+  });
+
+  app.put("/api/settings/player/options", isAuthenticated, async (req: Request, res: any) => {
+    try {
+      const userId = getUserId(req);
+      const existing = await storage.getSetting(getPlayerOptionsKey(userId));
+      const merged = mergePlayerOptions({ ...(existing?.value || {}), ...(req.body || {}) });
+      const setting = await storage.setSetting(
+        getPlayerOptionsKey(userId),
+        merged,
+        "Per-player options menu preferences",
+        "player-state"
+      );
+      res.json(mergePlayerOptions(setting.value));
+    } catch (error: any) {
+      console.error("Error saving player options:", error);
+      res.status(500).json({ message: "Failed to save player options" });
+    }
+  });
+
   // Get all system settings
   app.get("/api/settings", isAuthenticated, async (req: Request, res: any) => {
     try {
