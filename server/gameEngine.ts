@@ -2,8 +2,21 @@
 import { resourceService } from './services/resourceService';
 import { fleetService } from './services/fleetService';
 import { technologyService } from './services/technologyService';
+import { db } from './db';
+import { playerStates } from '../shared/schema';
+import { eq } from 'drizzle-orm';
 
 type ResourceCost = { metal: number; crystal: number; deuterium: number };
+type ResourceState = { metal: number; crystal: number; deuterium: number; energy: number };
+type ConstructionQueueItem = {
+  id: string;
+  type: 'building';
+  buildingType: string;
+  targetLevel: number;
+  cost: ResourceCost;
+  startedAt: number;
+  completeAt: number;
+};
 
 export const BUILDING_COSTS: Record<string, ResourceCost> = {
   metalMine: { metal: 60, crystal: 15, deuterium: 0 },
@@ -55,37 +68,229 @@ export function calculateBuildTime(buildingType: string, currentLevel: number, r
   return Math.max(1, Math.ceil(totalCost / (2500 * roboticsModifier)));
 }
 
+function normalizeResources(raw: any): ResourceState {
+  return {
+    metal: Math.max(0, Number(raw?.metal || 0)),
+    crystal: Math.max(0, Number(raw?.crystal || 0)),
+    deuterium: Math.max(0, Number(raw?.deuterium || 0)),
+    energy: Number(raw?.energy || 0),
+  };
+}
+
+function hasEnoughResources(resources: ResourceState, cost: ResourceCost): boolean {
+  return resources.metal >= cost.metal && resources.crystal >= cost.crystal && resources.deuterium >= cost.deuterium;
+}
+
+function deductResources(resources: ResourceState, cost: ResourceCost): ResourceState {
+  return {
+    ...resources,
+    metal: resources.metal - cost.metal,
+    crystal: resources.crystal - cost.crystal,
+    deuterium: resources.deuterium - cost.deuterium,
+  };
+}
+
+async function getPlayerStateForUser(userId: string) {
+  const playerState = await db.query.playerStates.findFirst({
+    where: eq(playerStates.userId, userId),
+  });
+
+  if (!playerState) {
+    throw new Error('Player state not found');
+  }
+
+  return playerState;
+}
+
 export async function processResourceTick(userId: string) {
+  const playerState = await getPlayerStateForUser(userId);
+  const buildings = (playerState.buildings as Record<string, number>) || {};
+  const research = (playerState.research as Record<string, number>) || {};
+  const resources = normalizeResources(playerState.resources);
+
+  const now = Date.now();
+  const lastUpdate = playerState.lastResourceUpdate?.getTime() ?? now;
+  const elapsedMs = Math.max(0, now - lastUpdate);
+  const elapsedHours = elapsedMs / 3600000;
+
+  const productionPerHour = calculateProduction(buildings, research);
+  const produced = {
+    metal: Math.floor(productionPerHour.metal * elapsedHours),
+    crystal: Math.floor(productionPerHour.crystal * elapsedHours),
+    deuterium: Math.floor(productionPerHour.deuterium * elapsedHours),
+    energy: productionPerHour.energy,
+  };
+
+  const nextResources: ResourceState = {
+    metal: resources.metal + produced.metal,
+    crystal: resources.crystal + produced.crystal,
+    deuterium: resources.deuterium + produced.deuterium,
+    energy: produced.energy,
+  };
+
+  await db
+    .update(playerStates)
+    .set({
+      resources: nextResources,
+      lastResourceUpdate: new Date(now),
+      updatedAt: new Date(now),
+    })
+    .where(eq(playerStates.userId, userId));
+
   return {
     userId,
-    produced: { metal: 0, crystal: 0, deuterium: 0, energy: 0 },
-    timestamp: Date.now(),
+    produced,
+    resources: nextResources,
+    elapsedSeconds: Math.floor(elapsedMs / 1000),
+    timestamp: now,
   };
 }
 
 export async function startBuilding(userId: string, buildingType: string) {
+  if (!BUILDING_COSTS[buildingType]) {
+    throw new Error('Invalid building type');
+  }
+
+  const playerState = await getPlayerStateForUser(userId);
+  const resources = normalizeResources(playerState.resources);
+  const buildings = ((playerState.buildings as Record<string, number>) || {}) as Record<string, number>;
+  const cronJobs = (Array.isArray(playerState.cronJobs) ? playerState.cronJobs : []) as any[];
+
+  const existingBuildQueue = cronJobs.filter((job) => job?.type === 'building');
+  if (existingBuildQueue.length >= 5) {
+    throw new Error('Building queue is full (max 5)');
+  }
+
+  const currentLevel = buildings[buildingType] || 0;
+  const cost = calculateBuildingCost(buildingType, currentLevel);
+
+  if (!hasEnoughResources(resources, cost)) {
+    throw new Error('Insufficient resources for construction');
+  }
+
+  const roboticsFactoryLevel = buildings.roboticsFactory || 0;
+  const buildTimeSeconds = calculateBuildTime(buildingType, currentLevel, roboticsFactoryLevel);
+  const now = Date.now();
+
+  const queueItem: ConstructionQueueItem = {
+    id: `build_${now}_${Math.random().toString(36).slice(2, 8)}`,
+    type: 'building',
+    buildingType,
+    targetLevel: currentLevel + 1,
+    cost,
+    startedAt: now,
+    completeAt: now + buildTimeSeconds * 1000,
+  };
+
+  const nextResources = deductResources(resources, cost);
+  const nextCronJobs = [...cronJobs, queueItem];
+
+  await db
+    .update(playerStates)
+    .set({
+      resources: nextResources,
+      cronJobs: nextCronJobs,
+      updatedAt: new Date(now),
+    })
+    .where(eq(playerStates.userId, userId));
+
   return {
     userId,
     buildingType,
     started: true,
-    startedAt: Date.now(),
+    queueItem,
+    buildTimeSeconds,
+    resources: nextResources,
+    startedAt: now,
   };
 }
 
 export async function processConstructionQueue(userId: string) {
+  const playerState = await getPlayerStateForUser(userId);
+  const cronJobs = (Array.isArray(playerState.cronJobs) ? playerState.cronJobs : []) as any[];
+  const buildings = { ...((playerState.buildings as Record<string, number>) || {}) };
+  const now = Date.now();
+
+  const completed: ConstructionQueueItem[] = [];
+  const remaining: any[] = [];
+
+  for (const job of cronJobs) {
+    if (job?.type === 'building' && Number(job.completeAt || 0) <= now) {
+      const buildingType = String(job.buildingType || '');
+      if (buildingType) {
+        buildings[buildingType] = (buildings[buildingType] || 0) + 1;
+      }
+      completed.push(job as ConstructionQueueItem);
+      continue;
+    }
+    remaining.push(job);
+  }
+
+  if (completed.length > 0) {
+    await db
+      .update(playerStates)
+      .set({
+        buildings,
+        cronJobs: remaining,
+        updatedAt: new Date(now),
+      })
+      .where(eq(playerStates.userId, userId));
+  }
+
   return {
     userId,
-    completed: [],
-    processedAt: Date.now(),
+    completed,
+    queueLength: remaining.length,
+    processedAt: now,
   };
 }
 
 export async function buildShips(userId: string, shipType: string, quantity: number) {
+  if (!SHIP_COSTS[shipType]) {
+    throw new Error('Invalid ship type');
+  }
+
+  const shipQuantity = Math.floor(quantity);
+  if (shipQuantity < 1) {
+    throw new Error('Quantity must be at least 1');
+  }
+
+  const playerState = await getPlayerStateForUser(userId);
+  const resources = normalizeResources(playerState.resources);
+  const units = { ...((playerState.units as Record<string, number>) || {}) };
+
+  const baseCost = SHIP_COSTS[shipType];
+  const totalCost: ResourceCost = {
+    metal: baseCost.metal * shipQuantity,
+    crystal: baseCost.crystal * shipQuantity,
+    deuterium: baseCost.deuterium * shipQuantity,
+  };
+
+  if (!hasEnoughResources(resources, totalCost)) {
+    throw new Error('Insufficient resources to build ships');
+  }
+
+  const nextResources = deductResources(resources, totalCost);
+  units[shipType] = (units[shipType] || 0) + shipQuantity;
+  const now = Date.now();
+
+  await db
+    .update(playerStates)
+    .set({
+      resources: nextResources,
+      units,
+      updatedAt: new Date(now),
+    })
+    .where(eq(playerStates.userId, userId));
+
   return {
     userId,
     shipType,
-    quantity,
-    builtAt: Date.now(),
+    quantity: shipQuantity,
+    cost: totalCost,
+    resources: nextResources,
+    currentFleet: units,
+    builtAt: now,
   };
 }
 

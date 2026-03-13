@@ -6,6 +6,9 @@
 import type { Express, Request, Response } from 'express';
 import { ServerStatusService } from './services/serverStatusService';
 import { isAuthenticated } from './basicAuth';
+import { db } from './db';
+import { adminUsers } from '../shared/schema';
+import { eq } from 'drizzle-orm';
 
 function getUserId(req: Request) {
   return (req.session as any)?.userId || '';
@@ -13,6 +16,18 @@ function getUserId(req: Request) {
 
 export function registerStatusRoutes(app: Express) {
   const statusService = ServerStatusService.getInstance();
+
+  async function isAdminUser(userId: string): Promise<boolean> {
+    if (!userId) return false;
+
+    const [adminRecord] = await db
+      .select({ id: adminUsers.id })
+      .from(adminUsers)
+      .where(eq(adminUsers.userId, userId))
+      .limit(1);
+
+    return Boolean(adminRecord);
+  }
 
   /**
    * GET /api/status - Get current server status and metrics
@@ -105,7 +120,8 @@ export function registerStatusRoutes(app: Express) {
    * POST /api/status/reset-metrics - Reset service metrics (admin only)
    */
   app.post('/api/status/reset-metrics', isAuthenticated, (req: Request, res: Response) => {
-    try {
+    (async () => {
+      try {
       const userId = getUserId(req);
       if (!userId) {
         return res.status(401).json({
@@ -114,19 +130,27 @@ export function registerStatusRoutes(app: Express) {
         });
       }
 
-      // TODO: Add proper admin check
+      const isAdmin = await isAdminUser(userId);
+      if (!isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: 'Admin access required',
+        });
+      }
+
       statusService.resetMetrics();
 
       res.json({
         success: true,
         message: 'Metrics reset successfully',
       });
-    } catch (error: any) {
+      } catch (error: any) {
       console.error('Error resetting metrics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to reset metrics',
       });
-    }
+      }
+    })();
   });
 }

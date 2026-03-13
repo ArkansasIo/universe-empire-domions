@@ -243,9 +243,12 @@ export function registerRoutes(app: any) {
       const userId = getUserId(req);
       const { amount } = req.body;
       if (amount <= 0) return res.status(400).json({ message: "Invalid amount" });
-      // Withdraw functionality to be implemented
-      res.status(501).json({ message: "Withdraw functionality not implemented" });
+      const updated = await storage.withdrawFromBankAccount(userId, amount);
+      res.json(updated);
     } catch (error: any) {
+      if ((error?.message || "").includes("Insufficient")) {
+        return res.status(400).json({ message: error.message });
+      }
       res.status(500).json({ message: error.message || "Failed to withdraw" });
     }
   });

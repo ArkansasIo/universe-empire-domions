@@ -1,5 +1,6 @@
 import GameLayout from "@/components/layout/GameLayout";
 import { useGame } from "@/lib/gameContext";
+import type { CommanderStats } from "@/lib/commanderTypes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -21,6 +22,13 @@ function fmt(n: number): string {
   if (n >= 1_000)         return `${(n / 1_000).toFixed(2)}K`;
   return Math.floor(n).toLocaleString();
 }
+
+const commanderStatKeys: Array<keyof Pick<CommanderStats, "warfare" | "logistics" | "science" | "engineering">> = [
+  "warfare",
+  "logistics",
+  "science",
+  "engineering",
+];
 
 // Stat card shown in the top metrics row
 function StatCard({
@@ -333,9 +341,9 @@ export default function EmpireView() {
                   </span>
                 </div>
                 <div className="flex gap-1 flex-wrap">
-                  {["warfare", "logistics", "science", "engineering"].map((stat) => (
+                  {commanderStatKeys.map((stat) => (
                     <Badge key={stat} variant="outline" className="text-xs capitalize">
-                      {stat[0].toUpperCase()}: {(commander.stats as Record<string, number>)[stat] ?? 1}
+                      {stat[0].toUpperCase()}: {commander.stats[stat] ?? 1}
                     </Badge>
                   ))}
                 </div>

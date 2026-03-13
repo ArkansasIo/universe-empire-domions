@@ -2504,6 +2504,39 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async withdrawFromBankAccount(userId: string, amount: number): Promise<any> {
+    const account = await this.getBankAccount(userId);
+    const currentBalance = Number(account.accountBalance || 0);
+
+    if (amount <= 0) {
+      throw new Error("Invalid amount");
+    }
+
+    if (currentBalance < amount) {
+      throw new Error("Insufficient bank balance");
+    }
+
+    const newBalance = currentBalance - amount;
+
+    await db.insert(bankTransactions).values({
+      userId,
+      accountId: account.id,
+      transactionType: "withdraw",
+      amount,
+      balanceBefore: currentBalance,
+      balanceAfter: newBalance,
+      description: `Withdrawal: -${amount}`,
+    });
+
+    const [updated] = await db
+      .update(bankAccounts)
+      .set({ accountBalance: newBalance, updatedAt: new Date() })
+      .where(eq(bankAccounts.id, account.id))
+      .returning();
+
+    return updated;
+  }
+
   // Empire value
   async calculateEmpireValue(userId: string): Promise<any> {
     const state = await this.getPlayerState(userId);

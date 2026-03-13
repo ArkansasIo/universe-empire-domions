@@ -113,7 +113,7 @@ export default function Stations() {
             <Satellite className="w-10 h-10 text-blue-500" />
             Orbital Stations
           </h1>
-          <p className="text-slate-600 mt-2">Construct and manage moon bases and space stations</p>
+          <p className="text-slate-600 mt-2">Construct and manage moon bases and space stations with progression from Tiers 1-99 and Levels 1-999.</p>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
@@ -194,6 +194,9 @@ export default function Stations() {
             <CardTitle>Orbital Construction Tips</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-slate-700 space-y-2">
+            <p>
+              <strong>Progression:</strong> Orbital facilities scale through <strong>Tiers 1-99</strong> and <strong>Levels 1-999</strong>, combining milestone upgrades with long-term level growth.
+            </p>
             <p>
               <strong>Lunar Base:</strong> Required first before any other moon construction. 
               Provides the foundation for all lunar operations.

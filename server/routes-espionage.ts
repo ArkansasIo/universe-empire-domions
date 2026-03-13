@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { db } from "./db";
-import { playerStates } from "../shared/schema";
+import { messages, playerStates, users } from "../shared/schema";
 import { eq } from "drizzle-orm";
 
 // Middleware to check authentication
@@ -330,7 +330,57 @@ export function registerEspionageRoutes(app: Express) {
       // If detected, notify target player (in production, add to notification system)
       if (detected) {
         console.log(`[ESPIONAGE] Spy mission detected! ${userId} -> ${targetUserId}`);
-        // TODO: Add counter-intelligence event to target player's logs
+
+        const targetTravelLog = Array.isArray(targetState.travelLog) ? [...(targetState.travelLog as any[])] : [];
+        const [attackerUser] = await db
+          .select({ username: users.username })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+        const [targetUser] = await db
+          .select({ username: users.username })
+          .from(users)
+          .where(eq(users.id, targetUserId))
+          .limit(1);
+
+        targetTravelLog.unshift({
+          id: `counterintel_${Date.now()}`,
+          type: "counter-intelligence",
+          createdAt: new Date().toISOString(),
+          attackerUserId: userId,
+          attackerName: attackerUser?.username || "Unknown Commander",
+          detected: true,
+          numSpies,
+          categories,
+          success: missionSucceeds,
+          summary: `Detected espionage probes from ${attackerUser?.username || "an unknown commander"}.`,
+        });
+
+        await db.update(playerStates)
+          .set({
+            travelLog: targetTravelLog.slice(0, 50),
+            updatedAt: new Date(),
+          })
+          .where(eq(playerStates.userId, targetUserId));
+
+        await db.insert(messages).values({
+          fromUserId: userId,
+          toUserId: targetUserId,
+          from: "Counter-Intelligence Network",
+          to: targetUser?.username || "Commander",
+          subject: "Espionage Attempt Detected",
+          body: `${attackerUser?.username || "An unknown commander"} attempted to spy on your empire using ${numSpies} probes. Counter-intelligence systems detected the mission.${missionSucceeds ? " Some intelligence may still have been gathered." : " The mission failed before gathering useful intelligence."}`,
+          type: "espionage",
+          espionageReport: {
+            attackerUserId: userId,
+            attackerName: attackerUser?.username || "Unknown Commander",
+            detected: true,
+            numSpies,
+            categories,
+            missionSucceeded: missionSucceeds,
+            timestamp: new Date().toISOString(),
+          },
+        });
       }
 
       res.json({

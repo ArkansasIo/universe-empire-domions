@@ -96,6 +96,10 @@ export function registerGameActionRoutes(app: Express) {
     try {
       const userId = req.session!.userId!;
       const { buildingType } = req.params;
+
+      if (!BUILDING_COSTS[buildingType as keyof typeof BUILDING_COSTS]) {
+        return res.status(400).json({ error: "Invalid building type" });
+      }
       
       const playerState = await db.query.playerStates.findFirst({
         where: eq(playerStates.userId, userId),
