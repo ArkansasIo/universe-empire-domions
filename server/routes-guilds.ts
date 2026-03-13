@@ -2,7 +2,17 @@ import type { Express, Request, Response } from "express";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { isAuthenticated } from "./basicAuth";
 import { db } from "./db";
+import { storage } from "./storage";
 import { guildMembers, guilds, users } from "../shared/schema";
+
+type GuildChatMessage = {
+  id: string;
+  guildId: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  createdAt: number;
+};
 
 function getUserId(req: Request): string {
   return (req.session as any)?.userId || "";
@@ -16,6 +26,30 @@ async function getMembershipForUser(userId: string) {
     .limit(1);
 
   return membership;
+}
+
+function getGuildChatKey(guildId: string): string {
+  return `guild_chat:${guildId}`;
+}
+
+async function getGuildChat(guildId: string): Promise<GuildChatMessage[]> {
+  const setting = await storage.getSetting(getGuildChatKey(guildId));
+  if (!setting || !Array.isArray(setting.value)) {
+    return [];
+  }
+
+  return (setting.value as GuildChatMessage[])
+    .filter((item) => item && typeof item.content === "string")
+    .slice(-100);
+}
+
+async function saveGuildChat(guildId: string, messages: GuildChatMessage[]): Promise<void> {
+  await storage.setSetting(
+    getGuildChatKey(guildId),
+    messages.slice(-100),
+    `Guild chat stream for ${guildId}`,
+    "guild"
+  );
 }
 
 export function registerGuildRoutes(app: Express) {
@@ -216,6 +250,66 @@ export function registerGuildRoutes(app: Express) {
     } catch (error) {
       console.error("Failed to load guild members:", error);
       res.status(500).json({ message: "Failed to load guild members" });
+    }
+  });
+
+  app.get("/api/guilds/:guildId/chat", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const { guildId } = req.params;
+      const membership = await getMembershipForUser(userId);
+
+      if (!membership || membership.guildId !== guildId) {
+        return res.status(403).json({ message: "You must be a member of this guild to view chat" });
+      }
+
+      const messages = await getGuildChat(guildId);
+      res.json({ messages });
+    } catch (error) {
+      console.error("Failed to load guild chat:", error);
+      res.status(500).json({ message: "Failed to load guild chat" });
+    }
+  });
+
+  app.post("/api/guilds/:guildId/chat", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const { guildId } = req.params;
+      const content = String(req.body?.content || "").trim();
+
+      if (!content) {
+        return res.status(400).json({ message: "Message content is required" });
+      }
+
+      if (content.length > 500) {
+        return res.status(400).json({ message: "Message must be 500 characters or less" });
+      }
+
+      const membership = await getMembershipForUser(userId);
+      if (!membership || membership.guildId !== guildId) {
+        return res.status(403).json({ message: "You must be a member of this guild to post" });
+      }
+
+      const [player] = await db.select({ username: users.username }).from(users).where(eq(users.id, userId)).limit(1);
+      const senderName = player?.username || "Commander";
+
+      const messages = await getGuildChat(guildId);
+      const nextMessage: GuildChatMessage = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        guildId,
+        senderId: userId,
+        senderName,
+        content,
+        createdAt: Date.now(),
+      };
+
+      const nextMessages = [...messages, nextMessage];
+      await saveGuildChat(guildId, nextMessages);
+
+      res.status(201).json({ message: nextMessage });
+    } catch (error) {
+      console.error("Failed to post guild chat message:", error);
+      res.status(500).json({ message: "Failed to post guild chat message" });
     }
   });
 }

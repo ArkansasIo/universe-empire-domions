@@ -14,9 +14,9 @@ import {
   Settings, Bell, History
 } from "lucide-react";
 import { useState } from "react";
-import { MOCK_ALLIANCES } from "@/lib/allianceData";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const diplomacyStates = [
   { id: "war", name: "At War", color: "text-red-600 bg-red-50 border-red-200" },
@@ -36,12 +36,96 @@ const mockWars = [
   { id: 1, enemyTag: "VOID", enemyName: "Void Reavers", startDate: "2024-02-15", kills: 1234, deaths: 567, status: "active" }
 ];
 
+type GuildInfo = {
+   id: string;
+   name: string;
+   description: string;
+   totalMembers?: number;
+   level?: number;
+   influence?: number;
+   tag?: string;
+};
+
+type GuildChatMessage = {
+   id: string;
+   guildId: string;
+   senderId: string;
+   senderName: string;
+   content: string;
+   createdAt: number;
+};
+
+type GuildChatResponse = {
+   messages: GuildChatMessage[];
+};
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+   const response = await fetch(url, {
+      credentials: "include",
+      headers: {
+         "Content-Type": "application/json",
+         ...(init?.headers || {}),
+      },
+      ...init,
+   });
+
+   const payload = await response.json().catch(() => null);
+   if (!response.ok) {
+      throw new Error(payload?.message || payload?.error || "Request failed");
+   }
+
+   return payload as T;
+}
+
 export default function Alliance() {
   const { alliance, createAlliance, joinAlliance, leaveAlliance } = useGame();
    const { toast } = useToast();
+   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [createName, setCreateName] = useState("");
   const [createTag, setCreateTag] = useState("");
+   const [chatMessage, setChatMessage] = useState("");
+
+   const { data: myGuild } = useQuery<GuildInfo | null>({
+      queryKey: ["guild-mine"],
+      queryFn: () => fetchJson<GuildInfo | null>("/api/guilds/mine"),
+      enabled: !!alliance,
+   });
+
+   const { data: guildDirectory } = useQuery<GuildInfo[]>({
+      queryKey: ["guild-directory"],
+      queryFn: () => fetchJson<GuildInfo[]>("/api/guilds"),
+   });
+
+   const visibleGuilds = (guildDirectory || []).filter((guild) => {
+      const key = searchQuery.trim().toLowerCase();
+      if (!key) return true;
+      const tag = (guild.tag || "").toLowerCase();
+      const name = (guild.name || "").toLowerCase();
+      return tag.includes(key) || name.includes(key);
+   });
+
+   const { data: guildChat } = useQuery<GuildChatResponse>({
+      queryKey: ["guild-chat", myGuild?.id],
+      queryFn: () => fetchJson<GuildChatResponse>(`/api/guilds/${myGuild!.id}/chat`),
+      enabled: !!myGuild?.id,
+      refetchInterval: 10000,
+   });
+
+   const sendGuildMessageMutation = useMutation({
+      mutationFn: (content: string) =>
+         fetchJson(`/api/guilds/${myGuild!.id}/chat`, {
+            method: "POST",
+            body: JSON.stringify({ content }),
+         }),
+      onSuccess: () => {
+         setChatMessage("");
+         queryClient.invalidateQueries({ queryKey: ["guild-chat", myGuild?.id] });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Message failed", description: error.message, variant: "destructive" });
+      },
+   });
 
   if (alliance) {
      const totalPoints = alliance.members.reduce((acc, m) => acc + m.points, 0);
@@ -343,13 +427,52 @@ export default function Alliance() {
                           </CardTitle>
                        </CardHeader>
                        <CardContent>
-                          <div className="h-[400px] flex items-center justify-center text-slate-400 border border-dashed border-slate-200 rounded">
-                             <div className="text-center">
-                                <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                                <p>Real-time chat coming soon</p>
-                                <p className="text-xs mt-1">Use the message system to communicate with alliance members</p>
-                             </div>
-                          </div>
+                                       {!myGuild?.id ? (
+                                          <div className="h-[300px] flex items-center justify-center text-slate-400 border border-dashed border-slate-200 rounded">
+                                             <div className="text-center">
+                                                <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                                                <p>Guild communications require an active guild membership.</p>
+                                             </div>
+                                          </div>
+                                       ) : (
+                                          <div className="space-y-4">
+                                             <ScrollArea className="h-[320px] rounded border border-slate-200 p-3">
+                                                <div className="space-y-3">
+                                                   {(guildChat?.messages || []).length === 0 && (
+                                                      <div className="text-center text-slate-400 py-10">No messages yet. Start alliance communications.</div>
+                                                   )}
+                                                   {(guildChat?.messages || []).map((message) => (
+                                                      <div key={message.id} className="rounded border border-slate-200 bg-slate-50 p-3">
+                                                         <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-sm font-semibold text-slate-900">{message.senderName}</span>
+                                                            <span className="text-[11px] text-slate-500">{new Date(message.createdAt).toLocaleTimeString()}</span>
+                                                         </div>
+                                                         <p className="text-sm text-slate-700 whitespace-pre-wrap">{message.content}</p>
+                                                      </div>
+                                                   ))}
+                                                </div>
+                                             </ScrollArea>
+
+                                             <div className="flex gap-2">
+                                                <Input
+                                                   value={chatMessage}
+                                                   onChange={(event) => setChatMessage(event.target.value)}
+                                                   placeholder="Transmit alliance message..."
+                                                   className="bg-slate-50"
+                                                />
+                                                <Button
+                                                   onClick={() => {
+                                                      const content = chatMessage.trim();
+                                                      if (!content) return;
+                                                      sendGuildMessageMutation.mutate(content);
+                                                   }}
+                                                   disabled={sendGuildMessageMutation.isPending}
+                                                >
+                                                   Send
+                                                </Button>
+                                             </div>
+                                          </div>
+                                       )}
                        </CardContent>
                     </Card>
                  </TabsContent>
@@ -388,28 +511,31 @@ export default function Alliance() {
                           className="bg-slate-50 border-slate-200"
                           data-testid="input-search-alliance"
                        />
-                       <Button onClick={() => toast({ title: "Alliance search", description: `Searching for ${searchQuery || "all alliances"}.` })} data-testid="button-search-alliance">Search</Button>
+                       <Button onClick={() => toast({ title: "Alliance search", description: `Showing ${visibleGuilds.length} matching alliances.` })} data-testid="button-search-alliance">Search</Button>
                     </div>
 
                     <div className="space-y-4">
-                       {MOCK_ALLIANCES.map(a => (
-                          <div key={a.id} className="flex items-center justify-between p-4 border border-slate-200 rounded hover:bg-slate-50 transition-colors">
+                       {visibleGuilds.map((guild) => (
+                          <div key={guild.id} className="flex items-center justify-between p-4 border border-slate-200 rounded hover:bg-slate-50 transition-colors">
                              <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-slate-100 rounded flex items-center justify-center font-bold text-slate-400">
-                                   {a.tag}
+                                   {guild.tag || guild.name.slice(0, 4).toUpperCase()}
                                 </div>
                                 <div>
-                                   <div className="font-bold text-slate-900 text-lg">[{a.tag}] {a.name}</div>
-                                   <div className="text-sm text-slate-500">{a.description}</div>
+                                   <div className="font-bold text-slate-900 text-lg">[{guild.tag || "ALLY"}] {guild.name}</div>
+                                   <div className="text-sm text-slate-500">{guild.description}</div>
                                    <div className="flex gap-2 mt-1">
-                                      <Badge variant="outline" className="text-[10px]">12 members</Badge>
-                                      <Badge variant="outline" className="text-[10px]">Rank #45</Badge>
+                                      <Badge variant="outline" className="text-[10px]">{guild.totalMembers || 0} members</Badge>
+                                      <Badge variant="outline" className="text-[10px]">Level {guild.level || 1}</Badge>
                                    </div>
                                 </div>
                              </div>
-                             <Button variant="outline" onClick={() => joinAlliance(a.id!)} data-testid={`button-join-${a.id}`}>Apply</Button>
+                             <Button variant="outline" onClick={() => joinAlliance(guild.id)} data-testid={`button-join-${guild.id}`}>Apply</Button>
                           </div>
                        ))}
+                       {visibleGuilds.length === 0 && (
+                          <div className="text-center text-slate-500 py-10 border border-dashed border-slate-200 rounded">No alliances matched your search.</div>
+                       )}
                     </div>
                  </CardContent>
               </Card>

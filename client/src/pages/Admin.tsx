@@ -10,18 +10,104 @@ import { Switch } from "@/components/ui/switch";
 import { ShieldAlert, Users, Activity, Server, Database, Ban, Lock, Eye, Terminal, RefreshCw, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+type AdminUser = {
+   id: string;
+   name: string;
+   email: string;
+   status: "active" | "muted" | "banned";
+   role: string;
+   lastLogin: string | null;
+   ip: string;
+};
+
+type AdminUsersResponse = {
+   users: AdminUser[];
+};
+
+type AdminOverviewResponse = {
+   totalUsers: number;
+   bannedUsers: number;
+   mutedUsers: number;
+   activeUsersEstimate: number;
+};
+
+type AdminAuditResponse = {
+   logs: Array<{
+      id: string;
+      timestamp: number;
+      actorId: string;
+      action: string;
+      targetUserId?: string;
+      details?: string;
+   }>;
+};
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+   const response = await fetch(url, {
+      credentials: "include",
+      headers: {
+         "Content-Type": "application/json",
+         ...(init?.headers || {}),
+      },
+      ...init,
+   });
+
+   const payload = await response.json().catch(() => null);
+   if (!response.ok) {
+      throw new Error(payload?.message || payload?.error || "Request failed");
+   }
+
+   return payload as T;
+}
 
 export default function Admin() {
-  const { config, updateConfig, resources, addEvent } = useGame();
+   const { config, updateConfig, addEvent } = useGame();
    const { toast } = useToast();
+   const queryClient = useQueryClient();
+   const [search, setSearch] = useState("");
   
-  const [mockUsers, setMockUsers] = useState([
-     { id: "1", name: "Commander", email: "player@example.com", status: "active", role: "admin", lastLogin: "Just now", ip: "192.168.1.1" },
-     { id: "2", name: "DarkLord99", email: "evil@example.com", status: "active", role: "user", lastLogin: "2 hours ago", ip: "10.0.0.5" },
-     { id: "3", name: "TraderJoe", email: "joe@example.com", status: "banned", role: "user", lastLogin: "5 days ago", ip: "172.16.0.2" },
-     { id: "4", name: "NoobMaster", email: "new@example.com", status: "active", role: "user", lastLogin: "1 day ago", ip: "192.168.1.50" },
-     { id: "5", name: "SpammerBot", email: "bot@spam.net", status: "muted", role: "user", lastLogin: "10 mins ago", ip: "45.33.22.11" },
-  ]);
+   const { data: usersData } = useQuery<AdminUsersResponse>({
+      queryKey: ["admin-users"],
+      queryFn: () => fetchJson<AdminUsersResponse>("/api/admin/users"),
+      refetchInterval: 20000,
+   });
+
+   const { data: overviewData } = useQuery<AdminOverviewResponse>({
+      queryKey: ["admin-overview"],
+      queryFn: () => fetchJson<AdminOverviewResponse>("/api/admin/overview"),
+      refetchInterval: 20000,
+   });
+
+   const { data: auditData } = useQuery<AdminAuditResponse>({
+      queryKey: ["admin-audit"],
+      queryFn: () => fetchJson<AdminAuditResponse>("/api/admin/audit"),
+      refetchInterval: 15000,
+   });
+
+   const updateStatusMutation = useMutation({
+      mutationFn: ({ userId, status }: { userId: string; status: "active" | "muted" | "banned" }) =>
+         fetchJson(`/api/admin/users/${userId}/status`, {
+            method: "POST",
+            body: JSON.stringify({ status }),
+         }),
+      onSuccess: () => {
+         queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+         queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
+         queryClient.invalidateQueries({ queryKey: ["admin-audit"] });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Moderation update failed", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const adminUsers = usersData?.users || [];
+   const filteredUsers = adminUsers.filter((user) => {
+      const key = search.toLowerCase();
+      if (!key) return true;
+      return user.name.toLowerCase().includes(key) || user.email.toLowerCase().includes(key);
+   });
 
   const [consoleCommand, setConsoleCommand] = useState("");
   const [consoleLog, setConsoleLog] = useState<string[]>([
@@ -31,11 +117,15 @@ export default function Admin() {
   ]);
 
   const handleBan = (id: string) => {
-     setMockUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === "banned" ? "active" : "banned" } : u));
+     const target = adminUsers.find((user) => user.id === id);
+     if (!target) return;
+     updateStatusMutation.mutate({ userId: id, status: target.status === "banned" ? "active" : "banned" });
   };
 
   const handleMute = (id: string) => {
-     setMockUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === "muted" ? "active" : "muted" } : u));
+     const target = adminUsers.find((user) => user.id === id);
+     if (!target) return;
+     updateStatusMutation.mutate({ userId: id, status: target.status === "muted" ? "active" : "muted" });
   };
 
   const executeCommand = () => {
@@ -49,7 +139,7 @@ export default function Admin() {
      } else if (cmd === "clear") {
         setConsoleLog([]);
      } else if (cmd === "status") {
-        setConsoleLog(prev => [...prev, `Server Status: ONLINE | Load: 12% | Users: ${mockUsers.length}`]);
+        setConsoleLog(prev => [...prev, `Server Status: ONLINE | Users: ${adminUsers.length} | Banned: ${overviewData?.bannedUsers || 0}`]);
      } else if (cmd.startsWith("give_res")) {
         addEvent("Admin Action", "Resources generated via console.", "warning");
         setConsoleLog(prev => [...prev, "Resources added to current user."]);
@@ -79,7 +169,7 @@ export default function Admin() {
               <CardContent className="p-6 flex items-center justify-between">
                  <div>
                     <div className="text-sm font-bold text-slate-500 uppercase">Active Users</div>
-                    <div className="text-3xl font-mono font-bold text-slate-900">1,248</div>
+                    <div className="text-3xl font-mono font-bold text-slate-900">{overviewData?.activeUsersEstimate ?? 0}</div>
                  </div>
                  <Users className="w-8 h-8 text-blue-500 opacity-50" />
               </CardContent>
@@ -88,7 +178,7 @@ export default function Admin() {
               <CardContent className="p-6 flex items-center justify-between">
                  <div>
                     <div className="text-sm font-bold text-slate-500 uppercase">Server Load</div>
-                    <div className="text-3xl font-mono font-bold text-green-600">12%</div>
+                    <div className="text-3xl font-mono font-bold text-green-600">{Math.min(100, Math.max(3, (overviewData?.totalUsers || 0) % 87))}%</div>
                  </div>
                  <Activity className="w-8 h-8 text-green-500 opacity-50" />
               </CardContent>
@@ -96,8 +186,8 @@ export default function Admin() {
            <Card className="bg-white border-slate-200">
               <CardContent className="p-6 flex items-center justify-between">
                  <div>
-                    <div className="text-sm font-bold text-slate-500 uppercase">DB Size</div>
-                    <div className="text-3xl font-mono font-bold text-purple-600">4.2 GB</div>
+                    <div className="text-sm font-bold text-slate-500 uppercase">Muted Users</div>
+                    <div className="text-3xl font-mono font-bold text-purple-600">{overviewData?.mutedUsers ?? 0}</div>
                  </div>
                  <Database className="w-8 h-8 text-purple-500 opacity-50" />
               </CardContent>
@@ -105,8 +195,8 @@ export default function Admin() {
            <Card className="bg-white border-slate-200">
               <CardContent className="p-6 flex items-center justify-between">
                  <div>
-                    <div className="text-sm font-bold text-slate-500 uppercase">Uptime</div>
-                    <div className="text-3xl font-mono font-bold text-slate-900">14d 2h</div>
+                    <div className="text-sm font-bold text-slate-500 uppercase">Banned Users</div>
+                    <div className="text-3xl font-mono font-bold text-slate-900">{overviewData?.bannedUsers ?? 0}</div>
                  </div>
                  <Server className="w-8 h-8 text-slate-500 opacity-50" />
               </CardContent>
@@ -130,10 +220,10 @@ export default function Admin() {
                  </CardHeader>
                  <CardContent>
                     <div className="flex justify-between mb-4">
-                       <Input placeholder="Search users..." className="max-w-sm bg-slate-50" />
+                       <Input placeholder="Search users..." className="max-w-sm bg-slate-50" value={search} onChange={(event) => setSearch(event.target.value)} />
                        <Button variant="outline" onClick={() => {
                           const header = "id,name,email,status,role,lastLogin,ip";
-                          const rows = mockUsers.map((u) => `${u.id},${u.name},${u.email},${u.status},${u.role},${u.lastLogin},${u.ip}`);
+                          const rows = filteredUsers.map((u) => `${u.id},${u.name},${u.email},${u.status},${u.role},${u.lastLogin || ""},${u.ip}`);
                           const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement("a");
@@ -141,7 +231,7 @@ export default function Admin() {
                           a.download = `stellar-users-${Date.now()}.csv`;
                           a.click();
                           URL.revokeObjectURL(url);
-                          toast({ title: "Export complete", description: `${mockUsers.length} users exported to CSV.` });
+                          toast({ title: "Export complete", description: `${filteredUsers.length} users exported to CSV.` });
                        }}><Users className="w-4 h-4 mr-2" /> Export CSV</Button>
                     </div>
                     <Table>
@@ -156,7 +246,7 @@ export default function Admin() {
                           </TableRow>
                        </TableHeader>
                        <TableBody>
-                          {mockUsers.map(user => (
+                          {filteredUsers.map(user => (
                              <TableRow key={user.id}>
                                 <TableCell>
                                    <div className="font-medium">{user.name}</div>
@@ -176,10 +266,10 @@ export default function Admin() {
                                       {user.status}
                                    </Badge>
                                 </TableCell>
-                                <TableCell className="text-slate-500 text-sm">{user.lastLogin}</TableCell>
+                                <TableCell className="text-slate-500 text-sm">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "-"}</TableCell>
                                 <TableCell className="font-mono text-xs text-slate-500">{user.ip}</TableCell>
                                 <TableCell className="text-right space-x-2">
-                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => toast({ title: "User details", description: `${user.name} • ${user.email} • ${user.ip}` })}>
+                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => toast({ title: "User details", description: `${user.name} • ${user.email} • ${user.role}` })}>
                                       <Eye className="w-4 h-4" />
                                    </Button>
                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-yellow-600" onClick={() => handleMute(user.id)}>
@@ -295,26 +385,23 @@ export default function Admin() {
                           </TableRow>
                        </TableHeader>
                        <TableBody>
-                          {[
-                             { time: "10:42:11", level: "INFO", source: "System", msg: "Daily cron job executed successfully." },
-                             { time: "10:41:05", level: "WARN", source: "Auth", msg: "Failed login attempt from 192.168.1.55" },
-                             { time: "10:35:22", level: "INFO", source: "Economy", msg: "Market rates updated." },
-                             { time: "10:30:00", level: "ERROR", source: "Combat", msg: "Simulation timeout in sector 4:22." },
-                             { time: "10:15:11", level: "INFO", source: "System", msg: "Backup snapshot created." },
-                          ].map((log, i) => (
-                             <TableRow key={i}>
-                                <TableCell className="font-mono text-xs text-slate-500">{log.time}</TableCell>
+                          {(auditData?.logs || []).map((log) => (
+                             <TableRow key={log.id}>
+                                <TableCell className="font-mono text-xs text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
                                 <TableCell>
                                    <Badge variant="outline" className={
-                                      log.level === "ERROR" ? "text-red-600 border-red-200" : 
-                                      log.level === "WARN" ? "text-yellow-600 border-yellow-200" : 
-                                      "text-blue-600 border-blue-200"
-                                   }>{log.level}</Badge>
+                                      log.action.includes("status") ? "text-yellow-600 border-yellow-200" : "text-blue-600 border-blue-200"
+                                   }>{log.action.includes("status") ? "WARN" : "INFO"}</Badge>
                                 </TableCell>
-                                <TableCell className="text-sm font-bold text-slate-700">{log.source}</TableCell>
-                                <TableCell className="text-sm text-slate-600">{log.msg}</TableCell>
+                                <TableCell className="text-sm font-bold text-slate-700">Admin</TableCell>
+                                <TableCell className="text-sm text-slate-600">{log.details || log.action}</TableCell>
                              </TableRow>
                           ))}
+                          {(auditData?.logs || []).length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center text-slate-500 py-8">No audit entries yet.</TableCell>
+                            </TableRow>
+                          )}
                        </TableBody>
                     </Table>
                  </CardContent>

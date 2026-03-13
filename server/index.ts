@@ -7,6 +7,7 @@ import { logger } from "./logger";
 import { ConsoleMenu } from "./consoleMenu";
 import { setupAuth } from "./basicAuth";
 import { registerAccountRoutes } from "./routes-account";
+import { registerAdminRoutes } from "./routes-admin";
 import { registerGuildRoutes } from "./routes-guilds";
 import { ServerStatusService } from "./services/serverStatusService";
 
@@ -191,6 +192,7 @@ import { seedOgameCatalogIfNeeded } from "./services/ogameCatalogService";
   registerUnitSystemsRoutes(app);
   registerGovernmentLeaderRoutes(app);
   registerAccountRoutes(app);
+  registerAdminRoutes(app);
   registerGuildRoutes(app);
   app.use(turnSystemRoutes);
   app.use(researchXPRoutes);

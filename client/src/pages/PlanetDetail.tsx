@@ -41,6 +41,22 @@ interface PlanetData {
   };
 }
 
+interface PlanetDefenseResponse {
+  defenseScore: number;
+  systems: Array<{
+    key: string;
+    label: string;
+    level: number;
+    powerPerLevel: number;
+    totalPower: number;
+    nextCost: {
+      metal: number;
+      crystal: number;
+      deuterium: number;
+    };
+  }>;
+}
+
 export default function PlanetDetail() {
   const [, params] = useRoute("/planet/:id");
   const planetId = params?.id || "";
@@ -113,6 +129,48 @@ export default function PlanetDetail() {
     onError: (error: Error) => {
       toast({
         title: "Construction Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const defenseQuery = useQuery<PlanetDefenseResponse>({
+    queryKey: ["planet-defense", planetId],
+    queryFn: async () => {
+      const res = await fetch(`/api/planets/${planetId}/defense`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load defense systems");
+      return res.json();
+    },
+    enabled: !!planetId && !!planet?.colonized,
+  });
+
+  const defenseUpgradeMutation = useMutation({
+    mutationFn: async (systemKey: string) => {
+      const res = await fetch(`/api/planets/${planetId}/defense/upgrade`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ systemKey }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || error.message || "Failed to upgrade defense system");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Defense Upgrade Complete",
+        description: data.message,
+      });
+      queryClient.invalidateQueries({ queryKey: ["planet-defense", planetId] });
+      queryClient.invalidateQueries({ queryKey: ["planet", planetId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/game/state"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Defense Upgrade Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -438,10 +496,47 @@ export default function PlanetDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <Shield className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                  <p className="text-muted-foreground">Defense systems coming soon</p>
-                </div>
+                {!planet.colonized ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Colonize this planet to build planetary defenses.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded border border-slate-200 bg-slate-50 p-4 flex items-center justify-between">
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-slate-500">Total Defense Score</div>
+                        <div className="text-2xl font-bold text-slate-900">{defenseQuery.data?.defenseScore?.toLocaleString() || 0}</div>
+                      </div>
+                      <Badge className="bg-blue-100 text-blue-800">Planetary Grid Active</Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(defenseQuery.data?.systems || []).map((system) => (
+                        <Card key={system.key}>
+                          <CardHeader>
+                            <CardTitle className="flex items-center justify-between text-base">
+                              <span>{system.label}</span>
+                              <Badge>Level {system.level}</Badge>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="text-xs text-slate-500">Power per level: {system.powerPerLevel} • Total power: {system.totalPower}</div>
+                            <div className="text-xs text-slate-500">
+                              Upgrade Cost: {system.nextCost.metal.toLocaleString()}M / {system.nextCost.crystal.toLocaleString()}C / {system.nextCost.deuterium.toLocaleString()}D
+                            </div>
+                            <Button
+                              className="w-full"
+                              onClick={() => defenseUpgradeMutation.mutate(system.key)}
+                              disabled={defenseUpgradeMutation.isPending}
+                            >
+                              <Shield className="w-4 h-4 mr-2" /> Upgrade Defense
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

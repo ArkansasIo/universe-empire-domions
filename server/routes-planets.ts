@@ -26,6 +26,15 @@ const STATION_MODULES: Record<string, { label: string; baseCost: { metal: number
   defenseMatrix: { label: "Defense Matrix", baseCost: { metal: 1100, crystal: 600, deuterium: 350 } },
 };
 
+const DEFENSE_SYSTEMS: Record<string, { label: string; baseCost: { metal: number; crystal: number; deuterium: number }; power: number }> = {
+  missileBattery: { label: "Missile Battery", baseCost: { metal: 350, crystal: 120, deuterium: 40 }, power: 15 },
+  laserTurret: { label: "Laser Turret", baseCost: { metal: 500, crystal: 280, deuterium: 90 }, power: 26 },
+  gaussCannon: { label: "Gauss Cannon", baseCost: { metal: 900, crystal: 450, deuterium: 180 }, power: 42 },
+  shieldGenerator: { label: "Shield Generator", baseCost: { metal: 1200, crystal: 700, deuterium: 260 }, power: 55 },
+};
+
+const PLANET_DEFENSE_STATE: Record<string, Record<string, number>> = {};
+
 function getOrCreateSubPlaneState(planetId: string, planet: any): SubPlaneState {
   if (!SUB_PLANE_STATE[planetId]) {
     const baseMoonLevel = Math.max(1, Math.floor((planet?.buildings?.deuteriumSynthesizer || 0) / 2) + 1);
@@ -56,6 +65,26 @@ function getUpgradeCost(baseCost: { metal: number; crystal: number; deuterium: n
     crystal: Math.floor(baseCost.crystal * multiplier),
     deuterium: Math.floor(baseCost.deuterium * multiplier),
   };
+}
+
+function getOrCreateDefenseState(planetId: string, planet: any): Record<string, number> {
+  if (!PLANET_DEFENSE_STATE[planetId]) {
+    const baseLevel = Math.max(1, Math.floor((planet?.buildings?.roboticsFactory || 0) / 2));
+    PLANET_DEFENSE_STATE[planetId] = {
+      missileBattery: baseLevel + 1,
+      laserTurret: baseLevel,
+      gaussCannon: Math.max(0, baseLevel - 1),
+      shieldGenerator: Math.max(0, baseLevel - 1),
+    };
+  }
+  return PLANET_DEFENSE_STATE[planetId];
+}
+
+function calculateDefenseScore(defenseState: Record<string, number>): number {
+  return Object.entries(defenseState).reduce((total, [systemKey, level]) => {
+    const power = DEFENSE_SYSTEMS[systemKey]?.power || 0;
+    return total + level * power;
+  }, 0);
 }
 
 // Sample planet database (in production, this would be in a database)
@@ -524,6 +553,119 @@ export function registerPlanetRoutes(app: Express) {
     } catch (error) {
       console.error("Error upgrading sub-plane module:", error);
       res.status(500).json({ error: "Failed to upgrade sub-plane module" });
+    }
+  });
+
+  app.get("/api/planets/:id/defense", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const planetId = req.params.id;
+      const planet = PLANET_DATABASE[planetId];
+
+      if (!planet) {
+        return res.status(404).json({ error: "Planet not found" });
+      }
+
+      const defenseState = getOrCreateDefenseState(planetId, planet);
+      const systems = Object.entries(DEFENSE_SYSTEMS).map(([key, definition]) => {
+        const level = defenseState[key] || 0;
+        return {
+          key,
+          label: definition.label,
+          level,
+          powerPerLevel: definition.power,
+          totalPower: level * definition.power,
+          nextCost: getUpgradeCost(definition.baseCost, level),
+        };
+      });
+
+      const defenseScore = calculateDefenseScore(defenseState);
+      planet.defenses = defenseScore;
+
+      res.json({
+        defenseScore,
+        systems,
+      });
+    } catch (error) {
+      console.error("Error loading planetary defense:", error);
+      res.status(500).json({ error: "Failed to load planetary defense" });
+    }
+  });
+
+  app.post("/api/planets/:id/defense/upgrade", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const planetId = req.params.id;
+      const systemKey = String(req.body?.systemKey || "");
+      const planet = PLANET_DATABASE[planetId];
+
+      if (!planet) {
+        return res.status(404).json({ error: "Planet not found" });
+      }
+
+      if (!planet.colonized) {
+        return res.status(400).json({ error: "Planet must be colonized first" });
+      }
+
+      const definition = DEFENSE_SYSTEMS[systemKey];
+      if (!definition) {
+        return res.status(400).json({ error: "Invalid defense system" });
+      }
+
+      const userId = req.session!.userId!;
+      const playerState = await db.query.playerStates.findFirst({
+        where: eq(playerStates.userId, userId),
+      });
+
+      if (!playerState) {
+        return res.status(404).json({ error: "Player state not found" });
+      }
+
+      const defenseState = getOrCreateDefenseState(planetId, planet);
+      const currentLevel = defenseState[systemKey] || 0;
+      const nextLevel = currentLevel + 1;
+      const cost = getUpgradeCost(definition.baseCost, currentLevel);
+      const resources = playerState.resources as any;
+
+      if (
+        resources.metal < cost.metal ||
+        resources.crystal < cost.crystal ||
+        resources.deuterium < cost.deuterium
+      ) {
+        return res.status(400).json({
+          error: "Insufficient resources",
+          required: cost,
+          available: resources,
+        });
+      }
+
+      const newResources = {
+        ...resources,
+        metal: resources.metal - cost.metal,
+        crystal: resources.crystal - cost.crystal,
+        deuterium: resources.deuterium - cost.deuterium,
+      };
+
+      await db
+        .update(playerStates)
+        .set({
+          resources: newResources,
+          updatedAt: new Date(),
+        })
+        .where(eq(playerStates.userId, userId));
+
+      defenseState[systemKey] = nextLevel;
+      const defenseScore = calculateDefenseScore(defenseState);
+      planet.defenses = defenseScore;
+
+      res.json({
+        message: `${definition.label} upgraded to level ${nextLevel}`,
+        systemKey,
+        level: nextLevel,
+        cost,
+        defenseScore,
+      });
+    } catch (error) {
+      console.error("Error upgrading planetary defense:", error);
+      res.status(500).json({ error: "Failed to upgrade planetary defense" });
     }
   });
 }
