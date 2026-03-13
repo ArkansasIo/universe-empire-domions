@@ -8,6 +8,8 @@ import { ConsoleMenu } from "./consoleMenu";
 import { setupAuth } from "./basicAuth";
 import { registerAccountRoutes } from "./routes-account";
 import { registerAdminRoutes } from "./routes-admin";
+import { registerAllianceRoutes } from "./routes-alliances";
+import { registerArtifactRoutes } from "./routes-artifacts";
 import { registerGuildRoutes } from "./routes-guilds";
 import { ServerStatusService } from "./services/serverStatusService";
 
@@ -193,6 +195,8 @@ import { seedOgameCatalogIfNeeded } from "./services/ogameCatalogService";
   registerGovernmentLeaderRoutes(app);
   registerAccountRoutes(app);
   registerAdminRoutes(app);
+  registerAllianceRoutes(app);
+  registerArtifactRoutes(app);
   registerGuildRoutes(app);
   app.use(turnSystemRoutes);
   app.use(researchXPRoutes);

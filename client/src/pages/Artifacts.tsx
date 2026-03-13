@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Artifact, ArtifactRarity } from "@/lib/artifactData";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 const RarityBadge = ({ rarity }: { rarity: ArtifactRarity }) => {
    const colors = {
@@ -26,20 +27,53 @@ const RarityBadge = ({ rarity }: { rarity: ArtifactRarity }) => {
    return <Badge variant="outline" className={cn("uppercase text-[10px]", colors[rarity])}>{rarity}</Badge>;
 };
 
-const mockDiscoveryLog = [
-  { id: 1, name: "Precursor Power Cell", location: "Gamma Sector, Planet Kepler-22b", date: "2024-02-15", rarity: "rare" },
-  { id: 2, name: "Ancient Navigation Matrix", location: "Debris Field, System X-47", date: "2024-02-10", rarity: "epic" },
-  { id: 3, name: "Crystalline Resonator", location: "Deep Space Expedition", date: "2024-01-28", rarity: "uncommon" }
-];
-
 const setBonus = [
   { set: "Precursor Set", pieces: 3, collected: 2, bonus: "+15% research speed when complete" },
   { set: "Ancient Armory", pieces: 4, collected: 1, bonus: "+20% fleet attack when complete" },
   { set: "Void Touched", pieces: 2, collected: 2, bonus: "+10% deuterium production (ACTIVE)" }
 ];
 
+type ArtifactSummaryResponse = {
+   totalExpeditions: number;
+   successRate: number;
+   artifactsFound: number;
+   legendaryCount: number;
+};
+
+type DiscoveryLogResponse = {
+   discoveries: Array<{
+      id: string;
+      name: string;
+      location: string;
+      date: string;
+      rarity: ArtifactRarity;
+      discoveryType: string;
+      techId: string;
+      xpGained: number;
+   }>;
+};
+
+async function fetchJson<T>(url: string): Promise<T> {
+   const response = await fetch(url, { credentials: "include" });
+   const payload = await response.json().catch(() => null);
+   if (!response.ok) {
+      throw new Error(payload?.message || payload?.error || "Request failed");
+   }
+   return payload as T;
+}
+
 export default function Artifacts() {
   const { artifacts, activateArtifact } = useGame();
+
+   const { data: artifactSummary } = useQuery<ArtifactSummaryResponse>({
+      queryKey: ["artifact-summary"],
+      queryFn: () => fetchJson<ArtifactSummaryResponse>("/api/artifacts/summary"),
+   });
+
+   const { data: discoveryLog } = useQuery<DiscoveryLogResponse>({
+      queryKey: ["artifact-discovery-log"],
+      queryFn: () => fetchJson<DiscoveryLogResponse>("/api/artifacts/discovery-log"),
+   });
 
   const passiveArtifacts = artifacts.filter(a => a.type === "passive");
   const activeArtifacts = artifacts.filter(a => a.type === "active");
@@ -318,21 +352,19 @@ export default function Artifacts() {
                        <div className="grid grid-cols-2 gap-4">
                           <div className="bg-slate-50 p-4 rounded border border-slate-200 text-center">
                              <div className="text-xs text-slate-500 uppercase">Total Expeditions</div>
-                             <div className="text-2xl font-mono font-bold text-slate-900">24</div>
+                                <div className="text-2xl font-mono font-bold text-slate-900">{artifactSummary?.totalExpeditions ?? 0}</div>
                           </div>
                           <div className="bg-slate-50 p-4 rounded border border-slate-200 text-center">
                              <div className="text-xs text-slate-500 uppercase">Success Rate</div>
-                             <div className="text-2xl font-mono font-bold text-green-600">87%</div>
+                                <div className="text-2xl font-mono font-bold text-green-600">{artifactSummary?.successRate ?? 0}%</div>
                           </div>
                           <div className="bg-slate-50 p-4 rounded border border-slate-200 text-center">
                              <div className="text-xs text-slate-500 uppercase">Artifacts Found</div>
-                             <div className="text-2xl font-mono font-bold text-purple-600">{artifacts.length}</div>
+                                <div className="text-2xl font-mono font-bold text-purple-600">{artifactSummary?.artifactsFound ?? artifacts.length}</div>
                           </div>
                           <div className="bg-slate-50 p-4 rounded border border-slate-200 text-center">
                              <div className="text-xs text-slate-500 uppercase">Legendaries</div>
-                             <div className="text-2xl font-mono font-bold text-yellow-600">
-                                {artifacts.filter(a => a.rarity === "legendary" || a.rarity === "ancient").length}
-                             </div>
+                                <div className="text-2xl font-mono font-bold text-yellow-600">{artifactSummary?.legendaryCount ?? artifacts.filter(a => a.rarity === "legendary" || a.rarity === "ancient").length}</div>
                           </div>
                        </div>
                     </CardContent>
@@ -349,14 +381,14 @@ export default function Artifacts() {
                     <CardDescription>Record of all artifacts discovered through expeditions.</CardDescription>
                  </CardHeader>
                  <CardContent>
-                    {mockDiscoveryLog.length === 0 ? (
+                    {(discoveryLog?.discoveries || []).length === 0 ? (
                        <div className="text-center py-12 text-slate-400">
                           <History className="w-12 h-12 mx-auto mb-4 opacity-30" />
                           <p>No discoveries yet. Launch an expedition to find artifacts!</p>
                        </div>
                     ) : (
                        <div className="space-y-3">
-                          {mockDiscoveryLog.map(entry => (
+                          {(discoveryLog?.discoveries || []).map(entry => (
                              <div key={entry.id} className="flex items-center justify-between p-4 bg-slate-50 rounded border border-slate-200">
                                 <div className="flex items-center gap-4">
                                    <div className="w-10 h-10 bg-purple-100 rounded flex items-center justify-center">
@@ -370,8 +402,8 @@ export default function Artifacts() {
                                    </div>
                                 </div>
                                 <div className="text-right">
-                                   <RarityBadge rarity={entry.rarity as ArtifactRarity} />
-                                   <div className="text-xs text-slate-400 mt-1">{entry.date}</div>
+                                   <RarityBadge rarity={entry.rarity} />
+                                   <div className="text-xs text-slate-400 mt-1">{new Date(entry.date).toLocaleDateString()}</div>
                                 </div>
                              </div>
                           ))}
