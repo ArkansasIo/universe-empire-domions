@@ -44,6 +44,23 @@ type AdminAuditResponse = {
    }>;
 };
 
+type AdminConsoleExecuteResponse = {
+   success: boolean;
+   output: string;
+};
+
+type AdminUserDetailResponse = {
+   user: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      status: "active" | "muted" | "banned";
+      createdAt: string | null;
+      lastLogin: string | null;
+   };
+};
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
    const response = await fetch(url, {
       credentials: "include",
@@ -102,6 +119,37 @@ export default function Admin() {
       },
    });
 
+   const consoleCommandMutation = useMutation({
+      mutationFn: (command: string) =>
+         fetchJson<AdminConsoleExecuteResponse>("/api/admin/console/execute", {
+            method: "POST",
+            body: JSON.stringify({ command }),
+         }),
+      onSuccess: (result) => {
+         setConsoleLog((prev) => [...prev, result.output]);
+         queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
+         queryClient.invalidateQueries({ queryKey: ["admin-audit"] });
+      },
+      onError: (error: Error) => {
+         setConsoleLog((prev) => [...prev, `Command failed: ${error.message}`]);
+         toast({ title: "Command failed", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const viewUserDetailMutation = useMutation({
+      mutationFn: (userId: string) => fetchJson<AdminUserDetailResponse>(`/api/admin/users/${userId}`),
+      onSuccess: (payload) => {
+         const user = payload.user;
+         toast({
+            title: `User: ${user.name}`,
+            description: `${user.email} • ${user.role} • ${user.status} • Joined ${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown"}`,
+         });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Unable to load user details", description: error.message, variant: "destructive" });
+      },
+   });
+
    const adminUsers = usersData?.users || [];
    const filteredUsers = adminUsers.filter((user) => {
       const key = search.toLowerCase();
@@ -133,19 +181,13 @@ export default function Admin() {
      
      const cmd = consoleCommand.trim();
      setConsoleLog(prev => [...prev, `> ${cmd}`]);
-     
-     if (cmd === "help") {
-        setConsoleLog(prev => [...prev, "Available commands: help, clear, status, give_res [amount], kick_all"]);
-     } else if (cmd === "clear") {
+     if (cmd === "clear") {
         setConsoleLog([]);
-     } else if (cmd === "status") {
-        setConsoleLog(prev => [...prev, `Server Status: ONLINE | Users: ${adminUsers.length} | Banned: ${overviewData?.bannedUsers || 0}`]);
-     } else if (cmd.startsWith("give_res")) {
-        addEvent("Admin Action", "Resources generated via console.", "warning");
-        setConsoleLog(prev => [...prev, "Resources added to current user."]);
-     } else {
-        setConsoleLog(prev => [...prev, `Unknown command: ${cmd}`]);
+        setConsoleCommand("");
+        return;
      }
+
+     consoleCommandMutation.mutate(cmd);
      
      setConsoleCommand("");
   };
@@ -269,7 +311,7 @@ export default function Admin() {
                                 <TableCell className="text-slate-500 text-sm">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "-"}</TableCell>
                                 <TableCell className="font-mono text-xs text-slate-500">{user.ip}</TableCell>
                                 <TableCell className="text-right space-x-2">
-                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => toast({ title: "User details", description: `${user.name} • ${user.email} • ${user.role}` })}>
+                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => viewUserDetailMutation.mutate(user.id)} disabled={viewUserDetailMutation.isPending}>
                                       <Eye className="w-4 h-4" />
                                    </Button>
                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-yellow-600" onClick={() => handleMute(user.id)}>
@@ -308,6 +350,7 @@ export default function Admin() {
                           className="flex-1 bg-transparent border-none outline-none text-green-500 placeholder-green-800" 
                           placeholder="Enter system command..."
                           value={consoleCommand}
+                          disabled={consoleCommandMutation.isPending}
                           onChange={(e) => setConsoleCommand(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && executeCommand()}
                           autoFocus

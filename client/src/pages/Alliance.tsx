@@ -126,7 +126,7 @@ export default function Alliance() {
       enabled: !!alliance,
    });
 
-   const { data: allianceDirectory } = useQuery<AllianceDirectoryEntry[]>({
+   const { data: allianceDirectory, refetch: refetchAllianceDirectory, isFetching: isFetchingAllianceDirectory } = useQuery<AllianceDirectoryEntry[]>({
       queryKey: ["alliance-directory"],
       queryFn: () => fetchJson<AllianceDirectoryEntry[]>("/api/alliances"),
    });
@@ -548,6 +548,13 @@ export default function Alliance() {
                                                 <Input
                                                    value={chatMessage}
                                                    onChange={(event) => setChatMessage(event.target.value)}
+                                                   onKeyDown={(event) => {
+                                                      if (event.key !== "Enter") return;
+                                                      event.preventDefault();
+                                                      const content = chatMessage.trim();
+                                                      if (!content || sendGuildMessageMutation.isPending) return;
+                                                      sendGuildMessageMutation.mutate(content);
+                                                   }}
                                                    placeholder="Transmit alliance message..."
                                                    className="bg-slate-50"
                                                 />
@@ -557,7 +564,7 @@ export default function Alliance() {
                                                       if (!content) return;
                                                       sendGuildMessageMutation.mutate(content);
                                                    }}
-                                                   disabled={sendGuildMessageMutation.isPending}
+                                                   disabled={sendGuildMessageMutation.isPending || !chatMessage.trim()}
                                                 >
                                                    Send
                                                 </Button>
@@ -602,7 +609,9 @@ export default function Alliance() {
                           className="bg-slate-50 border-slate-200"
                           data-testid="input-search-alliance"
                        />
-                       <Button onClick={() => toast({ title: "Alliance search", description: `Showing ${visibleAlliances.length} matching alliances.` })} data-testid="button-search-alliance">Search</Button>
+                       <Button onClick={() => refetchAllianceDirectory()} disabled={isFetchingAllianceDirectory} data-testid="button-search-alliance">
+                          {isFetchingAllianceDirectory ? "Searching..." : "Search"}
+                       </Button>
                     </div>
 
                     <div className="space-y-4">

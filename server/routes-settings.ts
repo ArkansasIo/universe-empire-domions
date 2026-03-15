@@ -30,7 +30,7 @@ const DEFAULT_PLAYER_OPTIONS = {
   },
   privacy: {
     hideOnlineStatus: false,
-    blockStrangerMessages: false,
+    blockStrangers: false,
   },
 };
 
@@ -39,11 +39,17 @@ function getPlayerOptionsKey(userId: string) {
 }
 
 function mergePlayerOptions(value: any) {
+  const incomingPrivacy = value?.privacy || {};
+  const normalizedPrivacy = {
+    hideOnlineStatus: Boolean(incomingPrivacy.hideOnlineStatus),
+    blockStrangers: Boolean(incomingPrivacy.blockStrangers ?? incomingPrivacy.blockStrangerMessages),
+  };
+
   return {
     notifications: { ...DEFAULT_PLAYER_OPTIONS.notifications, ...(value?.notifications || {}) },
     display: { ...DEFAULT_PLAYER_OPTIONS.display, ...(value?.display || {}) },
     sound: { ...DEFAULT_PLAYER_OPTIONS.sound, ...(value?.sound || {}) },
-    privacy: { ...DEFAULT_PLAYER_OPTIONS.privacy, ...(value?.privacy || {}) },
+    privacy: { ...DEFAULT_PLAYER_OPTIONS.privacy, ...normalizedPrivacy },
   };
 }
 

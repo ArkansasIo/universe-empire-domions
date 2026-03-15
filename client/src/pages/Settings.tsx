@@ -64,9 +64,27 @@ type PlayerOptions = {
    };
 };
 
-type PlayerOptionsResponse = {
+type AdminOperationResponse = {
    success: boolean;
-   options: PlayerOptions;
+   message: string;
+   operation: {
+      id: string;
+      type: "backup_snapshot" | "reset_universe" | "restart_server";
+      status: "queued" | "completed";
+      requestedAt: number;
+   };
+};
+
+type AdminOperationLogResponse = {
+   operations: Array<{
+      id: string;
+      type: "backup_snapshot" | "reset_universe" | "restart_server";
+      status: "queued" | "completed";
+      requestedBy: string;
+      requestedAt: number;
+      completedAt?: number;
+      notes?: string;
+   }>;
 };
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -96,6 +114,13 @@ export default function Settings() {
   const [bioMessage, setBioMessage] = useState("");
    const [accountEmail, setAccountEmail] = useState("");
    const [profileImageUrl, setProfileImageUrl] = useState("");
+   const [newEmailInput, setNewEmailInput] = useState("");
+   const [currentPasswordInput, setCurrentPasswordInput] = useState("");
+   const [newPasswordInput, setNewPasswordInput] = useState("");
+   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+   const [deletePasswordInput, setDeletePasswordInput] = useState("");
+   const [resetConfirmInput, setResetConfirmInput] = useState("");
+   const [restartAcknowledge, setRestartAcknowledge] = useState(false);
    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
    const { toast } = useToast();
   
@@ -115,7 +140,9 @@ export default function Settings() {
     compactView: false,
     showAnimations: true,
     showResourceRates: true,
-    language: "en"
+      language: "en",
+      timeFormat: "24h",
+      numberFormat: "comma",
   });
 
   const [soundSettings, setSoundSettings] = useState({
@@ -135,9 +162,16 @@ export default function Settings() {
       queryFn: () => fetchJson<AccountSettingsResponse>("/api/account/settings"),
    });
 
-   const { data: playerOptions } = useQuery<PlayerOptionsResponse>({
+   const { data: playerOptions } = useQuery<PlayerOptions>({
       queryKey: ["player-options"],
-      queryFn: () => fetchJson<PlayerOptionsResponse>("/api/settings/player/options"),
+      queryFn: () => fetchJson<PlayerOptions>("/api/settings/player/options"),
+   });
+
+   const { data: adminOperations } = useQuery<AdminOperationLogResponse>({
+      queryKey: ["admin-operations"],
+      queryFn: () => fetchJson<AdminOperationLogResponse>("/api/admin/operations"),
+      enabled: isAdmin,
+      refetchInterval: isAdmin ? 15000 : false,
    });
 
    useEffect(() => {
@@ -149,25 +183,28 @@ export default function Settings() {
       setCommanderTitle(accountSettings.commanderTitle || "commander");
       setBioMessage(accountSettings.bioMessage || "");
       setAccountEmail(accountSettings.email || "");
+      setNewEmailInput(accountSettings.email || "");
       setProfileImageUrl(accountSettings.profileImageUrl || "");
       setTwoFactorEnabled(Boolean(accountSettings.twoFactorEnabled));
    }, [accountSettings, username]);
 
    useEffect(() => {
-      if (!playerOptions?.options) {
+      if (!playerOptions) {
          return;
       }
 
-      setNotifications(playerOptions.options.notifications);
+      setNotifications(playerOptions.notifications);
       setDisplaySettings({
-         darkMode: playerOptions.options.display.darkMode,
-         compactView: playerOptions.options.display.compactView,
-         showAnimations: playerOptions.options.display.showAnimations,
-         showResourceRates: playerOptions.options.display.showResourceRates,
-         language: playerOptions.options.display.language,
+         darkMode: playerOptions.display.darkMode,
+         compactView: playerOptions.display.compactView,
+         showAnimations: playerOptions.display.showAnimations,
+         showResourceRates: playerOptions.display.showResourceRates,
+         language: playerOptions.display.language,
+         timeFormat: playerOptions.display.timeFormat,
+         numberFormat: playerOptions.display.numberFormat,
       });
-      setSoundSettings(playerOptions.options.sound);
-      setPrivacySettings(playerOptions.options.privacy);
+      setSoundSettings(playerOptions.sound);
+      setPrivacySettings(playerOptions.privacy);
    }, [playerOptions]);
 
    const saveProfileMutation = useMutation({
@@ -221,15 +258,11 @@ export default function Settings() {
    });
 
    const savePlayerOptionsMutation = useMutation({
-      mutationFn: () => fetchJson<PlayerOptionsResponse>("/api/settings/player/options", {
+      mutationFn: () => fetchJson<PlayerOptions>("/api/settings/player/options", {
          method: "PUT",
          body: JSON.stringify({
             notifications,
-            display: {
-               ...displaySettings,
-               timeFormat: playerOptions?.options.display.timeFormat || "24h",
-               numberFormat: playerOptions?.options.display.numberFormat || "comma",
-            },
+            display: displaySettings,
             sound: soundSettings,
             privacy: privacySettings,
          }),
@@ -240,6 +273,46 @@ export default function Settings() {
       },
       onError: (error: Error) => {
          toast({ title: "Unable to save options", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const backupSnapshotMutation = useMutation({
+      mutationFn: () => fetchJson<AdminOperationResponse>("/api/admin/operations/backup", {
+         method: "POST",
+      }),
+      onSuccess: (result) => {
+         toast({ title: "Backup created", description: result.message });
+         queryClient.invalidateQueries({ queryKey: ["admin-operations"] });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Backup failed", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const resetUniverseMutation = useMutation({
+      mutationFn: () => fetchJson<AdminOperationResponse>("/api/admin/operations/reset-universe", {
+         method: "POST",
+         body: JSON.stringify({ confirmText: "RESET" }),
+      }),
+      onSuccess: (result) => {
+         toast({ title: "Universe reset queued", description: result.message, variant: "destructive" });
+         queryClient.invalidateQueries({ queryKey: ["admin-operations"] });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Reset failed", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const restartServerMutation = useMutation({
+      mutationFn: () => fetchJson<AdminOperationResponse>("/api/admin/operations/restart", {
+         method: "POST",
+      }),
+      onSuccess: (result) => {
+         toast({ title: "Server restart queued", description: result.message, variant: "destructive" });
+         queryClient.invalidateQueries({ queryKey: ["admin-operations"] });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Restart failed", description: error.message, variant: "destructive" });
       },
    });
 
@@ -262,8 +335,9 @@ export default function Settings() {
    };
 
    const handleChangeEmail = () => {
-      const nextEmail = window.prompt("Enter your new email address", accountEmail || "");
+      const nextEmail = newEmailInput.trim();
       if (!nextEmail) {
+         toast({ title: "Email required", description: "Enter a valid email address.", variant: "destructive" });
          return;
       }
       setAccountEmail(nextEmail);
@@ -271,32 +345,37 @@ export default function Settings() {
    };
 
    const handleChangePassword = () => {
-      const currentPassword = window.prompt("Enter your current password");
+      const currentPassword = currentPasswordInput.trim();
       if (!currentPassword) {
+         toast({ title: "Current password required", description: "Provide your current password.", variant: "destructive" });
          return;
       }
-      const newPassword = window.prompt("Enter your new password (minimum 6 characters)");
+      const newPassword = newPasswordInput.trim();
       if (!newPassword) {
+         toast({ title: "New password required", description: "Enter a new password.", variant: "destructive" });
          return;
       }
       changePasswordMutation.mutate({ currentPassword, newPassword });
+      setCurrentPasswordInput("");
+      setNewPasswordInput("");
    };
 
    const handleDeleteAccount = async () => {
-      const confirmText = window.prompt('Type DELETE to confirm permanent account removal');
-      if (confirmText !== "DELETE") {
+      if (deleteConfirmInput.trim() !== "DELETE") {
+         toast({ title: "Confirmation required", description: "Type DELETE to confirm account removal.", variant: "destructive" });
          return;
       }
 
-      const currentPassword = window.prompt("Enter your current password to permanently delete the account");
+      const currentPassword = deletePasswordInput.trim();
       if (!currentPassword) {
+         toast({ title: "Password required", description: "Enter your password to delete account.", variant: "destructive" });
          return;
       }
 
       try {
          await fetchJson("/api/account", {
             method: "DELETE",
-            body: JSON.stringify({ currentPassword, confirmText }),
+            body: JSON.stringify({ currentPassword, confirmText: "DELETE" }),
          });
          toast({ title: "Account deleted", description: "Your account has been permanently removed." });
          setLocation("/");
@@ -359,17 +438,7 @@ export default function Settings() {
                              <div className="font-orbitron font-bold text-lg text-slate-900">{username || "Commander"}</div>
                              <div className="text-sm text-slate-500">Active since {new Date().toLocaleDateString()}</div>
                           </div>
-                          <Button
-                             variant="outline"
-                             size="sm"
-                             onClick={() => {
-                               const nextUrl = window.prompt("Enter avatar image URL", profileImageUrl || "");
-                               if (nextUrl === null) return;
-                               setProfileImageUrl(nextUrl.trim());
-                             }}
-                          >
-                             Change Avatar
-                          </Button>
+                         <Badge variant="outline" className="text-xs">Profile</Badge>
                        </div>
                        
                        <Separator />
@@ -398,6 +467,10 @@ export default function Settings() {
                              <label className="text-sm font-bold text-slate-700">Bio / Status Message</label>
                              <Input value={bioMessage} onChange={(e) => setBioMessage(e.target.value)} placeholder="Set your status message..." className="bg-slate-50 border-slate-200" />
                           </div>
+                          <div className="space-y-2">
+                             <label className="text-sm font-bold text-slate-700">Avatar URL</label>
+                             <Input value={profileImageUrl} onChange={(e) => setProfileImageUrl(e.target.value)} placeholder="https://..." className="bg-slate-50 border-slate-200" />
+                          </div>
                        </div>
                        
                        <Button className="w-full" onClick={() => saveProfileMutation.mutate()} disabled={saveProfileMutation.isPending}>
@@ -422,8 +495,9 @@ export default function Settings() {
                                    <div className="text-xs text-slate-500">{accountEmail || "No email set"}</div>
                                 </div>
                              </div>
-                             <Button variant="ghost" size="sm" onClick={handleChangeEmail} disabled={changeEmailMutation.isPending}>Change</Button>
+                             <Button variant="ghost" size="sm" onClick={handleChangeEmail} disabled={changeEmailMutation.isPending}>Update</Button>
                           </div>
+                          <Input value={newEmailInput} onChange={(e) => setNewEmailInput(e.target.value)} placeholder="new-email@example.com" className="bg-slate-50 border-slate-200" />
                           
                           <div className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100">
                              <div className="flex items-center gap-3">
@@ -433,8 +507,10 @@ export default function Settings() {
                                    <div className="text-xs text-slate-500">Last changed 30 days ago</div>
                                 </div>
                              </div>
-                             <Button variant="ghost" size="sm" onClick={handleChangePassword} disabled={changePasswordMutation.isPending}>Change</Button>
+                             <Button variant="ghost" size="sm" onClick={handleChangePassword} disabled={changePasswordMutation.isPending}>Update</Button>
                           </div>
+                          <Input type="password" value={currentPasswordInput} onChange={(e) => setCurrentPasswordInput(e.target.value)} placeholder="Current password" className="bg-slate-50 border-slate-200" />
+                          <Input type="password" value={newPasswordInput} onChange={(e) => setNewPasswordInput(e.target.value)} placeholder="New password (min 6 characters)" className="bg-slate-50 border-slate-200" />
                           
                           <div className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100">
                              <div className="flex items-center gap-3">
@@ -486,7 +562,9 @@ export default function Settings() {
                           <Button variant="outline" className="w-full justify-start text-orange-600 hover:bg-orange-50" onClick={logout}>
                              <LogOut className="w-4 h-4 mr-2" /> Logout from All Devices
                           </Button>
-                          <Button variant="outline" className="w-full justify-start text-red-600 hover:bg-red-50" onClick={handleDeleteAccount}>
+                          <Input value={deleteConfirmInput} onChange={(e) => setDeleteConfirmInput(e.target.value)} placeholder="Type DELETE to confirm" className="bg-red-50 border-red-200" />
+                          <Input type="password" value={deletePasswordInput} onChange={(e) => setDeletePasswordInput(e.target.value)} placeholder="Current password" className="bg-red-50 border-red-200" />
+                          <Button variant="outline" className="w-full justify-start text-red-600 hover:bg-red-50" onClick={handleDeleteAccount} disabled={deleteConfirmInput.trim() !== "DELETE" || !deletePasswordInput.trim()}>
                              <Trash2 className="w-4 h-4 mr-2" /> Delete Account Permanently
                           </Button>
                        </CardContent>
@@ -644,7 +722,7 @@ export default function Settings() {
                        
                        <div className="space-y-2">
                           <label className="text-sm font-bold text-slate-700">Time Format</label>
-                          <Select defaultValue={playerOptions?.options.display.timeFormat || "24h"}>
+                          <Select value={displaySettings.timeFormat} onValueChange={(v) => setDisplaySettings({ ...displaySettings, timeFormat: v })}>
                              <SelectTrigger className="bg-slate-50 border-slate-200">
                                 <SelectValue />
                              </SelectTrigger>
@@ -657,7 +735,7 @@ export default function Settings() {
                        
                        <div className="space-y-2">
                           <label className="text-sm font-bold text-slate-700">Number Format</label>
-                          <Select defaultValue={playerOptions?.options.display.numberFormat || "comma"}>
+                          <Select value={displaySettings.numberFormat} onValueChange={(v) => setDisplaySettings({ ...displaySettings, numberFormat: v })}>
                              <SelectTrigger className="bg-slate-50 border-slate-200">
                                 <SelectValue />
                              </SelectTrigger>
@@ -885,21 +963,59 @@ export default function Settings() {
                             Manage local game data and server snapshots.
                          </div>
                          
-                         <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: "Backup created", description: "Snapshot has been queued successfully." })}>
-                            <Save className="w-4 h-4 mr-2" /> Create Backup Snapshot
+                         <Button
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => backupSnapshotMutation.mutate()}
+                            disabled={backupSnapshotMutation.isPending || resetUniverseMutation.isPending || restartServerMutation.isPending}
+                         >
+                            <Save className="w-4 h-4 mr-2" /> {backupSnapshotMutation.isPending ? "Creating Backup..." : "Create Backup Snapshot"}
                          </Button>
                          <Button variant="outline" className="w-full justify-start" onClick={() => {
-                           if (!confirm("This will erase all universe data! Continue?")) return;
-                           toast({ title: "Universe reset", description: "Reset operation has been queued.", variant: "destructive" });
-                         }}>
+                           if (resetConfirmInput.trim() !== "RESET") {
+                              toast({ title: "Reset cancelled", description: "Confirmation text did not match.", variant: "destructive" });
+                              return;
+                           }
+                           resetUniverseMutation.mutate();
+                         }} disabled={backupSnapshotMutation.isPending || resetUniverseMutation.isPending || restartServerMutation.isPending || resetConfirmInput.trim() !== "RESET"}>
                             <RefreshCw className="w-4 h-4 mr-2" /> Reset Universe (Wipe Data)
                          </Button>
+                         <Input value={resetConfirmInput} onChange={(e) => setResetConfirmInput(e.target.value)} placeholder="Type RESET to enable universe wipe" className="bg-red-50 border-red-200" />
                          <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => {
-                           if (!confirm("Restart server now?")) return;
-                           toast({ title: "Server restart", description: "Restart command dispatched.", variant: "destructive" });
-                         }}>
+                           if (!restartAcknowledge) {
+                              toast({ title: "Restart blocked", description: "Enable acknowledgement toggle first.", variant: "destructive" });
+                              return;
+                           }
+                           restartServerMutation.mutate();
+                         }} disabled={backupSnapshotMutation.isPending || resetUniverseMutation.isPending || restartServerMutation.isPending || !restartAcknowledge}>
                             <Power className="w-4 h-4 mr-2" /> Force Server Restart
                          </Button>
+                         <div className="flex items-center justify-between rounded border border-red-200 bg-red-50 p-3">
+                            <span className="text-xs font-semibold text-red-700 uppercase tracking-wide">I understand restart impact</span>
+                            <Switch checked={restartAcknowledge} onCheckedChange={setRestartAcknowledge} />
+                         </div>
+
+                         <Separator />
+
+                         <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                               <Clock className="w-4 h-4" /> Recent Operations
+                            </div>
+                            <div className="space-y-2 max-h-44 overflow-auto pr-1">
+                               {(adminOperations?.operations || []).length === 0 && (
+                                  <div className="text-xs text-slate-500 border border-slate-200 rounded p-2">No operations recorded yet.</div>
+                               )}
+                               {(adminOperations?.operations || []).map((op) => (
+                                  <div key={op.id} className="border border-slate-200 rounded p-2 bg-slate-50">
+                                     <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-semibold text-slate-800 uppercase">{op.type.replaceAll("_", " ")}</span>
+                                        <Badge variant={op.status === "completed" ? "secondary" : "destructive"} className="text-[10px] uppercase">{op.status}</Badge>
+                                     </div>
+                                     <div className="text-[11px] text-slate-500 mt-1">{new Date(op.requestedAt).toLocaleString()}</div>
+                                  </div>
+                               ))}
+                            </div>
+                         </div>
                       </CardContent>
                    </Card>
                 </div>

@@ -18,7 +18,7 @@ import {
   Rocket
 } from "lucide-react";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -44,6 +44,19 @@ interface SystemData {
   positions: SystemPosition[];
 }
 
+interface ScanResponse {
+   success: boolean;
+   message: string;
+   report: {
+      targetName: string;
+      targetType: SystemObjectType;
+      threatLevel: "low" | "medium" | "high";
+      anomalies: string[];
+      estimatedResources: { metal: number; crystal: number; deuterium: number };
+      timestamp: number;
+   };
+}
+
 export default function Galaxy() {
    const { toast } = useToast();
    const [, setLocation] = useLocation();
@@ -61,6 +74,40 @@ export default function Galaxy() {
     },
     staleTime: 30_000,
   });
+
+   const deepScanMutation = useMutation({
+      mutationFn: async (target: { position: number; name: string; type: SystemObjectType }) => {
+         const response = await fetch(`/api/galaxy/${universe}/${galaxy}/${sector}/${system}/scan`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+               "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+               position: target.position,
+               targetName: target.name,
+               targetType: target.type,
+            }),
+         });
+
+         const payload = await response.json().catch(() => null);
+         if (!response.ok) {
+            throw new Error(payload?.error || payload?.message || "Deep scan failed");
+         }
+
+         return payload as ScanResponse;
+      },
+      onSuccess: (result) => {
+         const report = result.report;
+         toast({
+            title: `Scan Complete · ${report.targetName}`,
+            description: `${report.threatLevel.toUpperCase()} threat | M ${report.estimatedResources.metal.toLocaleString()} · C ${report.estimatedResources.crystal.toLocaleString()} · D ${report.estimatedResources.deuterium.toLocaleString()} | ${report.anomalies.join(", ")}`,
+         });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Deep scan failed", description: error.message, variant: "destructive" });
+      },
+   });
 
   return (
     <GameLayout>
@@ -239,7 +286,13 @@ export default function Galaxy() {
                       <TableCell className="text-right">
                          {data.type !== "empty" && !isMe && (
                             <div className="flex justify-end gap-2">
-                                              <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" onClick={() => toast({ title: "Deep scan started", description: `Scanning ${data.name}...` })}>
+                                                                     <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
+                                                                        onClick={() => deepScanMutation.mutate({ position: pos, name: data.name || `Position ${pos}`, type: data.type })}
+                                                                        disabled={deepScanMutation.isPending}
+                                                                     >
                                  <Search className="w-4 h-4" />
                                </Button>
                                {(data.type === "planet" || data.type === "station") && (

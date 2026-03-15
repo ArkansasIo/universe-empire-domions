@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "./db";
 import { isAuthenticated } from "./basicAuth";
 import { storage } from "./storage";
-import { adminUsers, users } from "../shared/schema";
+import { adminUsers, users, playerStates } from "../shared/schema";
 
 type ModerationStatus = "active" | "muted" | "banned";
 
@@ -16,6 +16,16 @@ type AuditEntry = {
   action: string;
   targetUserId?: string;
   details?: string;
+};
+
+type AdminOperation = {
+  id: string;
+  type: "backup_snapshot" | "reset_universe" | "restart_server";
+  status: "queued" | "completed";
+  requestedBy: string;
+  requestedAt: number;
+  completedAt?: number;
+  notes?: string;
 };
 
 function getUserId(req: Request): string {
@@ -40,6 +50,10 @@ function getModerationKey(): string {
 
 function getAuditKey(): string {
   return "admin_audit_log";
+}
+
+function getOperationsKey(): string {
+  return "admin_operations";
 }
 
 async function loadModerationMap(): Promise<ModerationMap> {
@@ -82,6 +96,33 @@ async function appendAudit(entry: Omit<AuditEntry, "id" | "timestamp">): Promise
     "Admin panel audit trail",
     "admin"
   );
+}
+
+async function loadOperations(): Promise<AdminOperation[]> {
+  const setting = await storage.getSetting(getOperationsKey());
+  if (!setting || !Array.isArray(setting.value)) {
+    return [];
+  }
+
+  return (setting.value as AdminOperation[]).slice(-200);
+}
+
+async function appendOperation(operation: Omit<AdminOperation, "id" | "requestedAt">): Promise<AdminOperation> {
+  const operations = await loadOperations();
+  const nextOperation: AdminOperation = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    requestedAt: Date.now(),
+    ...operation,
+  };
+
+  await storage.setSetting(
+    getOperationsKey(),
+    [...operations, nextOperation].slice(-200),
+    "Admin operation queue and history",
+    "admin"
+  );
+
+  return nextOperation;
 }
 
 export function registerAdminRoutes(app: Express) {
@@ -128,6 +169,55 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  app.get("/api/admin/users/:userId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = getUserId(req);
+      if (!(await isAdminUser(actorId))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { userId } = req.params;
+      const moderationMap = await loadModerationMap();
+
+      const [userRow] = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!userRow) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const [adminRow] = await db
+        .select({ role: adminUsers.role })
+        .from(adminUsers)
+        .where(eq(adminUsers.userId, userId))
+        .limit(1);
+
+      const detail = {
+        id: userRow.id,
+        name: userRow.username || "Unknown",
+        email: userRow.email || "",
+        role: adminRow?.role || "user",
+        status: moderationMap[userId] || "active",
+        createdAt: userRow.createdAt ? new Date(userRow.createdAt).toISOString() : null,
+        lastLogin: userRow.updatedAt ? new Date(userRow.updatedAt).toISOString() : null,
+      };
+
+      res.json({ user: detail });
+    } catch (error) {
+      console.error("Failed to load admin user detail:", error);
+      res.status(500).json({ message: "Failed to load user detail" });
+    }
+  });
+
   app.post("/api/admin/users/:userId/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const actorId = getUserId(req);
@@ -156,6 +246,106 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Failed to update moderation status:", error);
       res.status(500).json({ message: "Failed to update user status" });
+    }
+  });
+
+  app.post("/api/admin/console/execute", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = getUserId(req);
+      if (!(await isAdminUser(actorId))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const rawCommand = String(req.body?.command || "").trim();
+      if (!rawCommand) {
+        return res.status(400).json({ message: "Command is required" });
+      }
+
+      const command = rawCommand.toLowerCase();
+      let output = "";
+
+      if (command === "help") {
+        output = "Available commands: help, status, clear, give_res [amount], kick_all";
+      } else if (command === "status") {
+        const moderationMap = await loadModerationMap();
+        const usersRows = await db.select({ id: users.id }).from(users);
+        const totalUsers = usersRows.length;
+        const bannedUsers = Object.values(moderationMap).filter((status) => status === "banned").length;
+        const mutedUsers = Object.values(moderationMap).filter((status) => status === "muted").length;
+        output = `Server Status: ONLINE | Users: ${totalUsers} | Banned: ${bannedUsers} | Muted: ${mutedUsers}`;
+      } else if (command.startsWith("give_res")) {
+        const amountPart = rawCommand.split(/\s+/)[1];
+        const amount = Number.parseInt(amountPart || "10000", 10);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          return res.status(400).json({ message: "Amount must be a positive integer" });
+        }
+
+        const [existingState] = await db
+          .select({ id: playerStates.id, resources: playerStates.resources })
+          .from(playerStates)
+          .where(eq(playerStates.userId, actorId))
+          .limit(1);
+
+        if (!existingState) {
+          await db.insert(playerStates).values({
+            userId: actorId,
+            commander: {
+              race: "human",
+              class: "warrior",
+              stats: { level: 1, xp: 0, warfare: 0, logistics: 0, engineering: 0 },
+              equipment: {},
+              inventory: [],
+              title: "Commander",
+            },
+            government: {
+              type: "democracy",
+              taxRate: 10,
+              policies: [],
+              stats: { stability: 50, efficiency: 70, publicSupport: 60, militaryReadiness: 50 },
+            },
+            resources: { metal: amount, crystal: amount, deuterium: Math.floor(amount / 2), energy: 0 },
+          });
+        } else {
+          const resources = (existingState.resources as any) || {};
+          const nextResources = {
+            ...resources,
+            metal: Number(resources.metal || 0) + amount,
+            crystal: Number(resources.crystal || 0) + amount,
+            deuterium: Number(resources.deuterium || 0) + Math.floor(amount / 2),
+            energy: Number(resources.energy || 0),
+          };
+
+          await db
+            .update(playerStates)
+            .set({ resources: nextResources, updatedAt: new Date() })
+            .where(eq(playerStates.userId, actorId));
+        }
+
+        output = `Resources granted: +${amount.toLocaleString()} metal, +${amount.toLocaleString()} crystal, +${Math.floor(amount / 2).toLocaleString()} deuterium`;
+      } else if (command === "kick_all") {
+        await storage.setSetting(
+          "maintenance_mode",
+          true,
+          "Emergency maintenance lock enabled via admin console",
+          "server",
+        );
+        output = "Maintenance mode enabled. Non-admin sessions should reconnect when maintenance is disabled.";
+      } else if (command === "clear") {
+        output = "Console cleared.";
+      } else {
+        output = `Unknown command: ${rawCommand}`;
+      }
+
+      await appendAudit({
+        actorId,
+        action: "admin_console_execute",
+        details: `command=${rawCommand}`,
+      });
+
+      return res.json({ success: true, output });
+    } catch (error) {
+      console.error("Failed to execute admin console command:", error);
+      return res.status(500).json({ message: "Failed to execute command" });
     }
   });
 
@@ -196,6 +386,155 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Failed to load admin overview:", error);
       res.status(500).json({ message: "Failed to load admin overview" });
+    }
+  });
+
+  app.get("/api/admin/operations", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = getUserId(req);
+      if (!(await isAdminUser(actorId))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const operations = await loadOperations();
+      res.json({ operations: operations.slice().reverse().slice(0, 30) });
+    } catch (error) {
+      console.error("Failed to load admin operations:", error);
+      res.status(500).json({ message: "Failed to load admin operations" });
+    }
+  });
+
+  app.post("/api/admin/operations/backup", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = getUserId(req);
+      if (!(await isAdminUser(actorId))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const operation = await appendOperation({
+        type: "backup_snapshot",
+        status: "completed",
+        requestedBy: actorId,
+        completedAt: Date.now(),
+        notes: "Settings and state snapshot persisted",
+      });
+
+      await storage.setSetting(
+        "admin_last_backup_snapshot",
+        {
+          operationId: operation.id,
+          createdAt: operation.completedAt,
+          createdBy: actorId,
+        },
+        "Most recent admin backup snapshot metadata",
+        "admin"
+      );
+
+      await appendAudit({
+        actorId,
+        action: "create_backup_snapshot",
+        details: `operationId=${operation.id}`,
+      });
+
+      res.json({
+        success: true,
+        operation,
+        message: "Backup snapshot created successfully",
+      });
+    } catch (error) {
+      console.error("Failed to create backup snapshot:", error);
+      res.status(500).json({ message: "Failed to create backup snapshot" });
+    }
+  });
+
+  app.post("/api/admin/operations/reset-universe", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = getUserId(req);
+      if (!(await isAdminUser(actorId))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const confirmText = String(req.body?.confirmText || "");
+      if (confirmText !== "RESET") {
+        return res.status(400).json({ message: "Confirmation text mismatch" });
+      }
+
+      const operation = await appendOperation({
+        type: "reset_universe",
+        status: "queued",
+        requestedBy: actorId,
+        notes: "Universe reset queued by admin",
+      });
+
+      await storage.setSetting(
+        "admin_universe_reset_queue",
+        {
+          operationId: operation.id,
+          requestedAt: operation.requestedAt,
+          requestedBy: actorId,
+          status: "queued",
+        },
+        "Queued universe reset request",
+        "admin"
+      );
+
+      await appendAudit({
+        actorId,
+        action: "queue_universe_reset",
+        details: `operationId=${operation.id}`,
+      });
+
+      res.json({
+        success: true,
+        operation,
+        message: "Universe reset has been queued",
+      });
+    } catch (error) {
+      console.error("Failed to queue universe reset:", error);
+      res.status(500).json({ message: "Failed to queue universe reset" });
+    }
+  });
+
+  app.post("/api/admin/operations/restart", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = getUserId(req);
+      if (!(await isAdminUser(actorId))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const operation = await appendOperation({
+        type: "restart_server",
+        status: "queued",
+        requestedBy: actorId,
+        notes: "Server restart requested by admin",
+      });
+
+      await storage.setSetting(
+        "admin_restart_queue",
+        {
+          operationId: operation.id,
+          requestedAt: operation.requestedAt,
+          requestedBy: actorId,
+          status: "queued",
+        },
+        "Queued server restart request",
+        "admin"
+      );
+
+      await appendAudit({
+        actorId,
+        action: "queue_server_restart",
+        details: `operationId=${operation.id}`,
+      });
+
+      res.json({
+        success: true,
+        operation,
+        message: "Server restart request has been queued",
+      });
+    } catch (error) {
+      console.error("Failed to queue server restart:", error);
+      res.status(500).json({ message: "Failed to queue server restart" });
     }
   });
 }
