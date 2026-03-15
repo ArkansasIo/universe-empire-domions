@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Box, Database, Factory, Gem, Globe, Moon, Orbit, Shield, Users, Zap } from "lucide-react";
+import { Box, Cpu, Database, Droplets, Factory, Gem, Globe, Moon, Orbit, Shield, TrendingUp, Users, Wheat, Zap } from "lucide-react";
 
 interface PlanetSummary {
   id: string;
@@ -87,8 +87,70 @@ interface SubPlaneResponse {
   };
 }
 
+interface PopulationSnapshotResponse {
+  success: boolean;
+  snapshot: {
+    frameTier: number;
+    frame: {
+      name: string;
+      populationCapacityBonus: number;
+      foodEfficiencyBonus: number;
+      waterEfficiencyBonus: number;
+      stabilityBonus: number;
+    };
+    population: {
+      current: number;
+      capacity: number;
+      utilization: number;
+      happiness: number;
+      estimatedGrowthPerHour: number;
+      classes: Record<string, number>;
+    };
+    food: {
+      stock: number;
+      productionPerHour: number;
+      demandPerHour: number;
+      netPerHour: number;
+      pressure: string;
+      hoursToDepletion: number | null;
+    };
+    water: {
+      stock: number;
+      productionPerHour: number;
+      demandPerHour: number;
+      netPerHour: number;
+      pressure: string;
+      hoursToDepletion: number | null;
+    };
+  };
+}
+
 function formatCost(cost: { metal: number; crystal: number; deuterium: number }) {
   return `${cost.metal.toLocaleString()}M / ${cost.crystal.toLocaleString()}C / ${cost.deuterium.toLocaleString()}D`;
+}
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { credentials: "include" });
+  const payload = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(payload?.message || payload?.error || "Request failed");
+  }
+
+  return payload as T;
+}
+
+function pressureClasses(pressure: string) {
+  switch (pressure) {
+    case "surplus":
+      return "bg-emerald-100 text-emerald-900";
+    case "stable":
+      return "bg-blue-100 text-blue-900";
+    case "strained":
+      return "bg-amber-100 text-amber-900";
+    default:
+      return "bg-red-100 text-red-900";
+  }
 }
 
 export default function PlanetCommand() {
@@ -131,6 +193,12 @@ export default function PlanetCommand() {
       return res.json();
     },
     enabled: Boolean(selectedPlanetId),
+  });
+
+  const populationSnapshotQuery = useQuery<PopulationSnapshotResponse>({
+    queryKey: ["planet-command-population-snapshot"],
+    queryFn: () => fetchJson<PopulationSnapshotResponse>("/api/population/snapshot"),
+    refetchInterval: 30000,
   });
 
   const upgradePlanetStructureMutation = useMutation({
@@ -184,6 +252,7 @@ export default function PlanetCommand() {
 
   const planet = planetDetailsQuery.data;
   const subPlanes = subPlaneQuery.data;
+  const snapshot = populationSnapshotQuery.data?.snapshot;
 
   return (
     <GameLayout>
@@ -243,6 +312,109 @@ export default function PlanetCommand() {
             </Card>
           </div>
         )}
+
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+          <Card className="bg-slate-950 text-white border-slate-800">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-slate-300 text-xs uppercase tracking-[0.2em]">
+                <Cpu className="w-4 h-4" /> Frame System
+              </div>
+              <div className="mt-3 text-2xl font-orbitron font-bold">T{snapshot?.frameTier ?? "-"}</div>
+              <div className="text-sm text-slate-300">{snapshot?.frame.name ?? "Awaiting sync"}</div>
+              <div className="mt-3 text-xs text-slate-400">
+                Stability +{snapshot ? Math.round(snapshot.frame.stabilityBonus * 100) : 0}%
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-slate-500 text-xs uppercase tracking-[0.2em]">
+                <Users className="w-4 h-4 text-blue-600" /> Population Snapshot
+              </div>
+              <div className="mt-3 text-2xl font-orbitron font-bold text-slate-900">
+                {snapshot?.population.current?.toLocaleString() ?? "-"}
+              </div>
+              <div className="text-sm text-slate-500">
+                Capacity {snapshot?.population.capacity?.toLocaleString() ?? "-"}
+              </div>
+              <Progress value={(snapshot?.population.utilization ?? 0) * 100} className="mt-3 h-2" />
+              <div className="mt-2 text-xs text-slate-500">
+                Happiness {snapshot ? Math.round(snapshot.population.happiness * 100) : 0}%
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-slate-500 text-xs uppercase tracking-[0.2em]">
+                <Wheat className="w-4 h-4 text-amber-600" /> Food System
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="text-2xl font-orbitron font-bold text-slate-900">{snapshot?.food.stock?.toLocaleString() ?? "-"}</div>
+                <Badge className={pressureClasses(snapshot?.food.pressure ?? "critical")}>
+                  {snapshot?.food.pressure ?? "offline"}
+                </Badge>
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                {snapshot ? `${snapshot.food.productionPerHour.toFixed(1)}/h produced • ${snapshot.food.demandPerHour.toFixed(1)}/h consumed` : "Awaiting food telemetry"}
+              </div>
+              <div className="mt-2 text-sm font-semibold text-slate-800">
+                Net {snapshot ? snapshot.food.netPerHour.toFixed(1) : "-"}/h
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-slate-500 text-xs uppercase tracking-[0.2em]">
+                <Droplets className="w-4 h-4 text-cyan-600" /> Water System
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="text-2xl font-orbitron font-bold text-slate-900">{snapshot?.water.stock?.toLocaleString() ?? "-"}</div>
+                <Badge className={pressureClasses(snapshot?.water.pressure ?? "critical")}>
+                  {snapshot?.water.pressure ?? "offline"}
+                </Badge>
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                {snapshot ? `${snapshot.water.productionPerHour.toFixed(1)}/h produced • ${snapshot.water.demandPerHour.toFixed(1)}/h consumed` : "Awaiting water telemetry"}
+              </div>
+              <div className="mt-2 text-sm font-semibold text-slate-800">
+                Net {snapshot ? snapshot.water.netPerHour.toFixed(1) : "-"}/h
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-slate-900">
+              <TrendingUp className="w-5 h-5 text-emerald-600" /> Life Support Sustainability
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+            <div className="p-4 bg-slate-50 rounded border border-slate-200">
+              <div className="text-xs uppercase tracking-wider text-slate-500">Growth / Hour</div>
+              <div className="text-xl font-bold text-slate-900">{snapshot?.population.estimatedGrowthPerHour?.toLocaleString() ?? "-"}</div>
+            </div>
+            <div className="p-4 bg-slate-50 rounded border border-slate-200">
+              <div className="text-xs uppercase tracking-wider text-slate-500">Food Depletion</div>
+              <div className="text-xl font-bold text-slate-900">{snapshot?.food.hoursToDepletion ?? "Safe"}</div>
+            </div>
+            <div className="p-4 bg-slate-50 rounded border border-slate-200">
+              <div className="text-xs uppercase tracking-wider text-slate-500">Water Depletion</div>
+              <div className="text-xl font-bold text-slate-900">{snapshot?.water.hoursToDepletion ?? "Safe"}</div>
+            </div>
+            <div className="p-4 bg-slate-50 rounded border border-slate-200">
+              <div className="text-xs uppercase tracking-wider text-slate-500">Frame Capacity Bonus</div>
+              <div className="text-xl font-bold text-slate-900">+{snapshot ? Math.round(snapshot.frame.populationCapacityBonus * 100) : 0}%</div>
+            </div>
+            <div className="p-4 bg-slate-50 rounded border border-slate-200">
+              <div className="text-xs uppercase tracking-wider text-slate-500">Workers</div>
+              <div className="text-xl font-bold text-slate-900">{snapshot?.population.classes.workers?.toLocaleString() ?? "-"}</div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Tabs value={mainMenu} onValueChange={(value) => setMainMenu(value as "planet" | "moon" | "station")}> 
           <TabsList className="grid grid-cols-3 w-full lg:w-[480px]">

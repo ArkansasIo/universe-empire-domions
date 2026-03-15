@@ -50,6 +50,9 @@ npm run db:push
 # Type checking
 npm run check
 
+# Smoke test life support routes
+npm run smoke:life-support
+
 # Production build
 npm run build
 ```
@@ -57,6 +60,7 @@ npm run build
 Access the game at `http://localhost:5001`
 
 When `DATABASE_URL` is present, `npm run dev` starts the Express server with Vite middleware on `http://localhost:5001`. Without `DATABASE_URL`, it falls back to a client-only Vite server.
+The life-support smoke test targets `http://localhost:5001` by default and accepts `BASE_URL` for alternate ports.
 
 ---
 
