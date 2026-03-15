@@ -120,7 +120,36 @@ export {
   type ResearchConfig,
   type Research,
 } from './researchProgression';
-export { ENTITY_ARCHETYPES_90, ENTITY_ARCHETYPES_GROUPED, ENTITY_ARCHETYPES_META } from './entityArchetypesConfig';
+export {
+  ENTITY_ARCHETYPES_90,
+  ENTITY_ARCHETYPES_GROUPED,
+  ENTITY_ARCHETYPES_BY_CATEGORY,
+  ENTITY_ARCHETYPES_META,
+  type ArchetypeFamily,
+  type EntityArchetype,
+} from './entityArchetypesConfig';
+export {
+  BUILDING_ARCHETYPES_90,
+  FACTORY_JOB_ARCHETYPES_90,
+  BUILDING_ARCHETYPES_GROUPED_BY_CATEGORY,
+  FACTORY_JOB_ARCHETYPES_GROUPED_BY_JOB_CATEGORY,
+  BUILDING_FACTORY_JOB_META,
+  type BuildingArchetype,
+  type FactoryJobArchetype,
+} from './buildingFactoryJobArchetypesConfig';
+export {
+  FRAME_SYSTEMS,
+  POPULATION_SYSTEM,
+  FOOD_SYSTEM,
+  WATER_SYSTEM,
+  computeResourcePressure,
+  estimatePopulationGrowth,
+  estimateFoodDemand,
+  estimateWaterDemand,
+  type PopulationClass,
+  type ResourcePressureState,
+  type FrameSystemTier,
+} from './lifeSupportSystemsConfig';
 export { 
   PROGRESSION_CONSTANTS,
   ProgressionTables,

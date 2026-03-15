@@ -328,6 +328,177 @@ Response: { success: true, state: PlayerUnitSystemState }
 
 ---
 
+## Archetype & Life Support Routes
+
+### GET `/api/config/building-archetypes`
+Fetch all 90 building archetypes.
+```typescript
+Response: {
+  success: true
+  total: 90
+  items: BuildingArchetype[]
+}
+```
+
+### GET `/api/config/building-archetypes/meta`
+Fetch building archetype metadata and category grouping.
+```typescript
+Response: {
+  success: true
+  meta: {
+    total: number
+    categories: string[]
+    subCategories: string[]
+    types: string[]
+    subTypes: string[]
+    classes: string[]
+    subClasses: string[]
+  }
+  groupedByCategory: Record<string, BuildingArchetype[]>
+}
+```
+
+### GET `/api/config/factory-job-archetypes`
+Fetch all 90 factory job archetypes.
+```typescript
+Response: {
+  success: true
+  total: 90
+  items: FactoryJobArchetype[]
+}
+```
+
+### GET `/api/config/factory-job-archetypes/meta`
+Fetch factory job archetype metadata and job grouping.
+```typescript
+Response: {
+  success: true
+  meta: {
+    total: number
+    categories: string[]
+    subCategories: string[]
+    types: string[]
+    subTypes: string[]
+    classes: string[]
+    subClasses: string[]
+    jobCategories: string[]
+    subJobCategories: string[]
+  }
+  groupedByJobCategory: Record<string, FactoryJobArchetype[]>
+}
+```
+
+### GET `/api/config/entity-archetypes/meta`
+Fetch meta summary for the main 90-entity archetype catalog.
+```typescript
+Response: {
+  success: true
+  total: number
+  meta: EntityArchetypeMeta
+}
+```
+
+### GET `/api/config/frame-systems`
+Fetch frame system definitions and tier bonuses.
+```typescript
+Response: {
+  success: true
+  frameSystems: {
+    categories: Record<string, { name: string, description: string, subCategories: string[] }>
+    tiers: FrameSystemTier[]
+  }
+}
+```
+
+### GET `/api/config/population-system`
+Fetch population system configuration.
+```typescript
+Response: {
+  success: true
+  populationSystem: {
+    base: Record<string, number>
+    classes: Record<string, PopulationClassConfig>
+    happinessModifiers: Record<string, number>
+  }
+}
+```
+
+### GET `/api/config/food-system`
+Fetch food production, consumption, and storage rules.
+```typescript
+Response: {
+  success: true
+  foodSystem: FoodSystemConfig
+}
+```
+
+### GET `/api/config/water-system`
+Fetch water production, consumption, and storage rules.
+```typescript
+Response: {
+  success: true
+  waterSystem: WaterSystemConfig
+}
+```
+
+### GET `/api/config/life-support-systems`
+Fetch the complete frame, population, food, and water system bundle.
+```typescript
+Response: {
+  success: true
+  systems: {
+    frame: unknown
+    population: unknown
+    food: unknown
+    water: unknown
+  }
+}
+```
+
+### GET `/api/population/snapshot`
+Fetch live population, food, water, and frame telemetry for the authenticated player.
+```typescript
+Response: {
+  success: true
+  snapshot: {
+    frameTier: number
+    frame: {
+      name: string
+      populationCapacityBonus: number
+      foodEfficiencyBonus: number
+      waterEfficiencyBonus: number
+      stabilityBonus: number
+    }
+    population: {
+      current: number
+      capacity: number
+      utilization: number
+      happiness: number
+      estimatedGrowthPerHour: number
+      classes: Record<string, number>
+    }
+    food: {
+      stock: number
+      productionPerHour: number
+      demandPerHour: number
+      netPerHour: number
+      pressure: "surplus" | "stable" | "strained" | "critical"
+      hoursToDepletion: number | null
+    }
+    water: {
+      stock: number
+      productionPerHour: number
+      demandPerHour: number
+      netPerHour: number
+      pressure: "surplus" | "stable" | "strained" | "critical"
+      hoursToDepletion: number | null
+    }
+  }
+}
+```
+
+---
+
 ## Government Leader Routes
 
 ### GET `/api/government-leaders`
