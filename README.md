@@ -5,7 +5,15 @@ A comprehensive 4X space strategy game built with React, Express, and PostgreSQL
 **Website:** [stellar-dominion.replit.dev](https://stellardominion.ca
 **Version:** 1.0.0-release  
 **Status:** 🟢 PRODUCTION READY
-**Last Updated:** March 9, 2026
+**Last Updated:** March 14, 2026
+
+## March 14, 2026 Update
+
+- Added structured entity archetype catalogs for starships, motherships, units, untrained units, jobs, megastructures, space stations, starbases, and moonbases.
+- Added dedicated 90-entry building archetype and 90-entry factory job archetype catalogs.
+- Added shared frame, population, food, and water system configuration with reusable demand, pressure, and growth helpers.
+- Added life-support and archetype API routes, plus Colonies page telemetry for frame, population, food, and water snapshot data.
+- Corrected the development startup flow so `npm run dev` launches the Express server with integrated Vite middleware when `DATABASE_URL` is available.
 
 ---
 
@@ -46,7 +54,9 @@ npm run check
 npm run build
 ```
 
-Access the game at `http://localhost:5000`
+Access the game at `http://localhost:5001`
+
+When `DATABASE_URL` is present, `npm run dev` starts the Express server with Vite middleware on `http://localhost:5001`. Without `DATABASE_URL`, it falls back to a client-only Vite server.
 
 ---
 

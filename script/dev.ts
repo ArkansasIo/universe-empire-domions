@@ -21,7 +21,9 @@ if (!process.env.DATABASE_URL) {
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL && process.env.DATABASE_URL.length > 0);
 const nodeEnv = process.env.NODE_ENV ?? "development";
 
-const command = "npx vite dev --port 5001";
+const command = hasDatabaseUrl
+  ? "tsx server/index.ts"
+  : "npx vite dev --port 5001";
 
 if (hasDatabaseUrl) {
   console.log("Starting full-stack development server...");
