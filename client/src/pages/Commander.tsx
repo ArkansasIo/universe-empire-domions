@@ -108,18 +108,16 @@ const achievements = [
   { id: "titan_slayer", name: "Titan Slayer", desc: "Destroy an enemy Titan", icon: Target, unlocked: false }
 ];
 
-const skills = [
-  { id: "combat_training", name: "Combat Training", maxLevel: 10, currentLevel: 3, desc: "+5% attack per level" },
-  { id: "defensive_tactics", name: "Defensive Tactics", maxLevel: 10, currentLevel: 2, desc: "+5% shield per level" },
-  { id: "resource_management", name: "Resource Management", maxLevel: 10, currentLevel: 5, desc: "+2% production per level" },
-  { id: "speed_commander", name: "Speed Commander", maxLevel: 5, currentLevel: 1, desc: "+10% fleet speed per level" },
-  { id: "research_genius", name: "Research Genius", maxLevel: 10, currentLevel: 4, desc: "-3% research time per level" },
-  { id: "construction_expert", name: "Construction Expert", maxLevel: 10, currentLevel: 2, desc: "-3% build time per level" }
+const skillDefinitions = [
+   { id: "combat_training", stat: "warfare" as const, name: "Combat Training", maxLevel: 10, desc: "+5% attack per level" },
+   { id: "resource_management", stat: "logistics" as const, name: "Resource Management", maxLevel: 10, desc: "+2% production per level" },
+   { id: "research_genius", stat: "science" as const, name: "Research Genius", maxLevel: 10, desc: "-3% research time per level" },
+   { id: "construction_expert", stat: "engineering" as const, name: "Construction Expert", maxLevel: 10, desc: "-3% build time per level" },
 ];
 
 export default function Commander() {
    const { toast } = useToast();
-  const { commander, equipItem, unequipItem, craftItem, temperItem, setCommanderIdentity } = useGame();
+   const { commander, equipItem, unequipItem, craftItem, temperItem, setCommanderIdentity, upgradeCommanderSkill } = useGame();
 
   if (!commander?.stats || !commander?.equipment || !commander?.inventory) {
     return <GameLayout><div className="text-center py-12">Loading commander data...</div></GameLayout>;
@@ -137,7 +135,16 @@ export default function Commander() {
    const leadersByType = selectedLeaderType === "all" ? GOVERNMENT_LEADER_TYPES_23 : getGovernmentLeadersByType(selectedLeaderType);
    const filteredGovernmentLeaders = selectedLeaderClass === "all" ? leadersByType : leadersByType.filter(leader => getGovernmentLeadersByClass(selectedLeaderClass).some(match => match.id === leader.id));
 
-  const totalSkillPoints = skills.reduce((acc, s) => acc + s.currentLevel, 0);
+   const skills = skillDefinitions.map((skill) => ({
+      ...skill,
+      currentLevel: commander?.stats?.[skill.stat] || 1,
+   }));
+   const allocatedSkillPoints = Math.max(0, (commander?.stats?.warfare || 1) - 1)
+      + Math.max(0, (commander?.stats?.logistics || 1) - 1)
+      + Math.max(0, (commander?.stats?.science || 1) - 1)
+      + Math.max(0, (commander?.stats?.engineering || 1) - 1);
+   const totalSkillPoints = Math.max(0, ((commander?.stats?.level || 1) - 1) * 2);
+   const availableSkillPoints = Math.max(0, totalSkillPoints - allocatedSkillPoints);
   const unlockedAchievements = achievements.filter(a => a.unlocked).length;
 
   return (
@@ -184,8 +191,8 @@ export default function Commander() {
                   <Target className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <div className="text-xs text-green-600 uppercase">Skill Points</div>
-                  <div className="text-xl font-orbitron font-bold text-green-900">{totalSkillPoints}</div>
+                           <div className="text-xs text-green-600 uppercase">Available Skill Points</div>
+                           <div className="text-xl font-orbitron font-bold text-green-900">{availableSkillPoints}</div>
                 </div>
               </div>
             </CardContent>
@@ -341,8 +348,12 @@ export default function Commander() {
                                              size="sm"
                                              variant="outline"
                                              className="w-full"
-                                             disabled={skill.currentLevel >= skill.maxLevel}
-                                             onClick={() => skill.currentLevel < skill.maxLevel && toast({ title: "Skill upgrade queued", description: `${skill.name} upgrade initiated.` })}
+                                             disabled={skill.currentLevel >= skill.maxLevel || availableSkillPoints <= 0}
+                                             onClick={() => {
+                                                if (upgradeCommanderSkill(skill.stat)) {
+                                                   toast({ title: "Skill upgraded", description: `${skill.name} is now level ${skill.currentLevel + 1}.` });
+                                                }
+                                             }}
                                           >
                                Upgrade (1 SP)
                             </Button>
@@ -354,9 +365,9 @@ export default function Commander() {
                       <div className="flex items-center justify-between">
                          <div>
                             <div className="font-bold text-green-900">Available Skill Points</div>
-                            <div className="text-sm text-green-700">Earned from leveling up and achievements</div>
+                            <div className="text-sm text-green-700">Earned from commander levels</div>
                          </div>
-                         <div className="text-3xl font-mono font-bold text-green-600">5</div>
+                         <div className="text-3xl font-mono font-bold text-green-600">{availableSkillPoints}</div>
                       </div>
                    </div>
                 </CardContent>

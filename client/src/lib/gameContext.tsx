@@ -179,6 +179,7 @@ interface GameState {
   craftItem: (item: Item, cost: {metal: number, crystal: number, deuterium?: number}) => void;
   temperItem: (itemId: string) => void;
   setCommanderIdentity: (race: RaceId, cls: ClassId, subClass: SubClassId | null) => void;
+  upgradeCommanderSkill: (skill: "warfare" | "logistics" | "science" | "engineering") => boolean;
   setGovernmentType: (type: GovernmentId) => void;
   completeSetup: (commander: CommanderState, government: GovernmentState) => Promise<void>;
   togglePolicy: (policyId: string) => void;
@@ -1064,6 +1065,38 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     addEvent("Identity Updated", `Commander identity re-sequenced to ${RACES[race].name} ${CLASSES[cls].name}.`, "info");
   };
 
+  const upgradeCommanderSkill = (skill: "warfare" | "logistics" | "science" | "engineering") => {
+    const level = commander?.stats?.level || 1;
+    const current = commander?.stats?.[skill] || 1;
+    const allocated = Math.max(0, (commander?.stats?.warfare || 1) - 1)
+      + Math.max(0, (commander?.stats?.logistics || 1) - 1)
+      + Math.max(0, (commander?.stats?.science || 1) - 1)
+      + Math.max(0, (commander?.stats?.engineering || 1) - 1);
+    const totalPoints = Math.max(0, (level - 1) * 2);
+    const availablePoints = Math.max(0, totalPoints - allocated);
+
+    if (current >= 10) {
+      toast({ title: "Skill maxed", description: "This skill is already at maximum level.", variant: "destructive" });
+      return false;
+    }
+
+    if (availablePoints <= 0) {
+      toast({ title: "No skill points", description: "Gain commander levels to unlock more skill points.", variant: "destructive" });
+      return false;
+    }
+
+    setCommander((prev) => ({
+      ...prev,
+      stats: {
+        ...prev.stats,
+        [skill]: (prev.stats[skill] || 1) + 1,
+      },
+    }));
+
+    addEvent("Skill Upgraded", `${skill[0].toUpperCase()}${skill.slice(1)} increased to ${current + 1}.`, "success");
+    return true;
+  };
+
   const setGovernmentType = (type: GovernmentId) => {
      setGovernment(prev => {
         const newBase = GOVERNMENTS[type].baseStats;
@@ -1328,6 +1361,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        craftItem,
        temperItem,
        setCommanderIdentity,
+      upgradeCommanderSkill,
        setGovernmentType,
        completeSetup,
        togglePolicy,
