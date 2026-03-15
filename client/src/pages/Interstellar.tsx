@@ -11,6 +11,55 @@ import { useLocation } from "wouter";
 import { DESTINATIONS, Destination } from "@/lib/interstellarData";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery } from "@tanstack/react-query";
+
+type TravelCoordinates = {
+   galaxy: number;
+   sector: number;
+   system: number;
+   x: number;
+   y: number;
+   z: number;
+};
+
+type StargateResponse = {
+   count: number;
+   stargates: Array<{
+      id: string;
+      name: string;
+      location: TravelCoordinates;
+      isActive: boolean;
+      connectedGates: string[];
+   }>;
+};
+
+type RouteCalculationResponse = {
+   distance: number;
+   travelTime: number;
+   travelCost: {
+      deuterium: number;
+   };
+};
+
+function parseGameCoordinates(raw: string): TravelCoordinates {
+   const parts = String(raw || "")
+      .replace(/\[|\]/g, "")
+      .split(":")
+      .map((part) => Number.parseInt(part || "0", 10));
+
+   return {
+      galaxy: Number.isFinite(parts[0]) && parts[0] > 0 ? parts[0] : 1,
+      sector: Number.isFinite(parts[1]) && parts[1] >= 0 ? parts[1] : 1,
+      system: Number.isFinite(parts[2]) && parts[2] >= 0 ? parts[2] : 1,
+      x: Number.isFinite(parts[3]) && parts[3] >= 0 ? parts[3] : 0,
+      y: 0,
+      z: 0,
+   };
+}
+
+function coordsToGameString(coords: TravelCoordinates): string {
+   return `${coords.galaxy}:${coords.sector}:${coords.system}`;
+}
 
 export default function Interstellar() {
   const [, setLocation] = useLocation();
@@ -24,9 +73,69 @@ export default function Interstellar() {
    const safeCoordinates = typeof coordinates === "string" && coordinates.length > 0 ? coordinates : "1:1:100:3";
    const STARGATE_COST = 5000;
    const JUMPGATE_COST = 500;
+   const currentTravelCoords = parseGameCoordinates(safeCoordinates);
 
    const currentDest = DESTINATIONS.find(d => d.coordinates === safeCoordinates);
   const target = DESTINATIONS.find(d => d.id === selectedDest);
+
+   const { data: stargatesData } = useQuery<StargateResponse>({
+      queryKey: ["travel-stargates"],
+      queryFn: async () => {
+         const response = await fetch("/api/travel/stargates", { credentials: "include" });
+         if (!response.ok) throw new Error("Failed to load stargate network");
+         return response.json();
+      },
+      staleTime: 120000,
+   });
+
+   const routePreviewQuery = useQuery<RouteCalculationResponse>({
+      queryKey: ["travel-route-preview", safeCoordinates, target?.coordinates],
+      queryFn: async () => {
+         if (!target) throw new Error("No destination selected");
+         const response = await fetch("/api/travel/route/calculate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+               from: currentTravelCoords,
+               to: parseGameCoordinates(target.coordinates),
+               method: "warp",
+            }),
+         });
+
+         if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.message || "Failed to calculate route");
+         }
+
+         return response.json();
+      },
+      enabled: Boolean(target),
+      staleTime: 30000,
+   });
+
+   const playerRouteMutation = useMutation({
+      mutationFn: async (payload: { to: TravelCoordinates; method: "warp" | "gate" | "wormhole"; routeName: string }) => {
+         const response = await fetch("/api/travel/player/route", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+               from: currentTravelCoords,
+               to: payload.to,
+               method: payload.method,
+               routeName: payload.routeName,
+            }),
+         });
+
+         if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message || "Failed to register route");
+         }
+
+         return response.json();
+      },
+   });
 
   const calculateCost = (dist: number) => {
      return Math.floor(dist * 100); // 100 deuterium per light year
@@ -37,12 +146,24 @@ export default function Interstellar() {
         toast({ title: "No destination selected", description: "Select a target system first.", variant: "destructive" });
         return;
      }
-     const cost = calculateCost(target.distance);
+     const previewCost = Number(routePreviewQuery.data?.travelCost?.deuterium ?? calculateCost(target.distance));
+     const cost = Number.isFinite(previewCost) ? previewCost : calculateCost(target.distance);
      if (deuteriumReserve < cost) {
         toast({ title: "Insufficient deuterium", description: `Need ${cost.toLocaleString()} deuterium for this jump.`, variant: "destructive" });
         return;
      }
-     travelTo(target.name, target.coordinates, { deuterium: cost });
+     const destinationCoords = parseGameCoordinates(target.coordinates);
+     playerRouteMutation.mutate(
+        { to: destinationCoords, method: "warp", routeName: `Warp-${target.name}` },
+        {
+          onSuccess: () => {
+            travelTo(target.name, target.coordinates, { deuterium: cost });
+          },
+          onError: (error: Error) => {
+            toast({ title: "Route registration failed", description: error.message, variant: "destructive" });
+          },
+        },
+     );
   };
 
   const handleGateJump = (dest: Destination) => {
@@ -50,7 +171,17 @@ export default function Interstellar() {
         toast({ title: "Insufficient deuterium", description: `Jump Gate requires ${JUMPGATE_COST} deuterium.`, variant: "destructive" });
         return;
      }
-     travelTo(dest.name, dest.coordinates, { deuterium: JUMPGATE_COST });
+     playerRouteMutation.mutate(
+        { to: parseGameCoordinates(dest.coordinates), method: "gate", routeName: `JumpGate-${dest.name}` },
+        {
+          onSuccess: () => {
+            travelTo(dest.name, dest.coordinates, { deuterium: JUMPGATE_COST });
+          },
+          onError: (error: Error) => {
+            toast({ title: "Jump gate failed", description: error.message, variant: "destructive" });
+          },
+        },
+     );
   };
 
   const handleStargateDial = () => {
@@ -67,8 +198,34 @@ export default function Interstellar() {
      setIsDialing(true);
      setTimeout(() => {
         setIsDialing(false);
-        if (normalizedAddress === "777" || normalizedAddress === "777777777") {
-           travelTo("Unknown Sector", "9:999:9", { deuterium: STARGATE_COST });
+            const stargateList = stargatesData?.stargates || [];
+            const addressParts = stargateAddress
+               .split(/[^0-9]+/)
+               .map((part) => Number.parseInt(part, 10))
+               .filter((value) => Number.isFinite(value));
+
+            const resolvedGate = addressParts.length >= 3
+               ? stargateList.find(
+                     (gate) => gate.location.galaxy === addressParts[0]
+                        && gate.location.sector === addressParts[1]
+                        && gate.location.system === addressParts[2],
+                  )
+               : null;
+
+            if (resolvedGate) {
+               playerRouteMutation.mutate(
+                  { to: resolvedGate.location, method: "gate", routeName: `Stargate-${resolvedGate.name}` },
+                  {
+                     onSuccess: () => {
+                        travelTo(resolvedGate.name, coordsToGameString(resolvedGate.location), { deuterium: STARGATE_COST });
+                     },
+                     onError: (error: Error) => {
+                        toast({ title: "Stargate route failed", description: error.message, variant: "destructive" });
+                     },
+                  },
+               );
+            } else if (normalizedAddress === "777" || normalizedAddress === "777777777") {
+                travelTo("Unknown Sector", "9:999:9", { deuterium: STARGATE_COST });
         } else {
            toast({ title: "Dial failed", description: "Chevron 7 will not lock. Invalid address.", variant: "destructive" });
         }
@@ -196,12 +353,12 @@ export default function Interstellar() {
                                 </div>
                                 <div>
                                    <div className="text-xs text-slate-500 uppercase">Est. Time</div>
-                                   <div className="text-xl font-mono text-slate-900">Instant</div>
+                                   <div className="text-xl font-mono text-slate-900">{routePreviewQuery.data ? `${Math.max(1, Math.ceil(routePreviewQuery.data.travelTime / 60))}m` : "Calculating..."}</div>
                                 </div>
                                 <div>
                                    <div className="text-xs text-slate-500 uppercase">Fuel Cost</div>
-                                   <div className={cn("text-xl font-mono", deuteriumReserve >= calculateCost(target.distance) ? "text-green-600" : "text-red-600")}>
-                                      {calculateCost(target.distance).toLocaleString()} Deut
+                                   <div className={cn("text-xl font-mono", deuteriumReserve >= Number(routePreviewQuery.data?.travelCost?.deuterium ?? calculateCost(target.distance)) ? "text-green-600" : "text-red-600")}>
+                                      {Number(routePreviewQuery.data?.travelCost?.deuterium ?? calculateCost(target.distance)).toLocaleString()} Deut
                                    </div>
                                 </div>
                                 <div>
@@ -217,7 +374,7 @@ export default function Interstellar() {
                              
                              <Button 
                                 className="w-full h-12 text-lg font-orbitron bg-blue-600 hover:bg-blue-700"
-                                disabled={deuteriumReserve < calculateCost(target.distance)}
+                                disabled={deuteriumReserve < Number(routePreviewQuery.data?.travelCost?.deuterium ?? calculateCost(target.distance)) || playerRouteMutation.isPending}
                                 onClick={handleJump}
                              >
                                 <Zap className="w-5 h-5 mr-2" /> ENGAGE HYPERDRIVE
@@ -334,6 +491,11 @@ export default function Interstellar() {
                        <div className="text-xs text-red-400 flex items-center justify-center gap-2">
                           <AlertTriangle className="w-3 h-3" /> WARNING: Unstable wormhole connection
                        </div>
+                       {stargatesData?.stargates?.length ? (
+                         <div className="text-xs text-slate-300">
+                            Known Stargate addresses: {stargatesData.stargates.map((gate) => `${gate.location.galaxy}-${gate.location.sector}-${gate.location.system}`).join(", ")}
+                         </div>
+                       ) : null}
                     </div>
                  </CardContent>
               </Card>
