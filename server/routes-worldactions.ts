@@ -28,6 +28,42 @@ function getMarketPriceTrendKey() {
   return "market_price_trends";
 }
 
+function getExplorationQuestClaimsKey(userId: string) {
+  return `exploration_quest_claims:${userId}`;
+}
+
+function getExplorationDebrisHarvestsKey(userId: string) {
+  return `exploration_debris_harvests:${userId}`;
+}
+
+async function getExplorationQuestClaims(userId: string) {
+  const setting = await storage.getSetting(getExplorationQuestClaimsKey(userId));
+  return Array.isArray(setting?.value) ? (setting!.value as string[]) : [];
+}
+
+async function setExplorationQuestClaims(userId: string, claimedQuestIds: string[]) {
+  await storage.setSetting(
+    getExplorationQuestClaimsKey(userId),
+    claimedQuestIds.slice(0, 200),
+    "Claimed exploration quest rewards",
+    "exploration",
+  );
+}
+
+async function getExplorationDebrisHarvests(userId: string) {
+  const setting = await storage.getSetting(getExplorationDebrisHarvestsKey(userId));
+  return Array.isArray(setting?.value) ? (setting!.value as string[]) : [];
+}
+
+async function setExplorationDebrisHarvests(userId: string, harvestedDebrisIds: string[]) {
+  await storage.setSetting(
+    getExplorationDebrisHarvestsKey(userId),
+    harvestedDebrisIds.slice(0, 200),
+    "Harvested exploration debris fields",
+    "exploration",
+  );
+}
+
 async function getMarketHistory(userId: string) {
   const setting = await storage.getSetting(getMarketHistoryKey(userId));
   return Array.isArray(setting?.value) ? (setting!.value as any[]) : [];
@@ -207,6 +243,155 @@ router.post("/api/exploration/warp-action", isAuthenticated, async (req, res) =>
   } catch (error) {
     console.error("[exploration/warp-action]", error);
     res.status(500).json({ error: "Failed warp action" });
+  }
+});
+
+router.get("/api/exploration/state", isAuthenticated, async (req, res) => {
+  try {
+    const userId = (req.session as any)?.userId as string;
+    const [claimedQuestIds, harvestedDebrisIds] = await Promise.all([
+      getExplorationQuestClaims(userId),
+      getExplorationDebrisHarvests(userId),
+    ]);
+
+    res.json({
+      claimedQuestIds,
+      harvestedDebrisIds,
+    });
+  } catch (error) {
+    console.error("[exploration/state]", error);
+    res.status(500).json({ error: "Failed to load exploration state" });
+  }
+});
+
+router.post("/api/exploration/quest-claim", isAuthenticated, async (req, res) => {
+  try {
+    const userId = (req.session as any)?.userId as string;
+    const questId = String(req.body?.questId || "");
+    const rewards = req.body?.rewards || {};
+
+    if (!questId) {
+      return res.status(400).json({ error: "Quest ID is required" });
+    }
+
+    const claimedQuestIds = await getExplorationQuestClaims(userId);
+    if (claimedQuestIds.includes(questId)) {
+      return res.status(400).json({ error: "Quest reward already claimed" });
+    }
+
+    const playerState = await db.query.playerStates.findFirst({
+      where: eq(playerStates.userId, userId),
+    });
+
+    if (!playerState) {
+      return res.status(404).json({ error: "Player state not found" });
+    }
+
+    const currentResources = (playerState.resources as any) || { metal: 0, crystal: 0, deuterium: 0, energy: 0 };
+    const currentCommander = (playerState.commander as any) || {};
+    const currentStats = currentCommander.stats || { level: 1, xp: 0, warfare: 1, logistics: 1, science: 1, engineering: 1 };
+
+    const gain = {
+      metal: Math.max(0, Number(rewards.metal || 0)),
+      crystal: Math.max(0, Number(rewards.crystal || 0)),
+      deuterium: Math.max(0, Number(rewards.deuterium || 0)),
+      xp: Math.max(0, Number(rewards.xp || 0)),
+    };
+
+    const updatedResources = {
+      ...currentResources,
+      metal: Number(currentResources.metal || 0) + gain.metal,
+      crystal: Number(currentResources.crystal || 0) + gain.crystal,
+      deuterium: Number(currentResources.deuterium || 0) + gain.deuterium,
+      energy: Number(currentResources.energy || 0),
+    };
+
+    const updatedCommander = {
+      ...currentCommander,
+      stats: {
+        ...currentStats,
+        xp: Number(currentStats.xp || 0) + gain.xp,
+      },
+    };
+
+    await db
+      .update(playerStates)
+      .set({ resources: updatedResources, commander: updatedCommander, updatedAt: new Date() })
+      .where(eq(playerStates.userId, userId));
+
+    await setExplorationQuestClaims(userId, [questId, ...claimedQuestIds]);
+
+    res.json({
+      success: true,
+      questId,
+      gain,
+      resources: updatedResources,
+      commander: updatedCommander,
+    });
+  } catch (error) {
+    console.error("[exploration/quest-claim]", error);
+    res.status(500).json({ error: "Failed to claim quest reward" });
+  }
+});
+
+router.post("/api/exploration/debris-harvest", isAuthenticated, async (req, res) => {
+  try {
+    const userId = (req.session as any)?.userId as string;
+    const debrisId = String(req.body?.debrisId || "");
+    const debrisName = String(req.body?.debrisName || "Unknown Debris Field");
+    const resources = req.body?.resources || {};
+    const harvestProgress = Math.max(0, Math.min(100, Number(req.body?.harvestProgress || 0)));
+
+    if (!debrisId) {
+      return res.status(400).json({ error: "Debris ID is required" });
+    }
+
+    const harvestedDebrisIds = await getExplorationDebrisHarvests(userId);
+    if (harvestedDebrisIds.includes(debrisId)) {
+      return res.status(400).json({ error: "Debris field already harvested" });
+    }
+
+    const playerState = await db.query.playerStates.findFirst({
+      where: eq(playerStates.userId, userId),
+    });
+
+    if (!playerState) {
+      return res.status(404).json({ error: "Player state not found" });
+    }
+
+    const currentResources = (playerState.resources as any) || { metal: 0, crystal: 0, deuterium: 0, energy: 0 };
+    const harvestFactor = Math.max(0.1, 1 - harvestProgress / 100);
+    const gain = {
+      metal: Math.floor(Math.max(0, Number(resources.metal || 0)) * harvestFactor),
+      crystal: Math.floor(Math.max(0, Number(resources.crystal || 0)) * harvestFactor),
+      deuterium: Math.floor(Math.max(0, Number(resources.deuterium || 0)) * harvestFactor),
+    };
+
+    const updatedResources = {
+      ...currentResources,
+      metal: Number(currentResources.metal || 0) + gain.metal,
+      crystal: Number(currentResources.crystal || 0) + gain.crystal,
+      deuterium: Number(currentResources.deuterium || 0) + gain.deuterium,
+      energy: Number(currentResources.energy || 0),
+    };
+
+    await db
+      .update(playerStates)
+      .set({ resources: updatedResources, updatedAt: new Date() })
+      .where(eq(playerStates.userId, userId));
+
+    await setExplorationDebrisHarvests(userId, [debrisId, ...harvestedDebrisIds]);
+
+    res.json({
+      success: true,
+      debrisId,
+      debrisName,
+      gain,
+      resources: updatedResources,
+    });
+  } catch (error) {
+    console.error("[exploration/debris-harvest]", error);
+    res.status(500).json({ error: "Failed to harvest debris" });
   }
 });
 

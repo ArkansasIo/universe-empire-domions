@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Compass, Zap, AlertTriangle, Database, Star, Trophy } from "lucide-react";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { SPACE_ANOMALIES, generateAnomalyForCoordinates } from "@/lib/spaceAnomalies";
 import { WARP_GATES, TRADE_ROUTES, calculateWarpTime, calculateWarpCost } from "@/lib/warpNetwork";
@@ -19,6 +19,21 @@ export default function Exploration() {
   const [selectedAnomaly, setSelectedAnomaly] = useState<string | null>(null);
   const [selectedQuest, setSelectedQuest] = useState<string | null>(null);
   const [scannedAnomalies, setScannedAnomalies] = useState<Set<string>>(new Set());
+
+  const explorationStateQuery = useQuery<{ claimedQuestIds: string[]; harvestedDebrisIds: string[] }>({
+    queryKey: ["exploration-state"],
+    queryFn: async () => {
+      const response = await fetch("/api/exploration/state", { credentials: "include" });
+      if (!response.ok) {
+        throw new Error("Failed to load exploration state");
+      }
+      return response.json();
+    },
+    staleTime: 30000,
+  });
+
+  const claimedQuestIds = new Set(explorationStateQuery.data?.claimedQuestIds || []);
+  const harvestedDebrisIds = new Set(explorationStateQuery.data?.harvestedDebrisIds || []);
 
   const scanMutation = useMutation({
     mutationFn: async (anomaly: any) => {
@@ -78,6 +93,66 @@ export default function Exploration() {
     },
     onError: (error: Error) => {
       toast({ title: "Warp action failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const questClaimMutation = useMutation({
+    mutationFn: async (quest: any) => {
+      const response = await fetch("/api/exploration/quest-claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          questId: quest.id,
+          rewards: quest.rewards,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to claim quest reward");
+      }
+      return response.json();
+    },
+    onSuccess: (data, quest) => {
+      explorationStateQuery.refetch();
+      toast({
+        title: "Quest reward claimed",
+        description: `${quest.title}: +${data.gain.metal || 0}M, +${data.gain.crystal || 0}C, +${data.gain.deuterium || 0}D, +${data.gain.xp || 0} XP`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Quest claim failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const debrisHarvestMutation = useMutation({
+    mutationFn: async (debris: any) => {
+      const response = await fetch("/api/exploration/debris-harvest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          debrisId: debris.id,
+          debrisName: debris.name,
+          resources: debris.resources,
+          harvestProgress: debris.harvestProgress,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to harvest debris");
+      }
+      return response.json();
+    },
+    onSuccess: (data, debris) => {
+      explorationStateQuery.refetch();
+      toast({
+        title: "Debris harvested",
+        description: `${debris.name}: +${data.gain.metal}M, +${data.gain.crystal}C, +${data.gain.deuterium}D`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Harvest failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -306,6 +381,17 @@ export default function Exploration() {
                             </div>
                           ))}
                         </div>
+                        <Button
+                          size="sm"
+                          className="w-full mt-3"
+                          disabled={claimedQuestIds.has(quest.id) || questClaimMutation.isPending}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            questClaimMutation.mutate(quest);
+                          }}
+                        >
+                          {claimedQuestIds.has(quest.id) ? "Reward Claimed" : "Claim Reward"}
+                        </Button>
                       </CardContent>
                     </Card>
                   ))}
@@ -362,6 +448,15 @@ export default function Exploration() {
                             <div><span className="text-blue-600">{debris.resources.crystal.toLocaleString()}</span> Crystal</div>
                             <div><span className="text-green-600">{debris.resources.deuterium.toLocaleString()}</span> Deut</div>
                           </div>
+                          <Button
+                            size="sm"
+                            className="w-full mt-3"
+                            variant="outline"
+                            disabled={harvestedDebrisIds.has(debris.id) || debrisHarvestMutation.isPending}
+                            onClick={() => debrisHarvestMutation.mutate(debris)}
+                          >
+                            {harvestedDebrisIds.has(debris.id) ? "Harvested" : "Harvest Debris"}
+                          </Button>
                         </CardContent>
                       </Card>
                     ))}
