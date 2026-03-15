@@ -18,20 +18,31 @@ import {
   Rocket
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { getPlanetDetails } from "@/lib/planetUtils";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
-type SystemObject = {
-  type: "planet" | "asteroid" | "nebula" | "blackhole" | "station" | "empty";
+type SystemObjectType = "planet" | "asteroid" | "nebula" | "blackhole" | "station" | "empty";
+
+interface SystemPosition {
+  position: number;
+  type: SystemObjectType;
   name: string;
   owner?: string;
   alliance?: string;
-  debris?: { metal: number, crystal: number };
+  debris?: { metal: number; crystal: number };
   moon?: boolean;
   class?: string;
-};
+}
+
+interface SystemData {
+  universe: string;
+  galaxy: number;
+  sector: number;
+  system: number;
+  positions: SystemPosition[];
+}
 
 export default function Galaxy() {
    const { toast } = useToast();
@@ -41,31 +52,15 @@ export default function Galaxy() {
   const [sector, setSector] = useState(4); 
   const [system, setSystem] = useState(102);
 
-  // Mock Data Generator based on coordinates
-  const getSystemData = (pos: number): SystemObject => {
-    // Seed-like behavior
-    const seed = (universe.length + galaxy + sector + system + pos) * 1.1;
-    const random = (seed * 9301 + 49297) % 233280 / 233280;
-
-    // Get deterministic planet details for planets
-    const details = getPlanetDetails(seed);
-
-    if (pos === 8) return { type: "planet", name: "Homeworld", owner: "Commander", alliance: "ADMIN", moon: true, class: "M" };
-    if (random > 0.95) return { type: "blackhole", name: "Singularity", debris: { metal: 50000, crystal: 50000 } };
-    if (random > 0.90) return { type: "nebula", name: "Ion Cloud" };
-    if (random > 0.85) return { type: "asteroid", name: "Asteroid Field", debris: { metal: 5000, crystal: 1000 } };
-    if (random > 0.80) return { type: "station", name: "Pirate Outpost", owner: "Pirates" };
-    if (random > 0.60) return { 
-        type: "planet", 
-        name: `Colony ${pos}`, 
-        owner: `Player_${Math.floor(random * 1000)}`, 
-        alliance: random > 0.7 ? "NOOBS" : undefined, 
-        moon: random > 0.75,
-        class: details.class 
-    };
-    
-    return { type: "empty", name: "" };
-  };
+  const { data: systemData, isFetching } = useQuery<SystemData>({
+    queryKey: ["galaxy", universe, galaxy, sector, system],
+    queryFn: async () => {
+      const res = await fetch(`/api/galaxy/${universe}/${galaxy}/${sector}/${system}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load system data");
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
 
   return (
     <GameLayout>
@@ -146,10 +141,14 @@ export default function Galaxy() {
                </TableRow>
              </TableHeader>
              <TableBody>
+               {isFetching && !systemData && (
+                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading system data...</TableCell></TableRow>
+               )}
                {Array.from({ length: 15 }).map((_, i) => {
                  const pos = i + 1;
-                 const data = getSystemData(pos);
-                 const isMe = data.owner === "Commander";
+                 const data: SystemPosition = systemData?.positions?.find(p => p.position === pos) ||
+                   { position: pos, type: "empty", name: "" };
+                 const isMe = false; // Server sets real owner names; local identity resolved server-side
                  
                  return (
                    <TableRow key={pos} className="border-slate-100 hover:bg-slate-50 transition-colors">

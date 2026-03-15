@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { CommanderState, Item, RaceId, ClassId, SubClassId, RACES, CLASSES, SUBCLASSES } from './commanderTypes';
 import { GovernmentState, GOVERNMENTS, GovernmentId, POLICIES } from './governmentData';
 import { Alliance, AllianceMember, MOCK_ALLIANCES } from './allianceData';
@@ -203,6 +204,7 @@ interface GameState {
 const GameContext = createContext<GameState | undefined>(undefined);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
+  const { toast } = useToast();
   const [resources, setResources] = useState<Resources>({
     metal: 50000,
     crystal: 50000,
@@ -1037,7 +1039,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }));
         addEvent("Crafting Complete", `Created ${item.name}`, "success");
      } else {
-        alert("Insufficient Resources");
+        toast({ title: "Insufficient Resources", description: "Not enough materials to craft this item.", variant: "destructive" });
      }
   };
 
@@ -1214,7 +1216,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         // Check cooldown
         const now = Date.now();
         if (artifact.lastUsed && now - artifact.lastUsed < (artifact.cooldown || 0)) {
-           alert("Artifact is on cooldown!");
+           toast({ title: "Artifact on Cooldown", description: `${artifact.name} is not ready yet.`, variant: "destructive" });
            return;
         }
         
@@ -1277,7 +1279,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        setCoordinates(coords);
        addEvent("Hyperspace Jump", `Fleet successfully jumped to ${destinationName} [${coords}].`, "success");
     } else {
-       alert("Insufficient Deuterium for jump!");
+       toast({ title: "Insufficient Deuterium", description: "Not enough deuterium for this hyperspace jump.", variant: "destructive" });
     }
   };
 

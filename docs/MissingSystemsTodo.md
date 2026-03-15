@@ -39,11 +39,16 @@ This checklist captures systems that are still stubbed, mocked, or UI-placeholde
 
 ## Priority P2 — Content/system completeness
 
-- [ ] Replace Galaxy page synthetic data generation with server-side canonical universe data (`client/src/pages/Galaxy.tsx`).
-- [ ] Replace static troop roster seed (`MOCK_TROOPS`) with account/fleet-backed unit persistence (`client/src/pages/Army.tsx`).
-- [ ] Implement “coming soon” sections:
-  - alliance real-time chat (`client/src/pages/Alliance.tsx`)
-  - planet defense systems panel (`client/src/pages/PlanetDetail.tsx`)
+- [x] Replace Galaxy page synthetic data generation with server-side canonical universe data (`client/src/pages/Galaxy.tsx`).
+  - New route `GET /api/galaxy/:universe/:galaxy/:sector/:system` added (`server/routes-galaxy.ts`).
+  - Client now uses `useQuery` instead of local `getSystemData()`.
+- [x] Replace static troop roster seed (`MOCK_TROOPS`) with account/fleet-backed unit persistence (`client/src/pages/Army.tsx`).
+- [x] Implement planet defense systems panel (`client/src/pages/PlanetDetail.tsx`) — full upgrade UI with `defenseUpgradeMutation`.
+- [ ] Implement alliance real-time chat (`client/src/pages/Alliance.tsx`) — currently polls every 10 s but chat UI needs typing/send wiring.
+
+## P0 carried-forward fixes (session)
+
+- [x] Replace `alert()` calls in `client/src/lib/gameContext.tsx` (`craftItem`, `activateArtifact`, `travelTo`) with `toast()` notifications.
 
 ## Suggested implementation order
 
