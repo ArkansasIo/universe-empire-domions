@@ -154,6 +154,7 @@ export default function Commander() {
    const [selectedEquipmentType, setSelectedEquipmentType] = useState<CommanderEquipmentType>("weapon");
    const [selectedLeaderType, setSelectedLeaderType] = useState<string>("all");
    const [selectedLeaderClass, setSelectedLeaderClass] = useState<string>("all");
+   const [selectedTalentTier, setSelectedTalentTier] = useState<number>(1);
 
    const leaderTypes = Array.from(new Set(GOVERNMENT_LEADER_TYPES_23.map(leader => leader.type)));
    const leaderClasses = Array.from(new Set(GOVERNMENT_LEADER_TYPES_23.map(leader => leader.class)));
@@ -466,11 +467,53 @@ export default function Commander() {
                          </div>
 
                          <div className="space-y-4">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border border-slate-200 rounded p-3 bg-white">
+                               <div>
+                                  <div className="text-xs uppercase text-slate-500">Viewing Tier</div>
+                                  <div className="text-lg font-orbitron text-slate-900">{selectedTalentTier} / {COMMANDER_MAX_TIER}</div>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                  <Button
+                                     size="sm"
+                                     variant="outline"
+                                     onClick={() => setSelectedTalentTier((current) => Math.max(1, current - 1))}
+                                     disabled={selectedTalentTier <= 1}
+                                  >
+                                     Prev
+                                  </Button>
+                                  <Select
+                                     value={String(selectedTalentTier)}
+                                     onValueChange={(value) => setSelectedTalentTier(Number(value))}
+                                  >
+                                     <SelectTrigger className="w-40">
+                                        <SelectValue />
+                                     </SelectTrigger>
+                                     <SelectContent>
+                                        {Array.from({ length: COMMANDER_MAX_TIER }, (_, index) => index + 1).map((tierValue) => (
+                                           <SelectItem key={`talent-tier-${tierValue}`} value={String(tierValue)}>
+                                              Tier {tierValue}
+                                           </SelectItem>
+                                        ))}
+                                     </SelectContent>
+                                  </Select>
+                                  <Button
+                                     size="sm"
+                                     variant="outline"
+                                     onClick={() => setSelectedTalentTier((current) => Math.min(COMMANDER_MAX_TIER, current + 1))}
+                                     disabled={selectedTalentTier >= COMMANDER_MAX_TIER}
+                                  >
+                                     Next
+                                  </Button>
+                               </div>
+                            </div>
+
                             {Object.entries(talentNodesByBranch).map(([branch, nodes]) => (
                                <div key={branch} className="border border-slate-200 rounded p-4 bg-slate-50/40">
                                   <div className="font-bold text-slate-900 capitalize mb-3">{branch}</div>
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                     {nodes.slice(0, 6).map((node) => {
+                                     {nodes
+                                     .filter((node) => node.tier === selectedTalentTier)
+                                     .map((node) => {
                                         const currentRank = talentTreeData?.progression.unlockedNodes?.[node.id] || 0;
                                         const unlocked = currentRank > 0;
                                         const maxed = currentRank >= node.maxRank;
