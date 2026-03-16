@@ -4,7 +4,7 @@
  * @tag #ui #military #management #page
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import GameLayout from '@/components/layout/GameLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +75,15 @@ export default function ArmyManagement() {
   const [trainQuantity, setTrainQuantity] = useState(1);
   const [sortBy, setSortBy] = useState<SortBy>('tier');
   const [searchTerm, setSearchTerm] = useState('');
+  const [campaignName, setCampaignName] = useState('');
+  const [campaignType, setCampaignType] = useState<'conquest' | 'defense' | 'exploration' | 'raid'>('conquest');
+  const [targetGalaxy, setTargetGalaxy] = useState(1);
+  const [targetSystem, setTargetSystem] = useState(1);
+  const [selectedCampaignUnits, setSelectedCampaignUnits] = useState<string[]>([]);
+
+  const subsystemById = useMemo(() => {
+    return new Map<string, ArmySubsystem>((subsystems || []).map((subsystem) => [subsystem.id, subsystem]));
+  }, [subsystems]);
 
   if (forceLoading || subsystemsLoading) {
     return (
@@ -124,6 +133,23 @@ export default function ArmyManagement() {
     : [];
 
   const activeCampaigns = campaigns || [];
+
+  const totalUnitCount = force.squadrons.reduce((sum: number, unit: ArmyUnit) => sum + unit.quantity, 0);
+  const deployableBlueprints = sortedSubsystems.length;
+
+  const selectedBlueprint = selectedUnitType
+    ? subsystemById.get(selectedUnitType)
+    : undefined;
+
+  const selectedTrainingCost = selectedBlueprint
+    ? selectedBlueprint.cost.credits * trainQuantity
+    : 0;
+
+  const getUnitHealthPercent = (unit: ArmyUnit) => {
+    const maxHealth = Math.max(1, unit.quantity * 100);
+    const rawPercent = (unit.health / maxHealth) * 100;
+    return Math.max(0, Math.min(100, Math.round(rawPercent)));
+  };
 
   return (
     <GameLayout>
@@ -194,6 +220,27 @@ export default function ArmyManagement() {
           </Card>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="pt-6">
+              <div className="text-sm text-slate-500">Total Deployed Units</div>
+              <div className="text-2xl font-bold text-slate-900">{totalUnitCount}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="pt-6">
+              <div className="text-sm text-slate-500">Deployable Blueprints</div>
+              <div className="text-2xl font-bold text-slate-900">{deployableBlueprints}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="pt-6">
+              <div className="text-sm text-slate-500">Active Campaign Operations</div>
+              <div className="text-2xl font-bold text-slate-900">{activeCampaigns.length}</div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Tabs */}
         <Tabs defaultValue="units" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -227,14 +274,14 @@ export default function ArmyManagement() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-bold text-lg">
-                            {unit.quantity}x Unit
+                          <h3 className="font-bold text-lg text-slate-900">
+                            {unit.quantity}x {subsystemById.get(unit.subsystemId)?.name || 'Unit'}
                           </h3>
                           <Badge className={roleColors.commander}>
                             Level {unit.level}
                           </Badge>
                           <Badge variant="outline">
-                            {Math.round((unit.health / (unit.quantity * 100)) * 100)}% Health
+                            {getUnitHealthPercent(unit)}% Health
                           </Badge>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mb-4">
@@ -257,6 +304,23 @@ export default function ArmyManagement() {
                                 ? `Sector ${unit.location.galaxy}`
                                 : 'Home Base'}
                             </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Role:</span>{' '}
+                            <span className="text-slate-900 font-semibold capitalize">
+                              {subsystemById.get(unit.subsystemId)?.role || 'unknown'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs mb-2">
+                          <div className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-600">
+                            Attack: {subsystemById.get(unit.subsystemId)?.combat.attack ?? 0}
+                          </div>
+                          <div className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-600">
+                            Defense: {subsystemById.get(unit.subsystemId)?.combat.defense ?? 0}
+                          </div>
+                          <div className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-600">
+                            Speed: {subsystemById.get(unit.subsystemId)?.combat.speed ?? 0}
                           </div>
                         </div>
                       </div>
@@ -346,6 +410,8 @@ export default function ArmyManagement() {
                     <div className="bg-slate-50 p-2 rounded text-sm border border-slate-200">
                       <div className="text-slate-600">Cost: {subsystem.cost.credits} Credits</div>
                       <div className="text-slate-600">Crew: {subsystem.minCrewRequired} min</div>
+                      <div className="text-slate-600">Accuracy: {subsystem.combat.accuracy}%</div>
+                      <div className="text-slate-600">Dodge: {subsystem.combat.dodge}%</div>
                     </div>
 
                     <Button
@@ -361,10 +427,133 @@ export default function ArmyManagement() {
                 </Card>
               ))}
             </div>
+
+            {selectedBlueprint && (
+              <Card className="bg-white border-slate-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-slate-900">Selected Blueprint Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge>{selectedBlueprint.tier}-Star</Badge>
+                    <Badge variant="outline" className="capitalize">{selectedBlueprint.type}</Badge>
+                    <div className={cn('px-2 py-0.5 rounded text-xs', roleColors[selectedBlueprint.role])}>
+                      <span className="inline-flex items-center gap-1">{roleIcons[selectedBlueprint.role]}<span>{selectedBlueprint.role}</span></span>
+                    </div>
+                  </div>
+                  <div className="text-sm text-slate-600">{selectedBlueprint.description}</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    <div className="rounded border border-slate-200 bg-slate-50 p-2">ATK: <span className="font-semibold text-slate-900">{selectedBlueprint.combat.attack}</span></div>
+                    <div className="rounded border border-slate-200 bg-slate-50 p-2">DEF: <span className="font-semibold text-slate-900">{selectedBlueprint.combat.defense}</span></div>
+                    <div className="rounded border border-slate-200 bg-slate-50 p-2">HP: <span className="font-semibold text-slate-900">{selectedBlueprint.combat.health}</span></div>
+                    <div className="rounded border border-slate-200 bg-slate-50 p-2">SPD: <span className="font-semibold text-slate-900">{selectedBlueprint.combat.speed}</span></div>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Required Level: {selectedBlueprint.minimumLevel ?? 1} · Min Crew: {selectedBlueprint.minCrewRequired} · Morale Multiplier: {selectedBlueprint.moraleMultiplier}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Campaigns Tab */}
           <TabsContent value="campaigns" className="space-y-4">
+            <Card className="bg-white border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-slate-900">Campaign Planner</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Input
+                    value={campaignName}
+                    onChange={(event) => setCampaignName(event.target.value)}
+                    placeholder="Campaign name"
+                    className="bg-white border-slate-300"
+                  />
+                  <select
+                    value={campaignType}
+                    onChange={(event) => setCampaignType(event.target.value as 'conquest' | 'defense' | 'exploration' | 'raid')}
+                    className="px-3 py-2 bg-white border border-slate-300 rounded text-sm text-slate-800"
+                  >
+                    <option value="conquest">Conquest</option>
+                    <option value="defense">Defense</option>
+                    <option value="exploration">Exploration</option>
+                    <option value="raid">Raid</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={targetGalaxy}
+                    onChange={(event) => setTargetGalaxy(Math.max(1, Number(event.target.value) || 1))}
+                    placeholder="Target galaxy"
+                    className="bg-white border-slate-300"
+                  />
+                  <Input
+                    type="number"
+                    min={1}
+                    value={targetSystem}
+                    onChange={(event) => setTargetSystem(Math.max(1, Number(event.target.value) || 1))}
+                    placeholder="Target system"
+                    className="bg-white border-slate-300"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm font-medium text-slate-800">Assign Units</div>
+                  {force.squadrons.length === 0 ? (
+                    <div className="text-sm text-slate-500">No available units to assign.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {force.squadrons.map((unit: ArmyUnit) => {
+                        const checked = selectedCampaignUnits.includes(unit.id);
+                        const label = subsystemById.get(unit.subsystemId)?.name || 'Unit';
+                        return (
+                          <label key={unit.id} className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                            <span className="text-slate-700">{unit.quantity}x {label}</span>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() =>
+                                setSelectedCampaignUnits((previous) =>
+                                  checked
+                                    ? previous.filter((id) => id !== unit.id)
+                                    : [...previous, unit.id]
+                                )
+                              }
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  disabled={!campaignName.trim() || selectedCampaignUnits.length === 0 || deployCampaignMutation.isPending}
+                  onClick={() => {
+                    deployCampaignMutation.mutate(
+                      {
+                        campaignName: campaignName.trim(),
+                        unitIds: selectedCampaignUnits,
+                        targetGalaxy,
+                        targetSystem,
+                        campaignType,
+                      },
+                      {
+                        onSuccess: () => {
+                          setCampaignName('');
+                          setSelectedCampaignUnits([]);
+                        },
+                      }
+                    );
+                  }}
+                >
+                  Deploy Campaign
+                </Button>
+              </CardContent>
+            </Card>
+
             {activeCampaigns.length === 0 ? (
               <Card className="bg-white border-slate-200 shadow-sm">
                 <CardContent className="pt-6 text-center">
@@ -500,10 +689,7 @@ export default function ArmyManagement() {
                 <div className="flex justify-between mb-2">
                   <span className="text-slate-600">Total Cost:</span>
                   <span className="font-semibold text-slate-900">
-                    {selectedUnitType
-                      ? sortedSubsystems.find((u) => u.id === selectedUnitType)
-                          ?.cost.credits! * trainQuantity
-                      : 0}{' '}
+                    {selectedTrainingCost}{' '}
                     Credits
                   </span>
                 </div>

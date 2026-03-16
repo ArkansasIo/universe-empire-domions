@@ -4,6 +4,20 @@ import { Rocket, Globe, Users, Swords, FlaskConical, Building, ArrowLeft } from 
 import { Link } from "wouter";
 
 export default function About() {
+  const gameplayLoops = [
+    "Expand economy with mining, logistics, and production balancing.",
+    "Convert production into military and exploration capability.",
+    "Compete or cooperate through alliance diplomacy and conflict.",
+    "Cycle progression through research, policy, and strategic adaptation.",
+  ];
+
+  const roadmap = [
+    { phase: "Phase I", focus: "Core economy, research, and fleet systems" },
+    { phase: "Phase II", focus: "Expanded alliance wars and dynamic events" },
+    { phase: "Phase III", focus: "Seasonal progression, relic progression, and narrative arcs" },
+    { phase: "Phase IV", focus: "Endgame sovereignty and inter-universe competition" },
+  ];
+
   return (
     <div className="min-h-screen bg-white py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -117,6 +131,33 @@ export default function About() {
             </ul>
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-slate-900">Core Gameplay Loop</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-slate-600">
+              {gameplayLoops.map((item) => (
+                <div key={item} className="text-sm">• {item}</div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-slate-900">Development Roadmap</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-slate-600">
+              {roadmap.map((step) => (
+                <div key={step.phase} className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <div className="font-semibold text-slate-900">{step.phase}</div>
+                  <div className="text-sm">{step.focus}</div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="text-center">
           <Link href="/">

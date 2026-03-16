@@ -37,6 +37,10 @@ export default function CivilizationManagement() {
   const systemList: CivilizationSubsystem[] = subsystems || [];
   const jobList: CivilizationJob[] = jobs || [];
 
+  const jobsById = useMemo(() => {
+    return new Map<string, CivilizationJob>(jobList.map((job) => [job.id, job]));
+  }, [jobList]);
+
   const filteredJobs = useMemo(() => {
     const term = jobSearch.trim().toLowerCase();
     if (!term) return jobList.slice(0, 30);
@@ -51,6 +55,18 @@ export default function CivilizationManagement() {
       })
       .slice(0, 30);
   }, [jobList, jobSearch]);
+
+  const selectedJob = useMemo(
+    () => (selectedJobId ? jobsById.get(selectedJobId) : undefined),
+    [jobsById, selectedJobId]
+  );
+
+  const totalAssignedEmployees = useMemo(
+    () => currentAssignments.reduce((sum, assignment) => sum + assignment.employees, 0),
+    [currentAssignments]
+  );
+
+  const uniqueAssignedRoles = currentAssignments.length;
 
   if (stateLoading || systemsLoading || jobsLoading) {
     return (
@@ -105,6 +121,27 @@ export default function CivilizationManagement() {
           </Card>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-sm text-slate-500">Assigned Employees</div>
+              <div className="text-2xl font-bold text-slate-900">{totalAssignedEmployees}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-sm text-slate-500">Active Roles</div>
+              <div className="text-2xl font-bold text-slate-900">{uniqueAssignedRoles}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-sm text-slate-500">Subsystem Coverage</div>
+              <div className="text-2xl font-bold text-slate-900">{systemList.length}</div>
+            </CardContent>
+          </Card>
+        </div>
+
         <Tabs defaultValue="subsystems" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="subsystems">Subsystems</TabsTrigger>
@@ -130,6 +167,22 @@ export default function CivilizationManagement() {
                       <p className="text-sm text-slate-600">{system.description}</p>
                       <div className="text-sm text-slate-500">
                         Level {currentLevel} / {system.maxLevel}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-xs text-slate-600">
+                        <div className="rounded-md border border-slate-200 p-2 bg-slate-50">
+                          <div className="text-slate-500">Efficiency</div>
+                          <div className="font-semibold text-slate-900">{Math.round(system.efficiency * 100)}%</div>
+                        </div>
+                        <div className="rounded-md border border-slate-200 p-2 bg-slate-50">
+                          <div className="text-slate-500">Production/Turn</div>
+                          <div className="font-semibold text-slate-900">{system.productionPerTurn ?? 0}</div>
+                        </div>
+                      </div>
+                      <div className="space-y-1 text-xs text-slate-500">
+                        <div>Population Required: {system.populationRequired ?? 0}</div>
+                        <div>
+                          Cost/Turn: Food {system.costPerTurn?.food ?? 0} · Water {system.costPerTurn?.water ?? 0} · Credits {system.costPerTurn?.credits ?? 0}
+                        </div>
                       </div>
                       <Button
                         disabled={!canUpgrade || upgradeMutation.isPending}
@@ -189,6 +242,40 @@ export default function CivilizationManagement() {
               </CardContent>
             </Card>
 
+            {selectedJob && (
+              <Card className="bg-white border-slate-200">
+                <CardHeader>
+                  <CardTitle className="text-slate-900">Selected Role Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">{selectedJob.domain}</Badge>
+                    <Badge variant="outline">{selectedJob.class}</Badge>
+                    {selectedJob.subclass && <Badge variant="outline">{selectedJob.subclass}</Badge>}
+                    <Badge variant="outline">{selectedJob.rarity}</Badge>
+                  </div>
+                  <div>
+                    <div className="text-lg font-semibold text-slate-900">{selectedJob.name}</div>
+                    <div className="text-sm text-slate-600">{selectedJob.description}</div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                      <div className="text-slate-500">Food Demand</div>
+                      <div className="text-sm font-semibold text-slate-900">{selectedJob.resourceDemands.food}</div>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                      <div className="text-slate-500">Water Demand</div>
+                      <div className="text-sm font-semibold text-slate-900">{selectedJob.resourceDemands.water}</div>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                      <div className="text-slate-500">Productivity</div>
+                      <div className="text-sm font-semibold text-slate-900">{selectedJob.resourceDemands.productivity}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-1 gap-3">
               {currentAssignments.length === 0 ? (
                 <Card className="bg-white border-slate-200">
@@ -199,7 +286,13 @@ export default function CivilizationManagement() {
                   <Card key={assignment.id} className="bg-white border-slate-200">
                     <CardContent className="pt-6 flex items-center justify-between">
                       <div>
-                        <div className="font-semibold text-slate-900">{assignment.jobId}</div>
+                        <div className="font-semibold text-slate-900">{jobsById.get(assignment.jobId)?.name || assignment.jobId}</div>
+                        <div className="text-xs text-slate-500">
+                          {(jobsById.get(assignment.jobId)?.class || 'unknown')}
+                          {jobsById.get(assignment.jobId)?.subclass
+                            ? ` / ${jobsById.get(assignment.jobId)?.subclass}`
+                            : ''}
+                        </div>
                         <div className="text-sm text-slate-500">Employees: {assignment.employees}</div>
                       </div>
                       <Button

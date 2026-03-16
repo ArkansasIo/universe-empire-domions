@@ -37,6 +37,9 @@ const VendorTypeColors: Record<string, string> = {
 
 export default function Merchants() {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(VENDORS[0]);
+  const [reputation] = useState(72);
+
+  const totalOfferings = selectedVendor?.offerings.reduce((sum, offering) => sum + offering.items.length, 0) || 0;
 
   return (
     <GameLayout>
@@ -103,6 +106,21 @@ export default function Merchants() {
 
                 <ScrollArea className="flex-1">
                   <div className="p-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="rounded border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs uppercase text-slate-500">Reputation</div>
+                        <div className="text-xl font-bold text-slate-900">{reputation}%</div>
+                      </div>
+                      <div className="rounded border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs uppercase text-slate-500">Offerings</div>
+                        <div className="text-xl font-bold text-slate-900">{totalOfferings}</div>
+                      </div>
+                      <div className="rounded border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs uppercase text-slate-500">Quest Lines</div>
+                        <div className="text-xl font-bold text-slate-900">{selectedVendor.questsAvailable.length}</div>
+                      </div>
+                    </div>
+
                     <TabsContent value="overview" className="m-0 space-y-4">
                       <div>
                         <h4 className="text-sm font-bold text-slate-900 mb-2">Description</h4>
@@ -135,6 +153,14 @@ export default function Merchants() {
                       <div>
                         <h4 className="text-sm font-bold text-slate-900 mb-2">Trading Style</h4>
                         <p className="text-sm text-slate-700 bg-yellow-50 border border-yellow-200 p-3 rounded">{selectedVendor.tradingStyle}</p>
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 mb-2">Negotiation Guidance</h4>
+                        <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                          Higher reputation unlocks better contract terms, rare stock previews, and reduced transaction friction.
+                          Mix trade volume with quest completion to maximize vendor trust.
+                        </div>
                       </div>
                     </TabsContent>
 

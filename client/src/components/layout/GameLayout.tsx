@@ -40,8 +40,11 @@ import {
   GraduationCap,
   Compass,
   Home,
+  Coins,
+  Droplets,
   FileText,
   Trophy,
+  Wheat,
   Crown,
   Satellite,
   Link2,
@@ -224,6 +227,9 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
             <ResourceDisplay icon={Gem} label="Crystal" value={resources.crystal} colorClass="text-blue-600" />
             <ResourceDisplay icon={Database} label="Deuterium" value={resources.deuterium} colorClass="text-green-600" />
             <ResourceDisplay icon={Zap} label="Energy" value={resources.energy} colorClass={resources.energy >= 0 ? "text-yellow-600" : "text-red-600"} />
+            <ResourceDisplay icon={Coins} label="Credits" value={resources.credits} colorClass="text-amber-600" />
+            <ResourceDisplay icon={Wheat} label="Food" value={resources.food} colorClass="text-lime-600" />
+            <ResourceDisplay icon={Droplets} label="Water" value={resources.water} colorClass="text-cyan-600" />
           </div>
         </div>
       </header>

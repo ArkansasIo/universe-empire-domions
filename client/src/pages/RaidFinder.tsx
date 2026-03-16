@@ -22,6 +22,17 @@ export default function RaidFinder() {
     support: "bg-purple-600",
   };
 
+  const roleCounts = queue.reduce(
+    (acc: Record<string, number>, player: any) => {
+      const role = player?.preferredRole || "dps";
+      acc[role] = (acc[role] || 0) + 1;
+      return acc;
+    },
+    { tank: 0, dps: 0, healer: 0, support: 0 }
+  );
+
+  const estimatedWaitMinutes = Math.max(1, Math.ceil(queue.length / 4));
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6">
       <div className="max-w-7xl mx-auto">
@@ -29,6 +40,33 @@ export default function RaidFinder() {
           <Search className="w-8 h-8 text-primary" />
           Raid Finder
         </h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Queued Players</div>
+              <div className="text-2xl font-bold text-white">{queue.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Estimated Wait</div>
+              <div className="text-2xl font-bold text-white">~{estimatedWaitMinutes}m</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Preferred Role</div>
+              <div className="text-2xl font-bold text-white capitalize">{preferredRole}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Queue Status</div>
+              <div className="text-2xl font-bold text-white">{isQueued ? "Active" : "Idle"}</div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Your Status */}
         <Card className="bg-slate-800 border-slate-700 mb-6">
@@ -101,6 +139,34 @@ export default function RaidFinder() {
         </div>
 
         {/* Looking for */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Role Demand Snapshot</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(["tank", "dps", "healer", "support"] as const).map((role) => (
+                <div key={role} className="flex items-center justify-between rounded bg-slate-700/60 border border-slate-600 px-3 py-2 text-sm">
+                  <span className="text-slate-200 capitalize">{role}</span>
+                  <Badge className={roleColors[role]}>{roleCounts[role] || 0}</Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Operation Briefing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-slate-300">
+              <div>• Recommended composition: 1 Tank, 1 Healer, 2 DPS, 1 Support.</div>
+              <div>• Queue bonus applies when filling missing roles.</div>
+              <div>• Matchmaking prioritizes power balance over queue order for elite raids.</div>
+              <div>• Completing runs improves finder rating and shortens future waits.</div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div>
           <h2 className="text-2xl font-bold text-white mb-4">Looking For Groups</h2>
           <Card className="bg-slate-800 border-slate-700">

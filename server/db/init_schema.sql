@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS player_states (
   setup_complete boolean NOT NULL DEFAULT false,
   planet_name varchar NOT NULL DEFAULT 'New Colony',
   coordinates varchar NOT NULL DEFAULT '[1:1:1]',
-  resources jsonb NOT NULL DEFAULT '{"metal": 1000, "crystal": 500, "deuterium": 0, "energy": 0}',
+  resources jsonb NOT NULL DEFAULT '{"metal": 1000, "crystal": 500, "deuterium": 0, "energy": 0, "credits": 1000, "food": 500, "water": 500}',
   buildings jsonb NOT NULL DEFAULT '{"roboticsFactory": 0, "shipyard": 0, "researchLab": 0}',
   orbital_buildings jsonb NOT NULL DEFAULT '{}',
   research jsonb NOT NULL DEFAULT '{}',
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
 INSERT INTO system_settings (key, value, description, category) VALUES
   ('game_speed', '{"turnsPerMinute": 6, "resourceProductionRate": 1.0, "researchSpeedMultiplier": 1.0}', 'Game speed and progression multipliers', 'game'),
   ('resource_prices', '{"metal": 1, "crystal": 1.5, "deuterium": 2.0}', 'Market prices for resources', 'economy'),
-  ('starting_resources', '{"metal": 1000, "crystal": 500, "deuterium": 0, "energy": 0}', 'Starting resources for new players', 'economy'),
+  ('starting_resources', '{"metal": 1000, "crystal": 500, "deuterium": 0, "energy": 0, "credits": 1000, "food": 500, "water": 500}', 'Starting resources for new players', 'economy'),
   ('player_limits', '{"maxFleets": 10, "maxMissions": 50, "maxAlliances": 1}', 'Player action limits', 'gameplay'),
   ('turn_system', '{"turnsPerMinute": 6, "offlineAccumulationCap": 24, "maxCurrentTurns": 1000}', 'Turn system configuration', 'gameplay'),
   ('combat_enabled', 'true', 'Enable/disable player combat system', 'gameplay'),

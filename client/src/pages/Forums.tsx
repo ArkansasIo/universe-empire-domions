@@ -4,6 +4,20 @@ import { MessageSquare, ArrowLeft, Users, Shield } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Forums() {
+  const featuredThreads = [
+    { title: "Empire Opening Build Orders", replies: 184, category: "Strategy" },
+    { title: "Civilization Workforce Optimization", replies: 92, category: "Economy" },
+    { title: "Fleet Counter Meta - Current Season", replies: 147, category: "Combat" },
+    { title: "Alliance Recruitment Board", replies: 231, category: "Diplomacy" },
+  ];
+
+  const moderationRules = [
+    "No harassment, hate speech, or targeted abuse.",
+    "Post battle reports with complete context and evidence.",
+    "Keep trade and recruitment in their dedicated channels.",
+    "Report exploit discussions privately to admins.",
+  ];
+
   return (
     <div className="min-h-screen bg-white py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -49,6 +63,36 @@ export default function Forums() {
               <Link href="/alliance">
                 <Button variant="outline" className="w-full">Open Alliance</Button>
               </Link>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+          <Card className="bg-white border-slate-200 shadow-sm lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-slate-900">Featured Threads</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {featuredThreads.map((thread) => (
+                <div key={thread.title} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-semibold text-slate-900">{thread.title}</div>
+                    <div className="text-xs text-slate-500">{thread.category}</div>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">{thread.replies} replies</div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-slate-900">Forum Rules</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {moderationRules.map((rule) => (
+                <div key={rule} className="text-sm text-slate-600">• {rule}</div>
+              ))}
             </CardContent>
           </Card>
         </div>

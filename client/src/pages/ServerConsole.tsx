@@ -38,6 +38,12 @@ export default function ServerConsole() {
     return true;
   });
 
+  const categories = Array.from(new Set(logs.map((log) => log.category).filter(Boolean)));
+  const categoryCounts = categories.reduce((acc: Record<string, number>, item: string) => {
+    acc[item] = logs.filter((log) => log.category === item).length;
+    return acc;
+  }, {});
+
   const getLogIcon = (level: string) => {
     switch (level) {
       case 'error': return <AlertCircle className="w-4 h-4 text-red-600" />;
@@ -56,6 +62,21 @@ export default function ServerConsole() {
       case 'debug': return 'bg-gray-50 border-gray-200';
       default: return 'bg-white';
     }
+  };
+
+  const exportLogs = () => {
+    const blob = new Blob([JSON.stringify(filteredLogs, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'server-logs.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const clearLocalView = () => {
+    setLogs([]);
+    setStats({ total: 0, errors: 0, warnings: 0, info: 0, debug: 0 });
   };
 
   return (
@@ -132,7 +153,56 @@ export default function ServerConsole() {
             <Button onClick={fetchLogs} disabled={loading} size="sm" variant="outline" className="ml-auto">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
+            <Button onClick={exportLogs} size="sm" variant="outline" className="text-slate-200 border-slate-600">
+              <Download className="w-4 h-4 mr-1" /> Export
+            </Button>
+            <Button onClick={clearLocalView} size="sm" variant="outline" className="text-red-300 border-red-600">
+              <Trash2 className="w-4 h-4 mr-1" /> Clear View
+            </Button>
           </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={category === '' ? 'default' : 'outline'}
+              onClick={() => setCategory('')}
+              className={category === '' ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-300'}
+            >
+              All Categories
+            </Button>
+            {categories.map((item) => (
+              <Button
+                key={item}
+                size="sm"
+                variant={category === item ? 'default' : 'outline'}
+                onClick={() => setCategory(item)}
+                className={category === item ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-300'}
+              >
+                {item} ({categoryCounts[item] || 0})
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Visible Logs</div>
+              <div className="text-2xl font-bold text-white">{filteredLogs.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Selected Level</div>
+              <div className="text-2xl font-bold text-white">{filter.toUpperCase()}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Selected Category</div>
+              <div className="text-2xl font-bold text-white">{category || 'ALL'}</div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Logs */}

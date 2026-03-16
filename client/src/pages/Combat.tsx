@@ -24,6 +24,16 @@ export default function Combat() {
   const [battleResult, setBattleResult] = useState<any>(null);
   const [attackError, setAttackError] = useState<string | null>(null);
 
+  const { data: progressionMeta } = useQuery({
+    queryKey: ["/api/systems/progression-combat/meta"],
+    queryFn: async () => {
+      const res = await fetch("/api/systems/progression-combat/meta");
+      if (!res.ok) throw new Error("Failed to fetch progression combat meta");
+      return res.json();
+    },
+    refetchInterval: 60000,
+  });
+
   // Fetch combat stats
   const { data: combatStats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/combat/stats"],
@@ -85,6 +95,9 @@ export default function Combat() {
   const totalSelected = Object.values(selectedUnits).reduce((a, b) => a + b, 0);
   const weaponBonus = ((research as any)?.weaponsTech || 0) * 5;
   const defenseBonus = ((research as any)?.shieldingTech || 0) * 5;
+  const liveProfile = combatStats?.profile;
+  const profileCatalog = progressionMeta?.combatModes || [];
+  const effectCatalog = progressionMeta?.effects || [];
 
   return (
     <GameLayout>
@@ -158,6 +171,49 @@ export default function Combat() {
                     {battleHistory?.totalVictories || 0}
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Commander Progression Snapshot</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-500 uppercase">Level / Tier</div>
+                  <div className="font-bold text-slate-900">
+                    L{combatStats?.progression?.level || 1} · T{combatStats?.progression?.tier || 1}
+                  </div>
+                </div>
+                <div className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-500 uppercase">Rank</div>
+                  <div className="font-bold text-slate-900">{combatStats?.progression?.rank || "Recruit T1"}</div>
+                </div>
+              </div>
+              <div className="rounded border border-slate-200 bg-white p-3">
+                <div className="text-xs text-slate-500 uppercase">Title</div>
+                <div className="font-semibold text-slate-900">{combatStats?.progression?.title || "Commander 1.1"}</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Live Battle Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="rounded border border-slate-200 bg-slate-50 p-3">
+                <div className="font-semibold text-slate-900 capitalize">{liveProfile?.mode || "pvp"} Mode</div>
+                <div className="text-slate-600 text-xs">{liveProfile?.description || "High-volatility engagement tuning for commander operations."}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="rounded border border-slate-200 p-2">Rounds: <strong>{liveProfile?.maxRounds ?? 6}</strong></div>
+                <div className="rounded border border-slate-200 p-2">Plunder: <strong>{Math.round((liveProfile?.plunderRate ?? 0.4) * 100)}%</strong></div>
+                <div className="rounded border border-slate-200 p-2">Retreat: <strong>{Math.round((liveProfile?.retreatThreshold ?? 0.25) * 100)}%</strong></div>
               </div>
             </CardContent>
           </Card>
@@ -301,6 +357,26 @@ export default function Combat() {
                   <div>
                     <div className="text-slate-500 mb-1">Selected Units</div>
                     <div className="font-bold text-lg">{totalSelected}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500 mb-1">Suggested Effects</div>
+                    <div className="flex flex-wrap gap-1">
+                      {(combatStats?.suggestedEffects || effectCatalog.slice(0, 3)).map((effect: any) => (
+                        <Badge key={effect.id || effect.name} variant="outline" className="text-[10px]">
+                          {effect.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500 mb-1">Available Profiles</div>
+                    <div className="flex flex-wrap gap-1">
+                      {profileCatalog.map((profile: any) => (
+                        <Badge key={profile.mode} variant="secondary" className="text-[10px] uppercase">
+                          {profile.mode}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

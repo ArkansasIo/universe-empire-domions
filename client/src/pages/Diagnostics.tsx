@@ -99,6 +99,12 @@ export default function Diagnostics() {
   const issues = issuesResponse?.data || [];
   const warnings = warningsResponse?.data || [];
   const debugLogs = debugResponse?.data || [];
+  const resolvedIssues = issues.filter((issue) => issue.status === "resolved").length;
+  const unresolvedIssues = issues.filter((issue) => issue.status !== "resolved").length;
+  const warningAlerts = warnings.filter((warn) => warn.level === "alert" || warn.level === "emergency").length;
+  const avgLogDuration = debugLogs.length
+    ? Math.round(debugLogs.reduce((sum, log) => sum + (log.duration || 0), 0) / debugLogs.length)
+    : 0;
 
   const severityColors: Record<string, string> = {
     critical: "bg-red-100 text-red-800 border-red-300",
@@ -169,6 +175,24 @@ export default function Diagnostics() {
             </CardContent>
           </Card>
         </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Open Issues</div><div className="text-2xl font-orbitron font-bold text-red-700">{unresolvedIssues}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Resolved Issues</div><div className="text-2xl font-orbitron font-bold text-emerald-700">{resolvedIssues}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">High Alerts</div><div className="text-2xl font-orbitron font-bold text-amber-700">{warningAlerts}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Avg Log Duration</div><div className="text-2xl font-orbitron font-bold text-blue-700">{avgLogDuration}ms</div></CardContent></Card>
+        </div>
+
+        <Card className="bg-indigo-50 border-indigo-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-indigo-900">Incident Response Doctrine</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-indigo-900">
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Resolve critical issues first, then clear high-volume warnings to reduce alert fatigue.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Acknowledge repeated warnings only after root causes are documented in operations notes.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Use debug duration trends to identify services that need profiling during peak events.</div>
+          </CardContent>
+        </Card>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
           <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start">

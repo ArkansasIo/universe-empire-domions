@@ -91,6 +91,9 @@ export default function Leaderboard() {
     return leaderboard.find((entry) => entry.displayName === username || entry.userId === personalRanksQuery.data?.userId);
   }, [leaderboardQuery.data?.leaderboard, personalRanksQuery.data?.userId, username]);
 
+  const selectedRank = personalRanksQuery.data?.ranks?.[selectedType];
+  const topThree = (leaderboardQuery.data?.leaderboard ?? []).slice(0, 3);
+
   return (
     <GameLayout>
       <div className="space-y-6">
@@ -124,6 +127,29 @@ export default function Leaderboard() {
             </div>
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wider text-slate-500">Percentile</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {selectedRank ? `${selectedRank.percentile.toFixed(1)}%` : "-"}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wider text-slate-500">Rank Class</p>
+              <p className="text-2xl font-bold text-indigo-700">{selectedRank?.rankClass || "Unranked"}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wider text-slate-500">Overall Rank</p>
+              <p className="text-2xl font-bold text-amber-700">#{personalRanksQuery.data?.overallRank ?? "-"}</p>
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>
@@ -198,6 +224,22 @@ export default function Leaderboard() {
                 </table>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Commanders Snapshot</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {topThree.map((entry) => (
+              <div key={entry.userId} className="rounded border border-slate-200 bg-slate-50 p-3">
+                <div className="text-xs text-slate-500">Rank #{entry.position}</div>
+                <div className="font-semibold text-slate-900">{entry.displayName}</div>
+                <div className="text-sm text-slate-600">{entry.rankTitle}</div>
+                <div className="text-sm font-mono text-slate-900 mt-1">{formatScore(entry.score)}</div>
+              </div>
+            ))}
           </CardContent>
         </Card>
 

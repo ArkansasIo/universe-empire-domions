@@ -91,6 +91,10 @@ export default function Guilds() {
     enabled: !!activeGuildId,
   });
 
+  const recruitingGuilds = guildDirectory.filter((guild) => Boolean(guild.isRecruiting)).length;
+  const totalDirectoryMembers = guildDirectory.reduce((sum, guild) => sum + (guild.totalMembers ?? 0), 0);
+  const totalInfluence = guildDirectory.reduce((sum, guild) => sum + (guild.influence ?? 0), 0);
+
   const refreshGuildData = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["player-guild"] }),
@@ -179,6 +183,24 @@ export default function Guilds() {
             </Button>
           )}
         </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200 shadow-sm"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Guilds Listed</div><div className="text-2xl font-orbitron font-bold text-slate-900">{guildDirectory.length}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200 shadow-sm"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Recruiting</div><div className="text-2xl font-orbitron font-bold text-emerald-700">{recruitingGuilds}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200 shadow-sm"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Directory Members</div><div className="text-2xl font-orbitron font-bold text-blue-700">{totalDirectoryMembers.toLocaleString()}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200 shadow-sm"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Guild Influence</div><div className="text-2xl font-orbitron font-bold text-purple-700">{totalInfluence.toLocaleString()}</div></CardContent></Card>
+        </div>
+
+        <Card className="bg-indigo-50 border-indigo-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-orbitron text-indigo-900">Guild Operations Doctrine</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-indigo-900">
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Recruit around role gaps first to stabilize treasury and research contributions.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Track member contribution trends weekly and rotate mission ownership accordingly.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Use roster visibility before joining to avoid overfilled low-growth organizations.</div>
+          </CardContent>
+        </Card>
 
         {playerGuild ? (
           <>

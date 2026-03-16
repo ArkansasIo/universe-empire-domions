@@ -28,6 +28,16 @@ export default function Relics() {
 
   const filtered = selectedRarity ? relics.filter((r: any) => r.rarity === selectedRarity) : relics;
 
+  const equippedCount = inventory.filter((item: any) => item.isEquipped).length;
+  const avgCondition =
+    inventory.length > 0
+      ? Math.round(
+          inventory.reduce((sum: number, item: any) => sum + Number(item.condition || 0), 0) /
+            inventory.length
+        )
+      : 0;
+  const totalMarketValue = filtered.reduce((sum: number, relic: any) => sum + Number(relic.price || 0), 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6">
       <div className="max-w-7xl mx-auto">
@@ -35,6 +45,33 @@ export default function Relics() {
           <Sparkles className="w-8 h-8 text-yellow-500" />
           Relics & Artifacts
         </h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Collected</div>
+              <div className="text-2xl font-bold text-white">{inventory.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Equipped</div>
+              <div className="text-2xl font-bold text-white">{equippedCount}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Avg Condition</div>
+              <div className="text-2xl font-bold text-white">{avgCondition}%</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Market Value</div>
+              <div className="text-2xl font-bold text-white">{totalMarketValue}</div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Inventory Summary */}
         <Card className="bg-slate-800 border-slate-700 mb-6">
@@ -97,6 +134,11 @@ export default function Relics() {
                       +{(value as number).toFixed(1)}x {key}
                     </p>
                   ))}
+                </div>
+                <div className="rounded border border-slate-600 bg-slate-700/40 p-2 text-xs text-slate-300">
+                  <div>Artifact Type: {relic.type}</div>
+                  <div>Rarity Tier: {relic.rarity}</div>
+                  <div>Maintenance: {(relic.maintenanceCost ?? 0)} / cycle</div>
                 </div>
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-sm font-bold text-yellow-500">{relic.price} gold</span>

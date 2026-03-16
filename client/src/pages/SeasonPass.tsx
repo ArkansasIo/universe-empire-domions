@@ -108,6 +108,10 @@ export default function SeasonPass() {
   const season = data?.state;
   const config = data?.config;
   const progressPct = season && config ? Math.min(100, (season.currentTier / config.maxTier) * 100) : 0;
+  const freeClaimed = season?.claimedFree?.length || 0;
+  const goldClaimed = season?.claimedGold?.length || 0;
+  const platinumClaimed = season?.claimedPlatinum?.length || 0;
+  const totalTrackRewards = (config?.freeRewards?.length || 0) + (config?.goldRewards?.length || 0) + (config?.platinumRewards?.length || 0);
 
   return (
     <GameLayout>
@@ -154,6 +158,24 @@ export default function SeasonPass() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Total Rewards</div><div className="text-2xl font-orbitron font-bold text-slate-900">{totalTrackRewards}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Free Claimed</div><div className="text-2xl font-orbitron font-bold text-emerald-700">{freeClaimed}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Gold Claimed</div><div className="text-2xl font-orbitron font-bold text-amber-700">{goldClaimed}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Platinum Claimed</div><div className="text-2xl font-orbitron font-bold text-indigo-700">{platinumClaimed}</div></CardContent></Card>
+        </div>
+
+        <Card className="bg-indigo-50 border-indigo-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-indigo-900">Season Progression Doctrine</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-indigo-900">
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Schedule XP bursts around season reset events to secure leaderboard momentum early.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Use gold unlock when your active tier exceeds reward breakpoints to claim backlog immediately.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Reserve platinum activation for weeks with high-value item tiers and fleet expansion windows.</div>
           </CardContent>
         </Card>
 

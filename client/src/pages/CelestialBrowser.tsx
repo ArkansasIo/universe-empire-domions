@@ -103,6 +103,11 @@ export default function CelestialBrowser() {
       s.class.includes(searchTerm.toUpperCase())
   );
 
+  const totalMetal = filteredPlanets.reduce((sum, planet) => sum + planet.resources.metal, 0);
+  const totalCrystal = filteredPlanets.reduce((sum, planet) => sum + planet.resources.crystal, 0);
+  const habitableTargets = filteredPlanets.filter((planet) => planet.habitability >= 70).length;
+  const colonizedTargets = filteredPlanets.filter((planet) => planet.colonized).length;
+
   return (
     <GameLayout>
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -331,6 +336,24 @@ export default function CelestialBrowser() {
                 ))}
               </TabsContent>
             </Tabs>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Habitable Targets</div><div className="text-2xl font-orbitron font-bold text-emerald-700">{habitableTargets}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Colonized Worlds</div><div className="text-2xl font-orbitron font-bold text-blue-700">{colonizedTargets}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Metal in View</div><div className="text-2xl font-orbitron font-bold text-amber-700">{totalMetal.toLocaleString()}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Crystal in View</div><div className="text-2xl font-orbitron font-bold text-cyan-700">{totalCrystal.toLocaleString()}</div></CardContent></Card>
+        </div>
+
+        <Card className="bg-indigo-50 border-indigo-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-indigo-900">Exploration Protocol</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-indigo-900">
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Use high-habitability worlds as first-wave colony candidates to lower stabilization cost.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Match star class scouting with your tech branch to maximize anomaly discovery efficiency.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Track deuterium-zero planets for industrial roles where fleet fuel logistics are externalized.</div>
           </CardContent>
         </Card>
       </div>

@@ -13,6 +13,12 @@ import { Zap, Users, Building2, TrendingUp } from "lucide-react";
 
 export default function MegaStructures() {
   const { constructMegastructure } = useGame();
+  const totalCategories = MEGA_STRUCTURE_CATEGORIES.length;
+  const totalStructures = MEGA_STRUCTURE_CATEGORIES.reduce(
+    (sum, category) => sum + getMegaStructuresByCategory(category.id).length,
+    0,
+  );
+  const averagePerCategory = totalCategories > 0 ? Math.round(totalStructures / totalCategories) : 0;
 
   const getCategoryColor = (category: string) => {
     const colors = {
@@ -54,6 +60,12 @@ export default function MegaStructures() {
         </div>
 
         {/* Tabs for different categories */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white border-slate-200"><CardContent className="pt-6"><div className="text-xs uppercase text-slate-500">Structure Categories</div><div className="text-2xl font-bold text-slate-900">{totalCategories}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="pt-6"><div className="text-xs uppercase text-slate-500">Total Structures</div><div className="text-2xl font-bold text-indigo-700">{totalStructures}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="pt-6"><div className="text-xs uppercase text-slate-500">Avg / Category</div><div className="text-2xl font-bold text-emerald-700">{averagePerCategory}</div></CardContent></Card>
+        </div>
+
         <Tabs defaultValue={MEGA_STRUCTURE_CATEGORIES[0]?.id || "infrastructure"} className="w-full">
           <TabsList className="bg-white border border-slate-200 h-auto flex-wrap w-full justify-start gap-2 p-2">
             {MEGA_STRUCTURE_CATEGORIES.map(category => (
@@ -223,6 +235,17 @@ export default function MegaStructures() {
             <p>
               <strong>Unified Scaling:</strong> Construction and upgrade costs now follow shared progression formulas for all categories.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-lg">Strategic Build Doctrine</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Prioritize infrastructure/production first to sustain heavy maintenance cycles.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Sequence research and mobility upgrades before defense spikes for flexibility.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Reserve exotic and superweapon projects for stabilized resource throughput phases.</div>
           </CardContent>
         </Card>
       </div>

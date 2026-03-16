@@ -180,6 +180,10 @@ function FactionCard({ faction }: { faction: Faction }) {
 export default function Factions() {
   const factionList = Object.values(FACTIONS);
   const alignments = ["all", "lawful", "neutral", "chaotic"];
+  const diplomacySummary = factionList.flatMap((faction) => faction.diplomaticStances);
+  const alliedLinks = diplomacySummary.filter((item) => item.stance === "allied").length;
+  const neutralLinks = diplomacySummary.filter((item) => item.stance === "neutral").length;
+  const hostileLinks = diplomacySummary.filter((item) => item.stance === "hostile").length;
   
   return (
     <GameLayout>
@@ -222,6 +226,47 @@ export default function Factions() {
             </CardContent>
           </Card>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-green-700">{alliedLinks}</p>
+              <p className="text-xs text-green-700">Allied Diplomatic Links</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-50 border-slate-200">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-slate-700">{neutralLinks}</p>
+              <p className="text-xs text-slate-700">Neutral Diplomatic Links</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-red-50 border-red-200">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-red-700">{hostileLinks}</p>
+              <p className="text-xs text-red-700">Hostile Diplomatic Links</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle>Faction Strategy Doctrine</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Lawful Bloc</div>
+              <div>Stable growth, treaty-heavy diplomacy, and strong defensive posture.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Neutral Bloc</div>
+              <div>Balanced economy/combat distribution with flexible strategic pivots.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Chaotic Bloc</div>
+              <div>Aggressive opportunism, high-risk power spikes, and disruptive campaigns.</div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="bg-white border border-slate-200">

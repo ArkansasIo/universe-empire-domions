@@ -131,6 +131,11 @@ export default function TechnologyTree() {
       return fieldMatch && queryMatch;
     });
 
+  const completedCount = allTech.filter((tech) => (research[tech.id] || 0) > 0).length;
+  const availableCount = allTech.filter((tech) => statusFor(tech) === "available").length;
+  const researchingCount = allTech.filter((tech) => statusFor(tech) === "researching").length;
+  const completionRate = allTech.length > 0 ? Math.round((completedCount / allTech.length) * 100) : 0;
+
   return (
     <GameLayout>
       <div className="space-y-6">
@@ -151,6 +156,44 @@ export default function TechnologyTree() {
                 data-testid="input-tech-search"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Total Technologies</div>
+              <div className="text-2xl font-bold text-slate-900">{allTech.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Completed</div>
+              <div className="text-2xl font-bold text-green-700">{completedCount}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Available Now</div>
+              <div className="text-2xl font-bold text-amber-700">{availableCount}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Completion Rate</div>
+              <div className="text-2xl font-bold text-blue-700">{completionRate}%</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base">Research Planning Notes</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Pipeline Active: <span className="font-semibold text-slate-900">{researchingCount}</span> technology in progress.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Prioritize prerequisite chains with the highest unlocked branch depth.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Balance resource-heavy upgrades with short-time unlocks to keep queue velocity high.</div>
           </CardContent>
         </Card>
 

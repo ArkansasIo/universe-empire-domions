@@ -540,6 +540,11 @@ export default function Messages() {
     queryClient.invalidateQueries({ queryKey: ["/api/trades/history"] });
   };
 
+  const unreadMessages = inbox.filter((message: any) => !message.read).length;
+  const pendingTrades = incomingTrades.filter((trade: TradeOffer) => trade.status === "pending").length;
+  const acceptedTrades = tradeHistory.filter((trade: TradeOffer) => trade.status === "accepted").length;
+  const sentTransmissions = sent.length;
+
   return (
     <GameLayout>
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -547,6 +552,24 @@ export default function Messages() {
           <h2 className="text-3xl font-orbitron font-bold text-slate-900" data-testid="text-messages-title">Subspace Communications</h2>
           <p className="text-muted-foreground font-rajdhani text-lg">Encrypted messaging terminal & player trading.</p>
         </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Unread Messages</div><div className="text-2xl font-orbitron font-bold text-blue-700">{unreadMessages}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Pending Trades</div><div className="text-2xl font-orbitron font-bold text-amber-700">{pendingTrades}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Accepted Trades</div><div className="text-2xl font-orbitron font-bold text-emerald-700">{acceptedTrades}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Sent Messages</div><div className="text-2xl font-orbitron font-bold text-purple-700">{sentTransmissions}</div></CardContent></Card>
+        </div>
+
+        <Card className="bg-indigo-50 border-indigo-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-indigo-900">Communications Protocol</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-indigo-900">
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Clear unread combat and espionage reports before issuing new fleet orders.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Accept or decline pending trades quickly to maintain partner trust and queue liquidity.</div>
+            <div className="rounded border border-indigo-200 bg-white/70 p-3">Use concise compose subjects to speed archive searches during conflict windows.</div>
+          </CardContent>
+        </Card>
 
         <Tabs value={mainTab} onValueChange={(value) => setMainTab(value as MessagesMainTab)} className="w-full">
           <TabsList className="bg-white border border-slate-200">

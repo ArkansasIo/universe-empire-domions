@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function FriendsList() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -83,6 +84,8 @@ export default function FriendsList() {
   );
 
   const friendsCount = friends.length;
+  const selectedFriend = filtered.find((friend: any) => friend.id === selectedFriendId) || null;
+  const favoritesCount = friends.filter((friend: any) => friend.isFavorite).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6">
@@ -112,6 +115,16 @@ export default function FriendsList() {
               <div>
                 <p className="text-slate-400 text-sm">Pending Requests</p>
                 <p className="text-3xl font-bold text-yellow-500">{requests.length}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <p className="text-slate-400 text-sm">Favorites</p>
+                <p className="text-2xl font-bold text-pink-500">{favoritesCount}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 text-sm">Offline</p>
+                <p className="text-2xl font-bold text-slate-300">{Math.max(0, friendsCount - friends.filter((f: any) => f.isOnline).length)}</p>
               </div>
             </div>
           </CardContent>
@@ -156,9 +169,10 @@ export default function FriendsList() {
         </div>
 
         {/* Friends List */}
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 grid gap-3">
           {filtered.map((friend: any) => (
-            <Card key={friend.id} className="bg-slate-800 border-slate-700">
+            <Card key={friend.id} className={`bg-slate-800 border-slate-700 ${selectedFriendId === friend.id ? 'ring-2 ring-primary' : ''}`}>
               <CardContent className="pt-4">
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
@@ -176,6 +190,13 @@ export default function FriendsList() {
                     </p>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedFriendId(friend.id)}
+                    >
+                      Details
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -196,6 +217,31 @@ export default function FriendsList() {
               </CardContent>
             </Card>
           ))}
+          </div>
+
+          <Card className="bg-slate-800 border-slate-700 h-fit">
+            <CardHeader>
+              <CardTitle className="text-white">Friend Intel</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {!selectedFriend ? (
+                <p className="text-slate-400">Select a friend to review profile status and interaction context.</p>
+              ) : (
+                <>
+                  <div className="font-semibold text-white">{selectedFriend.nickname || selectedFriend.friendName}</div>
+                  <div className="rounded border border-slate-700 bg-slate-900/50 p-3 text-slate-300">
+                    <div>Status: {selectedFriend.isOnline ? 'Online' : 'Offline'}</div>
+                    <div>Favorite: {selectedFriend.isFavorite ? 'Yes' : 'No'}</div>
+                    <div>Last Seen: {selectedFriend.lastSeen ? new Date(selectedFriend.lastSeen).toLocaleString() : 'Unknown'}</div>
+                  </div>
+                  <div className="space-y-1 text-slate-300">
+                    <div>Message Priority: {selectedFriend.isFavorite ? 'High' : 'Normal'}</div>
+                    <div>Engagement Hint: {selectedFriend.isOnline ? 'Invite to live operation' : 'Queue asynchronous update'}</div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

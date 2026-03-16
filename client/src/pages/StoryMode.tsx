@@ -116,6 +116,9 @@ export default function StoryMode() {
     return left.title.localeCompare(right.title);
   });
   const nextRecommendedMission = sortedSelectedActMissions.find((mission) => !mission.isCompleted) || null;
+  const selectedActCompletionRate = selectedActTotal > 0 ? Math.round((selectedActCompleted / selectedActTotal) * 100) : 0;
+  const totalMainCompleted = allMissions.filter((mission) => mission.missionType === "main" && mission.isCompleted).length;
+  const totalSideCompleted = allMissions.filter((mission) => mission.missionType === "side" && mission.isCompleted).length;
 
   return (
     <GameLayout>
@@ -230,6 +233,28 @@ export default function StoryMode() {
                 </Badge>
               </CardContent>
             </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <Card className="bg-white border-slate-200">
+                <CardContent className="pt-4">
+                  <div className="text-xs uppercase text-slate-500">Selected Act Completion</div>
+                  <div className="text-2xl font-bold text-slate-900">{selectedActCompletionRate}%</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-white border-slate-200">
+                <CardContent className="pt-4">
+                  <div className="text-xs uppercase text-slate-500">Main Missions Completed</div>
+                  <div className="text-2xl font-bold text-blue-700">{totalMainCompleted}</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-white border-slate-200">
+                <CardContent className="pt-4">
+                  <div className="text-xs uppercase text-slate-500">Side Missions Completed</div>
+                  <div className="text-2xl font-bold text-purple-700">{totalSideCompleted}</div>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="grid gap-4">
               {missions.map((mission: any) => (
                 <Card key={mission.id} className="bg-white border-slate-200">
@@ -268,6 +293,26 @@ export default function StoryMode() {
               ))}
             </div>
           </div>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle>Narrative Progression Guidance</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Core Path</div>
+              <div>Prioritize main missions to unlock acts and key mechanics first.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Side Directives</div>
+              <div>Use side missions for bonus XP and support resource acceleration.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Act Readiness</div>
+              <div>Keep mission completion above 70% before pushing into higher-difficulty acts.</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </GameLayout>
   );

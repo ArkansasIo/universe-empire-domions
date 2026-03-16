@@ -18,6 +18,7 @@ const rarityColors: Record<string, string> = {
 export default function RaidBosses() {
   const { toast } = useToast();
   const [selectedRarity, setSelectedRarity] = useState<string | null>(null);
+  const [selectedBossId, setSelectedBossId] = useState<string | null>(null);
 
   const { data: bosses = [] } = useQuery({
     queryKey: ["bosses"],
@@ -25,6 +26,13 @@ export default function RaidBosses() {
   });
 
   const filtered = selectedRarity ? bosses.filter((b: any) => b.rarity === selectedRarity) : bosses;
+  const selectedBoss = filtered.find((boss: any) => boss.id === selectedBossId) || null;
+
+  const avgRecommendedLevel =
+    filtered.length > 0
+      ? Math.round(filtered.reduce((sum: number, boss: any) => sum + Number(boss.recommendedLevel || 0), 0) / filtered.length)
+      : 0;
+  const maxHealth = filtered.reduce((max: number, boss: any) => Math.max(max, Number(boss.healthPoints || 0)), 0);
 
   const challengeMutation = useMutation({
     mutationFn: async (boss: any) => {
@@ -56,6 +64,33 @@ export default function RaidBosses() {
           Raid Bosses (90 Types)
         </h1>
 
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Visible Bosses</div>
+              <div className="text-2xl font-bold text-white">{filtered.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Avg Recommended</div>
+              <div className="text-2xl font-bold text-blue-400">Lv {avgRecommendedLevel}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Max Health Pool</div>
+              <div className="text-2xl font-bold text-red-400">{maxHealth}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="text-xs text-slate-400 uppercase">Rarity Filter</div>
+              <div className="text-2xl font-bold text-yellow-400 capitalize">{selectedRarity || 'all'}</div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Rarity Filter */}
         <div className="flex gap-2 mb-6 flex-wrap">
           {["common", "rare", "epic", "legendary", "mythic", "transcendent"].map((rarity) => (
@@ -71,9 +106,10 @@ export default function RaidBosses() {
         </div>
 
         {/* Bosses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((boss: any) => (
-            <Card key={boss.id} className="bg-slate-800 border-slate-700">
+            <Card key={boss.id} className={`bg-slate-800 border-slate-700 ${selectedBossId === boss.id ? 'ring-2 ring-primary' : ''}`}>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-white">{boss.name}</CardTitle>
@@ -127,6 +163,13 @@ export default function RaidBosses() {
 
                 <Button
                   className="w-full"
+                  variant="outline"
+                  onClick={() => setSelectedBossId(boss.id)}
+                >
+                  Inspect Boss
+                </Button>
+                <Button
+                  className="w-full"
                   onClick={() => challengeMutation.mutate(boss)}
                   data-testid={`button-challenge-boss-${boss.id}`}
                 >
@@ -135,6 +178,33 @@ export default function RaidBosses() {
               </CardContent>
             </Card>
           ))}
+          </div>
+
+          <Card className="bg-slate-800 border-slate-700 h-fit">
+            <CardHeader>
+              <CardTitle className="text-white">Boss Strategy</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {!selectedBoss ? (
+                <p className="text-slate-400">Select a boss to view tactical strategy and target profile.</p>
+              ) : (
+                <>
+                  <div className="font-semibold text-white">{selectedBoss.name}</div>
+                  <Badge className={rarityColors[selectedBoss.rarity]}>{selectedBoss.rarity}</Badge>
+                  <div className="rounded border border-slate-700 bg-slate-900/50 p-3 text-slate-300">
+                    <div>Recommended Level: {selectedBoss.recommendedLevel}+</div>
+                    <div>Recommended Squad: {selectedBoss.recommendedPlayers}</div>
+                    <div>Core Stats: ATK {selectedBoss.attackPower} · DEF {selectedBoss.defense} · SPD {selectedBoss.speed}</div>
+                  </div>
+                  <div className="space-y-1 text-slate-300">
+                    <div>Primary Risk: {selectedBoss.attackPower > selectedBoss.defense ? 'Burst Damage' : 'Tank Endurance'}</div>
+                    <div>Suggested Counter: {selectedBoss.speed > 70 ? 'Control + Accuracy' : 'Sustained DPS'}</div>
+                    <div>Battle Readiness Index: {Math.round((selectedBoss.attackPower + selectedBoss.defense + selectedBoss.speed) / 3)}</div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

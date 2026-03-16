@@ -122,6 +122,10 @@ export default function BattlePass() {
   const battle = data?.state;
   const config = data?.config;
   const progressPct = Math.min(100, (battle?.completionRatio || 0) * 100);
+  const totalMissions = config?.missions?.length || 0;
+  const freeClaims = battle?.claimedFree?.length || 0;
+  const premiumClaims = battle?.claimedPremium?.length || 0;
+  const eliteClaims = battle?.claimedElite?.length || 0;
 
   return (
     <GameLayout>
@@ -172,6 +176,24 @@ export default function BattlePass() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Missions</div><div className="text-2xl font-orbitron font-bold text-slate-900">{totalMissions}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Free Claimed</div><div className="text-2xl font-orbitron font-bold text-emerald-700">{freeClaims}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Premium Claimed</div><div className="text-2xl font-orbitron font-bold text-amber-700">{premiumClaims}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Elite Claimed</div><div className="text-2xl font-orbitron font-bold text-indigo-700">{eliteClaims}</div></CardContent></Card>
+        </div>
+
+        <Card className="bg-amber-50 border-amber-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-amber-900">Battle Pass Optimization Guide</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-amber-900">
+            <div className="rounded border border-amber-200 bg-white/70 p-3">Prioritize weekly missions to smooth progression and reduce daily grind volatility.</div>
+            <div className="rounded border border-amber-200 bg-white/70 p-3">Delay claim windows until major build queues begin to stack resource injections efficiently.</div>
+            <div className="rounded border border-amber-200 bg-white/70 p-3">Unlock premium before tier spikes so claimable backlog converts immediately into power gains.</div>
           </CardContent>
         </Card>
 

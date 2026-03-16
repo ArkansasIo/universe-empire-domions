@@ -257,6 +257,35 @@ export {
   type MegastructureCost,
   type MegastructureTemplate,
 } from './megastructuresConfig';
+export {
+  MAX_TIER,
+  MAX_LEVEL,
+  ENTITY_LEVEL_MATRIX,
+  COMBAT_EFFECT_LIBRARY,
+  BATTLE_SYSTEM_PROFILES,
+  EVENT_BOSSES,
+  NPC_WORLD_TEMPLATES,
+  UNIVERSE_EVENT_TEMPLATES,
+  getTierForLevel,
+  getRankAndTitle,
+  buildProgressionSnapshot,
+  getProgressionCatalogForTrack,
+  getEventSystemSummary,
+  type EntityTrack,
+  type CombatAlignment,
+  type BattleMode,
+  type EffectType,
+  type CombatAttributes,
+  type CombatSubAttributes,
+  type CoreCombatStats,
+  type CombatEffectTemplate,
+  type EntityRankTitle,
+  type ProgressionSnapshot,
+  type BattleSystemProfile,
+  type EventBossTemplate,
+  type NpcWorldTemplate,
+  type UniverseEventTemplate,
+} from './empireCombatUniverseSystemsConfig';
 
 // Interstellar Travel & Navigation Exports
 export {

@@ -5,6 +5,13 @@ import { desc, eq, inArray, or } from "drizzle-orm";
 import { simulateBattle, calculateVictoryResources } from "./combatEngine";
 import { isAuthenticated as authenticateRequest } from "./basicAuth";
 import type { Request, Response } from "express";
+import {
+  BATTLE_SYSTEM_PROFILES,
+  COMBAT_EFFECT_LIBRARY,
+  buildProgressionSnapshot,
+  getTierForLevel,
+  type BattleMode,
+} from "@shared/config";
 
 function toUnitCountMap(units: Record<string, any>): Record<string, number> {
   return Object.entries(units || {}).reduce((acc, [unitType, value]) => {
@@ -34,6 +41,21 @@ function calculateUnitLosses(startUnits: Record<string, number>, remainingUnits:
   }
 
   return losses;
+}
+
+function toPlayerCombatLevel(research: Record<string, any>, shipyardLevel: number) {
+  const techSignal =
+    Number(research.weaponsTech || 0) +
+    Number(research.shieldingTech || 0) +
+    Number(research.armourTech || 0) +
+    Number(research.militaryTech || 0) +
+    Number(research.defenseTech || 0);
+  const level = Math.max(1, Math.min(999, Math.floor(1 + techSignal * 6 + shipyardLevel * 4)));
+  return level;
+}
+
+function getBattleProfile(mode: BattleMode) {
+  return BATTLE_SYSTEM_PROFILES.find((profile) => profile.mode === mode) || BATTLE_SYSTEM_PROFILES[0];
 }
 
 export function registerCombatRoutes(app: Router) {
@@ -86,6 +108,9 @@ export function registerCombatRoutes(app: Router) {
       const weaponsBonus = (research.weaponsTech || 0) * 0.05; // 5% per level
       const shieldingBonus = (research.shieldingTech || 0) * 0.05;
       const armorBonus = (research.armourTech || 0) * 0.03;
+      const combatLevel = toPlayerCombatLevel(research, Number(buildings.shipyard || 0));
+      const progression = buildProgressionSnapshot("commander", combatLevel);
+      const tier = getTierForLevel(combatLevel);
 
       res.json({
         totalUnits: Object.values(units).reduce((a: number, b: any) => a + (b as number), 0),
@@ -102,6 +127,15 @@ export function registerCombatRoutes(app: Router) {
           armor: armorBonus,
         },
         shipyard: buildings.shipyard || 0,
+        progression: {
+          level: combatLevel,
+          tier,
+          rank: progression.rank,
+          title: progression.title,
+          snapshot: progression,
+        },
+        profile: getBattleProfile("pvp"),
+        suggestedEffects: COMBAT_EFFECT_LIBRARY.slice(0, 3),
       });
     } catch (error) {
       console.error("[combat-stats] Error:", error);
@@ -187,6 +221,9 @@ export function registerCombatRoutes(app: Router) {
       const attackerLosses = calculateUnitLosses(attackUnits as Record<string, number>, attackerUnitsAfterBattle);
       const defenderLosses = calculateUnitLosses(defenderUnitsAtStart, defenderUnitsAfterBattle);
       const winnerTag = battleResult.winner === "attacker" ? "attacker" : "defender";
+      const attackerLevel = toPlayerCombatLevel(attacker.research as Record<string, any>, Number((attacker.buildings as any)?.shipyard || 0));
+      const defenderLevel = toPlayerCombatLevel(defender.research as Record<string, any>, Number((defender.buildings as any)?.shipyard || 0));
+      const pvpProfile = getBattleProfile("pvp");
 
       // Process results
       if (battleResult.winner === "attacker") {
@@ -273,6 +310,10 @@ export function registerCombatRoutes(app: Router) {
           winner: "attacker",
           battleId: battleRecord[0]?.id,
           battleResult,
+          battleProfile: pvpProfile,
+          attackerProgression: buildProgressionSnapshot("commander", attackerLevel),
+          defenderProgression: buildProgressionSnapshot("commander", defenderLevel),
+          activeEffects: COMBAT_EFFECT_LIBRARY.slice(0, 4),
           plunder,
           newAttackerUnits,
           newAttackerResources,
@@ -322,6 +363,10 @@ export function registerCombatRoutes(app: Router) {
           winner: "defender",
           battleId: battleRecord[0]?.id,
           battleResult,
+          battleProfile: pvpProfile,
+          attackerProgression: buildProgressionSnapshot("commander", attackerLevel),
+          defenderProgression: buildProgressionSnapshot("commander", defenderLevel),
+          activeEffects: COMBAT_EFFECT_LIBRARY.slice(2, 6),
           plunder: { metal: 0, crystal: 0, deuterium: 0 },
           newAttackerUnits,
         });

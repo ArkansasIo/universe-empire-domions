@@ -7,7 +7,15 @@ import { playerStates } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 
 type ResourceCost = { metal: number; crystal: number; deuterium: number };
-type ResourceState = { metal: number; crystal: number; deuterium: number; energy: number };
+type ResourceState = {
+  metal: number;
+  crystal: number;
+  deuterium: number;
+  energy: number;
+  credits: number;
+  food: number;
+  water: number;
+};
 type ConstructionQueueItem = {
   id: string;
   type: 'building';
@@ -74,6 +82,9 @@ function normalizeResources(raw: any): ResourceState {
     crystal: Math.max(0, Number(raw?.crystal || 0)),
     deuterium: Math.max(0, Number(raw?.deuterium || 0)),
     energy: Number(raw?.energy || 0),
+    credits: Math.max(0, Number(raw?.credits || 0)),
+    food: Math.max(0, Number(raw?.food || 0)),
+    water: Math.max(0, Number(raw?.water || 0)),
   };
 }
 
@@ -122,6 +133,7 @@ export async function processResourceTick(userId: string) {
   };
 
   const nextResources: ResourceState = {
+    ...resources,
     metal: resources.metal + produced.metal,
     crystal: resources.crystal + produced.crystal,
     deuterium: resources.deuterium + produced.deuterium,

@@ -115,6 +115,9 @@ export default function UniverseGeneratorPage() {
   const moons = objects.filter(obj => obj.type === "moon");
   const asteroids = objects.filter(obj => obj.type === "asteroid");
   const stars = objects.filter(obj => obj.type === "star");
+  const habitablePlanets = planets.filter(
+    (planet) => "properties" in planet && Boolean((planet as any).properties?.habitable)
+  ).length;
 
   const solPlanets = getSolSystemPlanets();
   const solMoons = getSolSystemMoons();
@@ -127,6 +130,50 @@ export default function UniverseGeneratorPage() {
           <h2 className="text-3xl font-orbitron font-bold text-slate-900">Universe Generator</h2>
           <p className="text-muted-foreground font-rajdhani text-lg">Procedurally generate entire star systems and galaxies with deterministic seeding.</p>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Generated Objects</div>
+              <div className="text-2xl font-bold text-slate-900">{objects.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Stars</div>
+              <div className="text-2xl font-bold text-yellow-700">{stars.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Planets</div>
+              <div className="text-2xl font-bold text-blue-700">{planets.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Moons</div>
+              <div className="text-2xl font-bold text-slate-700">{moons.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Habitable</div>
+              <div className="text-2xl font-bold text-green-700">{habitablePlanets}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base">Deterministic Generation Notes</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Identical seed + coordinates always produce identical systems.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Use system generation for tactical scouting and galaxy generation for macro mapping.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Track habitable count and orbital patterns before expansion route selection.</div>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="sol" className="w-full">
           <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start overflow-x-auto">

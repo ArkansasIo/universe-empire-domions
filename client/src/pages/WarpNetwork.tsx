@@ -188,6 +188,10 @@ export default function WarpNetwork() {
   const ownedGates = WARP_GATES.filter(g => g.owned).length;
   const activeRoutes = TRADE_ROUTES.filter(r => r.active).length;
   const totalProfit = TRADE_ROUTES.filter(r => r.active).reduce((sum, r) => sum + r.profit, 0);
+  const averageRisk = TRADE_ROUTES.length > 0
+    ? Math.round(TRADE_ROUTES.reduce((sum, route) => sum + route.risk, 0) / TRADE_ROUTES.length)
+    : 0;
+  const connectedGateLinks = WARP_GATES.reduce((sum, gate) => sum + gate.linkedGates.length, 0);
   
   return (
     <GameLayout>
@@ -229,6 +233,12 @@ export default function WarpNetwork() {
               <p className="text-xs text-amber-700">Total Profit</p>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white border-slate-200"><CardContent className="pt-6"><div className="text-xs uppercase text-slate-500">Average Route Risk</div><div className="text-2xl font-bold text-rose-700">{averageRisk}/10</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="pt-6"><div className="text-xs uppercase text-slate-500">Gate Links</div><div className="text-2xl font-bold text-indigo-700">{connectedGateLinks}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="pt-6"><div className="text-xs uppercase text-slate-500">Network Efficiency</div><div className="text-2xl font-bold text-emerald-700">{ownedGates > 0 ? Math.round((activeRoutes / Math.max(1, ownedGates)) * 100) : 0}%</div></CardContent></Card>
         </div>
 
         <Tabs defaultValue="gates" className="w-full">
@@ -277,6 +287,17 @@ export default function WarpNetwork() {
               <strong>Gate Networks:</strong> Connect multiple gates to create efficient travel networks. 
               Strategic gate placement can give you a significant advantage.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle>Network Doctrine</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Anchor core logistics through low-risk routes for baseline economy stability.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Use high-profit links selectively with escort doctrines and redundancy routes.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Expand gate ownership in clusters to reduce travel friction and response latency.</div>
           </CardContent>
         </Card>
       </div>

@@ -124,6 +124,11 @@ export default function OgameCompendium() {
       );
     });
 
+  const categoryCount = catalogQuery.data?.length || 0;
+  const totalEntries = allEntries.length;
+  const moonOnlyEntries = allEntries.filter((entry) => entry.isMoonOnly).length;
+  const researchEntries = allEntries.filter((entry) => entry.entryType === 'research').length;
+
   return (
     <GameLayout>
       <div className="space-y-6">
@@ -146,6 +151,24 @@ export default function OgameCompendium() {
                 data-testid="input-ogame-search"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Categories</div><div className="text-2xl font-orbitron font-bold text-slate-900">{categoryCount}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Entries</div><div className="text-2xl font-orbitron font-bold text-blue-700">{totalEntries}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Research Nodes</div><div className="text-2xl font-orbitron font-bold text-indigo-700">{researchEntries}</div></CardContent></Card>
+          <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Moon-Only</div><div className="text-2xl font-orbitron font-bold text-purple-700">{moonOnlyEntries}</div></CardContent></Card>
+        </div>
+
+        <Card className="bg-emerald-50 border-emerald-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-emerald-900">Compendium Planning Doctrine</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-emerald-900">
+            <div className="rounded border border-emerald-200 bg-white/70 p-3">Sequence economy buildings before fleet expansion to reduce idle queue time.</div>
+            <div className="rounded border border-emerald-200 bg-white/70 p-3">Use calculator levels as milestone snapshots when planning alliance operation windows.</div>
+            <div className="rounded border border-emerald-200 bg-white/70 p-3">Track moon-only assets separately for late-game infrastructure dependency management.</div>
           </CardContent>
         </Card>
 
@@ -187,6 +210,12 @@ export default function OgameCompendium() {
               <div className="rounded border border-slate-200 p-3 text-sm text-slate-700">
                 <div className="font-semibold text-slate-900">{selectedEntry.name}</div>
                 <div className="text-xs text-slate-500">{selectedEntry.id}</div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded border border-slate-200 bg-slate-50 p-2">Type: {selectedEntry.entryType}</div>
+                  <div className="rounded border border-slate-200 bg-slate-50 p-2">Growth: x{selectedEntry.growthFactor}</div>
+                  <div className="rounded border border-slate-200 bg-slate-50 p-2">Base Time: {selectedEntry.baseTimeSeconds}s</div>
+                  <div className="rounded border border-slate-200 bg-slate-50 p-2">Moon Only: {selectedEntry.isMoonOnly ? 'Yes' : 'No'}</div>
+                </div>
               </div>
             )}
 

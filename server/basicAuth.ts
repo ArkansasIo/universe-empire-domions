@@ -8,6 +8,32 @@ import { db } from "./db";
 import { adminUsers, users } from "../shared/schema";
 import { eq } from "drizzle-orm";
 
+function isDevAuthBypassEnabled() {
+  const raw = (process.env.DEV_AUTH_BYPASS || "").trim().toLowerCase();
+  const isDevelopment = process.env.NODE_ENV === "development";
+  return isDevelopment && ["1", "true", "yes", "on"].includes(raw);
+}
+
+async function ensureDevBypassUser() {
+  const username = (process.env.DEV_AUTH_USERNAME || "devadmin").trim();
+  const email = (process.env.DEV_AUTH_EMAIL || "devadmin@universee.local").trim();
+  const firstName = (process.env.DEV_AUTH_FIRST_NAME || "Dev Admin").trim();
+  const defaultPassword = process.env.DEV_AUTH_PASSWORD || "dev-password";
+
+  let user = await storage.getUserByUsername(username);
+  if (!user) {
+    user = await storage.createUser({
+      username,
+      email,
+      firstName,
+      passwordHash: hashPassword(defaultPassword),
+    });
+    logger.info("AUTH", `Dev bypass user created: ${username}`);
+  }
+
+  return user;
+}
+
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   
@@ -121,6 +147,10 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
 
   await ensureBootstrapAdminAccount();
+  if (isDevAuthBypassEnabled()) {
+    await ensureDevBypassUser();
+    logger.warn("AUTH", "DEV_AUTH_BYPASS is enabled; protected routes will auto-authenticate locally");
+  }
 
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -312,6 +342,20 @@ export async function setupAuth(app: Express) {
       }
       
       logger.warn("AUTH", "No valid authentication for /api/auth/user");
+      if (isDevAuthBypassEnabled()) {
+        const user = await ensureDevBypassUser();
+        (req.session as any).userId = user.id;
+        const adminStatus = await resolveAdminStatus(user.id);
+        return res.status(200).json({
+          id: user.id,
+          username: user.username || "",
+          email: user.email,
+          firstName: user.firstName,
+          isAdmin: adminStatus.isAdmin,
+          adminRole: adminStatus.adminRole,
+          devBypass: true,
+        });
+      }
       res.status(401).json({ message: "Unauthorized" });
     } catch (error) {
       logger.error("AUTH", "Auth user endpoint error", {}, error);
@@ -332,6 +376,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   // First try session
   let userId = (req.session as any)?.userId;
   if (userId) {
+    (req as any).user = { id: userId };
     logger.info("AUTH", `Session auth successful for userId: ${userId}`);
     return next();
   }
@@ -351,6 +396,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
           const passwordValid = verifyPassword(password, user.passwordHash);
           if (passwordValid) {
             (req.session as any).userId = user.id;
+            (req as any).user = { id: user.id };
             logger.info("AUTH", `Basic auth successful for user: ${username}`);
             return next();
           }
@@ -358,6 +404,18 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       }
     } catch (err) {
       logger.warn("AUTH", `Basic auth header parse error: ${String(err)}`);
+    }
+  }
+
+  if (isDevAuthBypassEnabled()) {
+    try {
+      const user = await ensureDevBypassUser();
+      (req.session as any).userId = user.id;
+      (req as any).user = { id: user.id };
+      logger.warn("AUTH", `Dev auth bypass granted for ${req.path}`);
+      return next();
+    } catch (error) {
+      logger.error("AUTH", "Failed to establish dev auth bypass session", {}, error);
     }
   }
   

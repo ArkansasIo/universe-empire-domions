@@ -187,6 +187,11 @@ export default function Universe() {
   const selectedRealmId = realmData?.selectedRealmId || "nexus-alpha";
   const selectedRealm = realmData?.selectedRealm;
   const filteredGalaxies = GALAXIES.filter((galaxy) => galaxy.realmId === selectedRealmId);
+  const systemsInRealm = filteredGalaxies.flatMap((galaxy) => galaxy.sectors.flatMap((sector) => sector.systems));
+  const planetsInRealm = systemsInRealm.flatMap((system) => system.planets);
+  const averageActivity = systemsInRealm.length > 0
+    ? Math.round(systemsInRealm.reduce((sum, system) => sum + system.activity, 0) / systemsInRealm.length)
+    : 0;
 
   const handleGalaxySelect = (galaxy: Galaxy) => {
     setSelectedGalaxy(galaxy);
@@ -296,6 +301,44 @@ export default function Universe() {
             </div>
           )}
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Realm Galaxies</div>
+              <div className="text-2xl font-bold text-slate-900">{filteredGalaxies.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Systems Visible</div>
+              <div className="text-2xl font-bold text-blue-700">{systemsInRealm.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Planet Nodes</div>
+              <div className="text-2xl font-bold text-green-700">{planetsInRealm.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Avg System Activity</div>
+              <div className="text-2xl font-bold text-amber-700">{averageActivity}%</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base">Navigation Doctrine</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">High-activity systems are ideal for diplomacy, trade, and conflict scouting.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Track ownership clusters to identify alliance influence corridors.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Coordinate search lets you fast-route to known objectives and fleet rally points.</div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Galaxies List */}

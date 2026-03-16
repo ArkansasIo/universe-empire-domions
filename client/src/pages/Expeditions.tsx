@@ -35,6 +35,9 @@ export default function Expeditions() {
   });
 
   const expeditions = Array.isArray(expeditionsData) ? expeditionsData : expeditionsData.expeditions || [];
+  const activeCount = expeditions.filter((expedition: Expedition) => expedition.status === "in_progress").length;
+  const completedCount = expeditions.filter((expedition: Expedition) => expedition.status === "completed").length;
+  const failedCount = expeditions.filter((expedition: Expedition) => expedition.status === "failed").length;
 
   const createExpeditionMutation = useMutation({
     mutationFn: (data: any) =>
@@ -142,6 +145,13 @@ export default function Expeditions() {
               {createExpeditionMutation.isPending ? "Launching..." : "Launch Expedition"}
             </Button>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white border border-slate-200 rounded-lg p-4"><div className="text-xs uppercase text-slate-500">Total Expeditions</div><div className="text-2xl font-bold text-slate-900">{expeditions.length}</div></div>
+          <div className="bg-white border border-slate-200 rounded-lg p-4"><div className="text-xs uppercase text-slate-500">Active</div><div className="text-2xl font-bold text-blue-700">{activeCount}</div></div>
+          <div className="bg-white border border-slate-200 rounded-lg p-4"><div className="text-xs uppercase text-slate-500">Completed</div><div className="text-2xl font-bold text-green-700">{completedCount}</div></div>
+          <div className="bg-white border border-slate-200 rounded-lg p-4"><div className="text-xs uppercase text-slate-500">Failed</div><div className="text-2xl font-bold text-rose-700">{failedCount}</div></div>
         </div>
 
         {/* Expeditions Table */}
@@ -252,12 +262,45 @@ export default function Expeditions() {
                   </div>
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-1">Resources Recovered</p>
+                  <div className="space-y-1">
+                    {Object.entries(expeditions.find((e: Expedition) => e.id === selectedExpedition)?.resources || {}).map(([resource, count]: [string, any]) => (
+                      <p key={resource} className="text-sm text-emerald-700">
+                        <span className="capitalize font-semibold">{resource}:</span> {count}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-1">Discoveries</p>
+                  <div className="space-y-1">
+                    {(expeditions.find((e: Expedition) => e.id === selectedExpedition)?.discoveries || []).length === 0 ? (
+                      <p className="text-sm text-slate-500">No discoveries logged.</p>
+                    ) : (
+                      (expeditions.find((e: Expedition) => e.id === selectedExpedition)?.discoveries || []).map((discovery: any, index: number) => (
+                        <p key={index} className="text-sm text-slate-700">• {typeof discovery === "string" ? discovery : JSON.stringify(discovery)}</p>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
               <Button variant="outline" onClick={() => setSelectedExpedition(null)}>
                 Close Details
               </Button>
             </div>
           </div>
         )}
+
+        <div className="bg-white border border-slate-200 rounded-lg p-6 text-sm text-slate-600">
+          <p className="font-semibold text-slate-900 mb-2">Expedition Planning Guidance</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Use exploration missions to map risk before sending high-value military fleets.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Balance troop composition against expected attrition to protect campaign momentum.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Track failed routes and optimize by coordinating escorts or alternate coordinates.</div>
+          </div>
+        </div>
       </div>
     </GameLayout>
   );

@@ -106,6 +106,8 @@ export default function EmpireCommandCenter() {
   const totalResearch = useMemo(() => Object.values(research).reduce((sum, amount) => sum + amount, 0), [research]);
   const totalBuildings = useMemo(() => Object.values(buildings).reduce((sum, amount) => sum + amount, 0), [buildings]);
   const totalOrbitalStructures = useMemo(() => Object.values(orbitalBuildings).reduce((sum, amount) => sum + amount, 0), [orbitalBuildings]);
+  const unreadMessages = messages.filter((message) => !message.read).length;
+  const defenseScore = defenseQuery.data?.summary?.totalDefenseScore || 0;
 
   return (
     <GameLayout>
@@ -130,6 +132,21 @@ export default function EmpireCommandCenter() {
           <Card><CardContent className="p-4"><div className="text-xs text-slate-500 uppercase">Orbital Structures</div><div className="text-2xl font-orbitron font-bold text-indigo-700">{num(totalOrbitalStructures)}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs text-slate-500 uppercase">Megastructures</div><div className="text-2xl font-orbitron font-bold text-rose-700">{megastructuresQuery.data?.structures?.length || 0}</div></CardContent></Card>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card><CardContent className="p-4"><div className="text-xs text-slate-500 uppercase">Unread Command Reports</div><div className="text-2xl font-orbitron font-bold text-amber-700">{unreadMessages}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-slate-500 uppercase">Defense Readiness</div><div className="text-2xl font-orbitron font-bold text-emerald-700">{defenseScore}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-slate-500 uppercase">Strategic Posture</div><div className="text-2xl font-orbitron font-bold text-indigo-700">{activeMissions.length > 3 ? "Aggressive" : "Balanced"}</div></CardContent></Card>
+        </div>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Command Doctrine</CardTitle></CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Maintain colony growth and orbital upgrades in parallel for steady macro scaling.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Keep defense systems above baseline before committing high-value fleet missions.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Use megastructures as long-cycle multipliers, not short-term resource fixes.</div>
+          </CardContent>
+        </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-5 w-full">

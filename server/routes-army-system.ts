@@ -8,6 +8,18 @@ import type { Express } from 'express';
 import { ArmySystemService } from './services/armySystemService';
 import { isAuthenticated } from './basicAuth';
 import { getAllArmySubsystems, getAvailableArmyUnits } from '../shared/config/armySubsystemsConfig';
+import {
+  BATTLE_SYSTEM_PROFILES,
+  COMBAT_EFFECT_LIBRARY,
+  buildProgressionSnapshot,
+  getTierForLevel,
+} from '@shared/config';
+
+function boundedLevel(raw: unknown, fallback = 1) {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(1, Math.min(999, Math.floor(parsed)));
+}
 
 export function registerArmySystemRoutes(app: Express): void {
   /**
@@ -37,14 +49,19 @@ export function registerArmySystemRoutes(app: Express): void {
    */
   app.get('/api/army/subsystems/available', isAuthenticated, (req, res) => {
     try {
-      const playerLevel = parseInt(req.query.level as string) || 1;
+      const playerLevel = boundedLevel(req.query.level, 1);
       const subsystems = getAvailableArmyUnits(playerLevel);
+      const snapshot = buildProgressionSnapshot('unit', playerLevel);
 
       res.json({
         success: true,
         data: subsystems,
         count: subsystems.length,
         playerLevel,
+        progression: {
+          tier: getTierForLevel(playerLevel),
+          snapshot,
+        },
       });
     } catch (error) {
       res.status(500).json({
@@ -62,10 +79,26 @@ export function registerArmySystemRoutes(app: Express): void {
     try {
       const playerId = (req as any).user?.id || 'anonymous';
       const summary = ArmySystemService.getMilitarySummary(playerId);
+      const estimatedLevel = Math.max(
+        1,
+        Math.min(
+          999,
+          Math.floor((summary.totalUnits || 0) / 6) + (Number(summary.force?.totalStrength || 0) > 0 ? 12 : 1)
+        )
+      );
+      const snapshot = buildProgressionSnapshot('unit', estimatedLevel);
 
       res.json({
         success: true,
         data: summary,
+        progression: {
+          level: estimatedLevel,
+          tier: getTierForLevel(estimatedLevel),
+          rank: snapshot.rank,
+          title: snapshot.title,
+        },
+        recommendedProfile: BATTLE_SYSTEM_PROFILES.find((profile) => profile.mode === 'pve') || BATTLE_SYSTEM_PROFILES[0],
+        suggestedEffects: COMBAT_EFFECT_LIBRARY.slice(0, 3),
         timestamp: new Date(),
       });
     } catch (error) {
@@ -308,6 +341,8 @@ export function registerArmySystemRoutes(app: Express): void {
       res.json({
         success: true,
         data: result,
+        battleProfile: BATTLE_SYSTEM_PROFILES.find((profile) => profile.mode === 'pvp') || BATTLE_SYSTEM_PROFILES[0],
+        activeEffects: COMBAT_EFFECT_LIBRARY.slice(0, 4),
       });
     } catch (error) {
       res.status(500).json({
@@ -340,6 +375,7 @@ export function registerArmySystemRoutes(app: Express): void {
         data: {
           combatPower: power,
           unitCount: unitIds.length,
+          tierHint: getTierForLevel(Math.max(1, Math.floor(power / 350))),
         },
       });
     } catch (error) {

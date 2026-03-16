@@ -174,6 +174,19 @@ export default function EmpireProgression() {
   const { resources } = useGame();
   const currentLevel = 1; // This would come from player state
   const kardashevTiers = Object.values(KARDASHEV_SCALE);
+  const nextTier = KARDASHEV_SCALE[(Math.min(18, currentLevel + 1) as KardashevLevel)];
+  const totalResources = (resources.metal || 0) + (resources.crystal || 0) + (resources.deuterium || 0);
+  const readiness = nextTier
+    ? Math.min(
+        100,
+        Math.round(
+          ((resources.metal / Math.max(1, nextTier.requirementsMetal)) +
+            (resources.crystal / Math.max(1, nextTier.requirementsCrystal)) +
+            (resources.deuterium / Math.max(1, nextTier.requirementsDeuterium))) *
+            (100 / 3)
+        )
+      )
+    : 100;
   
   return (
     <GameLayout>
@@ -205,6 +218,27 @@ export default function EmpireProgression() {
             </div>
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Total Strategic Resources</p>
+              <p className="text-2xl font-bold text-slate-900">{formatLargeNumber(totalResources)}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Next Tier Readiness</p>
+              <p className="text-2xl font-bold text-blue-700">{readiness}%</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Next Milestone</p>
+              <p className="text-2xl font-bold text-amber-700">{nextTier?.name || 'Completed'}</p>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {kardashevTiers.map(tier => (
@@ -238,6 +272,30 @@ export default function EmpireProgression() {
             <p>
               <strong>Levels 13-18:</strong> Transcendence - becoming a god-like entity with control over reality itself.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle>Progression Milestone Roadmap</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Early Expansion (1-4)</div>
+              <div>Focus mining infrastructure, core research, and defensive baseline.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Regional Power (5-8)</div>
+              <div>Scale fleets, optimize production chains, and secure strategic sectors.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Galactic Hegemony (9-13)</div>
+              <div>Project force, dominate diplomacy, and establish technology supremacy.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Transcendent Endgame (14-18)</div>
+              <div>Convert macro power into universal control and ultimate empire legacy.</div>
+            </div>
           </CardContent>
         </Card>
       </div>

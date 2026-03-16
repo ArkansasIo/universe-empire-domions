@@ -82,6 +82,9 @@ export default function AccountSetup() {
     }
   };
 
+  const selectedRaceData = RACES[selectedRace];
+  const selectedGovernmentData = GOVERNMENTS[selectedGovernment];
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
       <Button 
@@ -186,6 +189,24 @@ export default function AccountSetup() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-lg border border-slate-300 bg-slate-50 p-3">
+              <p className="text-xs uppercase text-slate-500">Selected Race</p>
+              <p className="text-lg font-semibold text-slate-900">{selectedRaceData.name}</p>
+              <p className="text-xs text-slate-600 mt-1">Primary Doctrine: {selectedRaceData.bonuses[0]}</p>
+            </div>
+            <div className="rounded-lg border border-slate-300 bg-slate-50 p-3">
+              <p className="text-xs uppercase text-slate-500">Selected Government</p>
+              <p className="text-lg font-semibold text-slate-900">{selectedGovernmentData.name}</p>
+              <p className="text-xs text-slate-600 mt-1">Ruler Title: {selectedGovernmentData.rulerTitle}</p>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-600">
+            <p className="font-semibold text-slate-900 mb-1">Starter Doctrine</p>
+            <p>Launch with balanced economy and defense in the first cycle, then pivot into your race-government synergy strengths for faster empire scaling.</p>
           </div>
 
           {error && (

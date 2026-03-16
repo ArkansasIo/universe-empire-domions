@@ -125,6 +125,11 @@ export default function Stations() {
   const moonBuildings = ORBITAL_BUILDINGS.filter(b => b.type === 'moon');
   const stationBuildings = ORBITAL_BUILDINGS.filter(b => b.type === 'station');
   const [activeTab, setActiveTab] = useState<StationsTab>("moon");
+  const activeBuildingPool = activeTab === "moon" ? moonBuildings : stationBuildings;
+  const averageCostFactor =
+    activeBuildingPool.length > 0
+      ? (activeBuildingPool.reduce((sum, building) => sum + building.costFactor, 0) / activeBuildingPool.length).toFixed(2)
+      : "0.00";
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -177,6 +182,27 @@ export default function Stations() {
               <Building2 className="w-8 h-8 text-purple-600 mx-auto mb-2" />
               <p className="text-2xl font-bold text-purple-900">{ORBITAL_BUILDINGS.length}</p>
               <p className="text-xs text-purple-700">Total Buildings</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Active Facility Pool</div>
+              <div className="text-2xl font-bold text-slate-900">{activeBuildingPool.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Average Cost Factor</div>
+              <div className="text-2xl font-bold text-blue-700">x{averageCostFactor}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Active Mode</div>
+              <div className="text-2xl font-bold text-purple-700 capitalize">{activeTab}</div>
             </CardContent>
           </Card>
         </div>
@@ -254,6 +280,26 @@ export default function Stations() {
               <strong>Starbase Hub:</strong> The command center of your space station. 
               Increases overall station durability and unlocks advanced facilities.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle>Orbital Build Doctrine</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Moon Priority</div>
+              <div>Secure intelligence and mobility first through phalanx and gate infrastructure.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Station Priority</div>
+              <div>Scale logistics and ship support before pushing expensive combat modules.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Cost Control</div>
+              <div>Stagger upgrades across structures to flatten cost-factor spikes.</div>
+            </div>
           </CardContent>
         </Card>
       </div>

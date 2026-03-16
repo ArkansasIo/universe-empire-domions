@@ -7,6 +7,20 @@ import { MENU_ASSETS } from "@shared/config";
 const TEMP_THEME_IMAGE = "/theme-temp.png";
 
 export default function Terms() {
+  const policyHighlights = [
+    { section: "Account Integrity", detail: "One commander account per player; credential sharing is prohibited." },
+    { section: "Fair Play", detail: "Bots, automation scripts, exploits, and data tampering are not allowed." },
+    { section: "Community Standards", detail: "Harassment, hate speech, and doxxing lead to enforcement action." },
+    { section: "Economy Integrity", detail: "Fraudulent market behavior and multi-account boosting are bannable." },
+  ];
+
+  const enforcementSteps = [
+    "Detection and evidence review by moderation systems.",
+    "Warning or temporary sanctions for first-time low-risk violations.",
+    "Escalation to suspension for repeated or severe abuse.",
+    "Permanent account closure for exploit abuse or malicious activity.",
+  ];
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-5 pointer-events-none"></div>
@@ -67,8 +81,38 @@ export default function Terms() {
             <p>Universe-Empires-Dominions is provided "as is" without warranties of any kind. We are not liable for any damages arising from your use of the game.</p>
           </section>
 
+          <section>
+            <h3 className="font-semibold text-slate-900 mb-2">8. Policy Highlights</h3>
+            <div className="space-y-2">
+              {policyHighlights.map((item) => (
+                <div key={item.section} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="font-medium text-slate-900">{item.section}</p>
+                  <p className="text-slate-600 text-xs mt-1">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="font-semibold text-slate-900 mb-2">9. Enforcement Workflow</h3>
+            <div className="space-y-1">
+              {enforcementSteps.map((step) => (
+                <p key={step}>• {step}</p>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="font-semibold text-slate-900 mb-2">10. Player Rights & Support</h3>
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>Request account support through the help and support channels.</li>
+              <li>Appeal moderation actions with a clear evidence trail.</li>
+              <li>Review policy updates published in patch and governance notes.</li>
+            </ul>
+          </section>
+
           <section className="text-xs text-slate-400 pt-4 border-t border-slate-200">
-            <p>Last updated: December 2024</p>
+            <p>Last updated: March 2026</p>
             <p>Developed by Stephen</p>
           </section>
         </CardContent>

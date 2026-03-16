@@ -111,6 +111,14 @@ export default function Storefront() {
   }, [selectedItemId, visibleItems]);
 
   const selectedQuantity = selectedItemId ? getQuantityForItem(selectedItemId) : 1;
+  const totalVisibleItems = visibleItems.length;
+  const visibleByCurrency = visibleItems.reduce(
+    (acc, item) => {
+      acc[item.currency] += 1;
+      return acc;
+    },
+    { silver: 0, gold: 0, platinum: 0 } as Record<StoreCurrency, number>
+  );
 
   const { data: checkoutPreview, isLoading: previewLoading } = useQuery<CheckoutPreviewResponse>({
     queryKey: ["/api/storefront/preview-checkout", selectedItemId, selectedQuantity],
@@ -166,6 +174,33 @@ export default function Storefront() {
             </div>
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Visible Items</div>
+              <div className="text-2xl font-bold text-slate-900">{totalVisibleItems}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Silver Items</div>
+              <div className="text-2xl font-bold text-slate-700">{visibleByCurrency.silver}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Gold Items</div>
+              <div className="text-2xl font-bold text-yellow-700">{visibleByCurrency.gold}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Platinum Items</div>
+              <div className="text-2xl font-bold text-indigo-700">{visibleByCurrency.platinum}</div>
+            </CardContent>
+          </Card>
+        </div>
 
         <Tabs value={category} onValueChange={(value) => setCategory(value as "all" | StoreCategory)}>
           <TabsList className="bg-white border border-slate-200">
@@ -303,6 +338,27 @@ export default function Storefront() {
             );
           })}
         </div>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle>Store Strategy Guide</CardTitle>
+            <CardDescription>Recommended spending cadence for efficient progression.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Early Game</div>
+              <div>Prioritize silver-cost resource packs and short-duration boosters.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Mid Campaign</div>
+              <div>Mix cosmetics with utility bundles that amplify mission throughput.</div>
+            </div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="font-semibold text-slate-900">Season Push</div>
+              <div>Reserve premium currencies for high-value bundles and pass accelerators.</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </GameLayout>
   );

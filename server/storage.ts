@@ -1940,7 +1940,7 @@ export class DatabaseStorage implements IStorage {
       // Create new player state with starting turns
       playerState = await this.createPlayerState({
         userId,
-        resources: { metal: 1000, crystal: 500, deuterium: 0, energy: 0 },
+        resources: { metal: 1000, crystal: 500, deuterium: 0, energy: 0, credits: 1000, food: 500, water: 500 },
         commander: { race: "human", class: "warrior", stats: { level: 1, xp: 0 }, equipment: {}, inventory: [] },
         government: { type: "democracy", taxRate: 10, policies: [], stats: { stability: 50, efficiency: 70, publicSupport: 60, militaryReadiness: 50 } },
         currentTurns: 50,
@@ -2536,7 +2536,7 @@ export class DatabaseStorage implements IStorage {
     const defaults = [
       { key: "game_speed", value: { turnsPerMinute: 6, resourceProductionRate: 1.0, researchSpeedMultiplier: 1.0 }, category: "game", description: "Game speed multipliers" },
       { key: "resource_prices", value: { metal: 1, crystal: 1.5, deuterium: 2.0 }, category: "economy", description: "Resource market prices" },
-      { key: "starting_resources", value: { metal: 1000, crystal: 500, deuterium: 0, energy: 0 }, category: "economy", description: "New player starting resources" },
+      { key: "starting_resources", value: { metal: 1000, crystal: 500, deuterium: 0, energy: 0, credits: 1000, food: 500, water: 500 }, category: "economy", description: "New player starting resources" },
       { key: "player_limits", value: { maxFleets: 10, maxMissions: 50, maxAlliances: 1 }, category: "gameplay", description: "Player action limits" },
       { key: "turn_system", value: { turnsPerMinute: 6, offlineAccumulationCap: 24, maxCurrentTurns: 1000 }, category: "gameplay", description: "Turn system config" },
       { key: "combat_enabled", value: true, category: "gameplay", description: "Enable combat system" },

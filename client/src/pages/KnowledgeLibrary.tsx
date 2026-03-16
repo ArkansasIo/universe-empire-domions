@@ -33,6 +33,12 @@ const KNOWLEDGE_TIERS = [
   { name: "Supreme", tier: 5, maxLevel: 100 },
 ];
 
+const TRAINING_TRACKS = [
+  { name: "Empire Builder", focus: "Engineering + Agriculture + Commerce", impact: "Infrastructure and economic scaling" },
+  { name: "War Strategist", focus: "Military + Espionage + Diplomacy", impact: "Combat readiness and geopolitical control" },
+  { name: "Frontier Scientist", focus: "Science + Exploration + Arcane", impact: "Discovery, innovation, and expansion tempo" },
+];
+
 export default function KnowledgeLibrary() {
   return (
     <GameLayout>
@@ -172,29 +178,47 @@ export default function KnowledgeLibrary() {
 
           {/* Synergies */}
           <TabsContent value="synergies" className="mt-6">
-            <Card className="bg-white border-slate-200">
-              <CardHeader>
-                <CardTitle className="font-orbitron">Knowledge Synergies</CardTitle>
-                <CardDescription>Combining different knowledge types grants bonus effects</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[
-                    { combo: "Military + Engineering", bonus: "Combat building efficiency +20%" },
-                    { combo: "Science + Arcane", bonus: "Research speed +15%" },
-                    { combo: "Commerce + Diplomacy", bonus: "Trade profit +25%" },
-                    { combo: "Exploration + Navigation", bonus: "Fleet speed +10%" },
-                    { combo: "Medicine + Agriculture", bonus: "Population growth +30%" },
-                    { combo: "Espionage + Intelligence", bonus: "Detection range +40%" },
-                  ].map((syn, idx) => (
-                    <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                      <p className="font-semibold font-rajdhani text-slate-900">{syn.combo}</p>
-                      <Badge className="bg-green-100 text-green-900 mt-2">{syn.bonus}</Badge>
+            <div className="space-y-4">
+              <Card className="bg-white border-slate-200">
+                <CardHeader>
+                  <CardTitle className="font-orbitron">Knowledge Synergies</CardTitle>
+                  <CardDescription>Combining different knowledge types grants bonus effects</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { combo: "Military + Engineering", bonus: "Combat building efficiency +20%" },
+                      { combo: "Science + Arcane", bonus: "Research speed +15%" },
+                      { combo: "Commerce + Diplomacy", bonus: "Trade profit +25%" },
+                      { combo: "Exploration + Navigation", bonus: "Fleet speed +10%" },
+                      { combo: "Medicine + Agriculture", bonus: "Population growth +30%" },
+                      { combo: "Espionage + Intelligence", bonus: "Detection range +40%" },
+                    ].map((syn, idx) => (
+                      <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <p className="font-semibold font-rajdhani text-slate-900">{syn.combo}</p>
+                        <Badge className="bg-green-100 text-green-900 mt-2">{syn.bonus}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-slate-200">
+                <CardHeader>
+                  <CardTitle className="font-orbitron">Recommended Training Tracks</CardTitle>
+                  <CardDescription>Preset specialization paths for commanders and sub-commanders</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {TRAINING_TRACKS.map((track) => (
+                    <div key={track.name} className="rounded border border-slate-200 bg-slate-50 p-3">
+                      <div className="font-semibold text-slate-900">{track.name}</div>
+                      <div className="text-sm text-slate-600 mt-1">Focus: {track.focus}</div>
+                      <div className="text-xs text-slate-500 mt-1">Impact: {track.impact}</div>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

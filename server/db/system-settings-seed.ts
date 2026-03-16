@@ -15,6 +15,9 @@ export const DEFAULT_SYSTEM_SETTINGS = {
     crystal: 500,
     deuterium: 0,
     energy: 0,
+    credits: 1000,
+    food: 500,
+    water: 500,
   },
   player_limits: {
     maxFleets: 10,

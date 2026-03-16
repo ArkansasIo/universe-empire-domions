@@ -142,6 +142,9 @@ export default function Alliance() {
       return tag.includes(key) || name.includes(key);
    });
 
+   const directoryMembers = visibleAlliances.reduce((sum, entry) => sum + (entry.memberCount || 0), 0);
+   const directoryWars = visibleAlliances.reduce((sum, entry) => sum + (entry.activeWars || 0), 0);
+
    const { data: diplomacyData } = useQuery<DiplomacyResponse>({
       queryKey: ["alliance-diplomacy", alliance?.id],
       queryFn: () => fetchJson<DiplomacyResponse>(`/api/alliances/${alliance!.id}/diplomacy`),
@@ -286,6 +289,17 @@ export default function Alliance() {
                   </CardContent>
                 </Card>
               </div>
+
+              <Card className="bg-indigo-50 border-indigo-200">
+                 <CardHeader className="pb-3">
+                    <CardTitle className="text-base text-indigo-900">Alliance Command Doctrine</CardTitle>
+                 </CardHeader>
+                 <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-indigo-900">
+                    <div className="rounded border border-indigo-200 bg-white/70 p-3">Escalate wars only when allied logistics can sustain reinforcement cycles for 72 hours.</div>
+                    <div className="rounded border border-indigo-200 bg-white/70 p-3">Align diplomacy state changes with announcement cadence to keep member morale synchronized.</div>
+                    <div className="rounded border border-indigo-200 bg-white/70 p-3">Rotate top-point commanders between fronts to distribute defensive pressure across systems.</div>
+                 </CardContent>
+              </Card>
 
               <Tabs defaultValue="overview" className="w-full">
                  <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start overflow-x-auto">
@@ -590,6 +604,13 @@ export default function Alliance() {
           <h2 className="text-3xl font-orbitron font-bold text-slate-900">Alliance Network</h2>
           <p className="text-muted-foreground font-rajdhani text-lg">Join forces with other commanders or establish your own faction.</p>
         </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Visible Alliances</div><div className="text-2xl font-orbitron font-bold text-slate-900">{visibleAlliances.length}</div></CardContent></Card>
+                <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Directory Members</div><div className="text-2xl font-orbitron font-bold text-blue-700">{directoryMembers.toLocaleString()}</div></CardContent></Card>
+                <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Active Wars</div><div className="text-2xl font-orbitron font-bold text-red-700">{directoryWars}</div></CardContent></Card>
+                <Card className="bg-white border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Recruitment Mode</div><div className="text-2xl font-orbitron font-bold text-emerald-700">Open</div></CardContent></Card>
+            </div>
 
         <Tabs defaultValue="search" className="w-full">
            <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start">

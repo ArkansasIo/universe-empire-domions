@@ -7,6 +7,20 @@ import { MENU_ASSETS } from "@shared/config";
 const TEMP_THEME_IMAGE = "/theme-temp.png";
 
 export default function Privacy() {
+  const dataCategories = [
+    { title: "Identity Data", details: "Username, display profile, and account identifiers." },
+    { title: "Gameplay Data", details: "Progression state, economy history, combat and alliance activity." },
+    { title: "Technical Data", details: "Session metadata, performance logs, and client diagnostics." },
+    { title: "Support Data", details: "Messages submitted to support and moderation workflows." },
+  ];
+
+  const securityPractices = [
+    "Session-based authentication controls and credential handling safeguards.",
+    "Server-side access restrictions for administrative and moderation actions.",
+    "Operational monitoring and audit logging for sensitive requests.",
+    "Periodic retention and data cleanup for stale records.",
+  ];
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-5 pointer-events-none"></div>
@@ -77,8 +91,37 @@ export default function Privacy() {
             <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.</p>
           </section>
 
+          <section>
+            <h3 className="font-semibold text-slate-900 mb-2">9. Data Categories at a Glance</h3>
+            <div className="space-y-2">
+              {dataCategories.map((category) => (
+                <div key={category.title} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="font-medium text-slate-900">{category.title}</p>
+                  <p className="text-xs text-slate-600 mt-1">{category.details}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="font-semibold text-slate-900 mb-2">10. Security Practices</h3>
+            <div className="space-y-1">
+              {securityPractices.map((practice) => (
+                <p key={practice}>• {practice}</p>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="font-semibold text-slate-900 mb-2">11. Data Requests</h3>
+            <p>
+              You may request account deletion, correction, or export of personal gameplay data through official support channels.
+              We process requests after verifying account ownership.
+            </p>
+          </section>
+
           <section className="text-xs text-slate-400 pt-4 border-t border-slate-200">
-            <p>Last updated: December 2024</p>
+            <p>Last updated: March 2026</p>
             <p>Developed by Stephen</p>
           </section>
         </CardContent>

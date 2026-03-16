@@ -38,6 +38,31 @@ interface Resources {
   crystal: number;
   deuterium: number;
   energy: number;
+  credits: number;
+  food: number;
+  water: number;
+}
+
+const DEFAULT_RESOURCES: Resources = {
+  metal: 50000,
+  crystal: 50000,
+  deuterium: 20000,
+  energy: 5000,
+  credits: 10000,
+  food: 5000,
+  water: 5000,
+};
+
+function normalizeResources(raw: any, fallback: Resources = DEFAULT_RESOURCES): Resources {
+  return {
+    metal: Number(raw?.metal ?? fallback.metal),
+    crystal: Number(raw?.crystal ?? fallback.crystal),
+    deuterium: Number(raw?.deuterium ?? fallback.deuterium),
+    energy: Number(raw?.energy ?? fallback.energy),
+    credits: Number(raw?.credits ?? fallback.credits),
+    food: Number(raw?.food ?? fallback.food),
+    water: Number(raw?.water ?? fallback.water),
+  };
 }
 
 interface Buildings {
@@ -206,12 +231,7 @@ const GameContext = createContext<GameState | undefined>(undefined);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
-  const [resources, setResources] = useState<Resources>({
-    metal: 50000,
-    crystal: 50000,
-    deuterium: 20000,
-    energy: 5000,
-  });
+  const [resources, setResources] = useState<Resources>(DEFAULT_RESOURCES);
 
   const [buildings, setBuildings] = useState<Buildings>({
     metalMine: 10,
@@ -524,7 +544,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     const state = (serverGameState && typeof serverGameState === "object") ? serverGameState : {};
 
-    setResources((state as any).resources || { metal: 1000, crystal: 500, deuterium: 0, energy: 0 });
+    setResources(normalizeResources((state as any).resources, DEFAULT_RESOURCES));
     setBuildings({
       metalMine: (state as any).buildings?.metalMine || 1,
       crystalMine: (state as any).buildings?.crystalMine || 1,
@@ -672,6 +692,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       // 1. Resource Production (Now formally part of "resource_tick" logic, but kept inline for smooth UI)
       // We sync this with the cron job update visually
       setResources(prev => ({
+        ...prev,
         metal: prev.metal + (production.metal * 10 * speedMult),
         crystal: prev.crystal + (production.crystal * 10 * speedMult),
         deuterium: prev.deuterium + (production.deuterium * 10 * speedMult),
@@ -872,7 +893,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       
       if (response.success) {
         // Update local state based on response
-        setResources(response.resources || resources);
+        setResources(normalizeResources(response.resources, resources));
         setBuildings(response.buildings || buildings);
         
         const adjustedTime = (time * Math.pow(1.15, buildings[building] || 0)) / (config?.gameSpeed || 1);
@@ -927,7 +948,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       
       if (response.success) {
         // Update local state based on response
-        setResources(response.resources || resources);
+        setResources(normalizeResources(response.resources, resources));
         setUnits(response.units || units);
         
         const adjustedTime = (time * amount) / (config?.gameSpeed || 1);

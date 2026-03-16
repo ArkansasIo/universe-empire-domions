@@ -98,6 +98,15 @@ export default function TechTree() {
     );
   };
 
+  const totalEntries = OGAME_BUILDINGS.length + OGAME_SHIPS.length + OGAME_RESEARCH.length;
+  const searchHits = activeTab === "buildings"
+    ? filterBySearch(OGAME_BUILDINGS).length
+    : activeTab === "ships"
+    ? filterBySearch(OGAME_SHIPS).length
+    : activeTab === "research"
+    ? filterBySearch(OGAME_RESEARCH).length
+    : totalEntries;
+
   return (
     <GameLayout>
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -121,6 +130,44 @@ export default function TechTree() {
             />
           </div>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Catalog Entries</div>
+              <div className="text-2xl font-bold text-slate-900">{totalEntries}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Building Blueprints</div>
+              <div className="text-2xl font-bold text-amber-700">{OGAME_BUILDINGS.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Ship Blueprints</div>
+              <div className="text-2xl font-bold text-green-700">{OGAME_SHIPS.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <div className="text-xs uppercase text-slate-500">Search Hits (Active Tab)</div>
+              <div className="text-2xl font-bold text-blue-700">{searchHits}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base">Encyclopedia Usage Guide</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Use tab filters first, then narrow by search term for fast blueprint discovery.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Compare resource cost columns to identify cheapest progression branches.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Cross-reference facilities and progression tabs before committing upgrade routes.</div>
+          </CardContent>
+        </Card>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

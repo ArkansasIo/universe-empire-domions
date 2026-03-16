@@ -154,6 +154,18 @@ function QuestCard({ quest }: { quest: Quest }) {
 
 export default function Achievements() {
   const categories = ["all", "exploration", "combat", "economics", "technology", "diplomacy", "milestones"];
+  const completedAchievements = ACHIEVEMENTS.filter((achievement) => achievement.completed).length;
+  const totalAchievements = ACHIEVEMENTS.length;
+  const activeQuests = QUESTS.filter((quest) => quest.active).length;
+  const completedQuests = QUESTS.filter((quest) => quest.completed).length;
+  const completionRate = totalAchievements > 0 ? Math.round((completedAchievements / totalAchievements) * 100) : 0;
+
+  const totalAchievementXp = ACHIEVEMENTS
+    .filter((achievement) => achievement.completed)
+    .reduce((sum, achievement) => sum + achievement.rewards.xp, 0);
+  const totalAchievementPrestige = ACHIEVEMENTS
+    .filter((achievement) => achievement.completed)
+    .reduce((sum, achievement) => sum + achievement.rewards.prestige, 0);
   
   return (
     <GameLayout>
@@ -170,29 +182,51 @@ export default function Achievements() {
           <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
             <CardContent className="p-4 text-center">
               <Trophy className="w-8 h-8 text-amber-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-amber-900">{ACHIEVEMENTS.filter(a => a.completed).length}</p>
+              <p className="text-2xl font-bold text-amber-900">{completedAchievements}</p>
               <p className="text-xs text-amber-700">Completed</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-4 text-center">
               <Target className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-blue-900">{ACHIEVEMENTS.length}</p>
+              <p className="text-2xl font-bold text-blue-900">{totalAchievements}</p>
               <p className="text-xs text-blue-700">Total Achievements</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-4 text-center">
               <CheckCircle2 className="w-8 h-8 text-green-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-green-900">{QUESTS.filter(q => q.completed).length}</p>
+              <p className="text-2xl font-bold text-green-900">{completedQuests}</p>
               <p className="text-xs text-green-700">Quests Done</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
             <CardContent className="p-4 text-center">
               <Clock className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-purple-900">{QUESTS.filter(q => q.active).length}</p>
+              <p className="text-2xl font-bold text-purple-900">{activeQuests}</p>
               <p className="text-xs text-purple-700">Active Quests</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Achievement Completion</p>
+              <p className="text-2xl font-bold text-slate-900">{completionRate}%</p>
+              <Progress value={completionRate} className="h-2 mt-2" />
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-slate-500">XP Earned (Achievements)</p>
+              <p className="text-2xl font-bold text-indigo-700">{totalAchievementXp.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Prestige Earned</p>
+              <p className="text-2xl font-bold text-amber-700">{totalAchievementPrestige.toLocaleString()}</p>
             </CardContent>
           </Card>
         </div>

@@ -32,24 +32,54 @@ const navItems = [
 export default function Navigation() {
   const [location] = useLocation();
 
+  const groupedLinks = [
+    {
+      title: "Empire Core",
+      items: navItems.filter((item) => ["/", "/resources", "/facilities", "/research", "/colonies", "/blueprints"].includes(item.href)),
+    },
+    {
+      title: "Military",
+      items: navItems.filter((item) => ["/shipyard", "/fleet", "/combat", "/battle-logs"].includes(item.href)),
+    },
+    {
+      title: "Galaxy & Social",
+      items: navItems.filter((item) => ["/exploration", "/galaxy", "/interstellar", "/commander", "/government", "/alliance", "/market", "/messages", "/artifacts"].includes(item.href)),
+    },
+  ];
+
   return (
     <Card className="bg-white border-slate-200">
       <CardContent className="p-4">
         <div className="text-xs uppercase font-bold text-slate-600 mb-3 tracking-widest">Quick Links</div>
-        <div className="grid grid-cols-4 gap-2">
-          {navItems.map(item => (
-            <Link key={item.href} href={item.href}>
-              <Button
-                variant={location === item.href ? "default" : "outline"}
-                size="sm"
-                className="w-full"
-                title={item.label}
-                data-testid={`nav-button-${item.label.toLowerCase()}`}
-              >
-                <item.icon className="w-4 h-4" />
-              </Button>
-            </Link>
+
+        <div className="space-y-4">
+          {groupedLinks.map((section) => (
+            <div key={section.title}>
+              <div className="text-[11px] font-semibold text-slate-500 mb-2 uppercase tracking-wide">{section.title}</div>
+              <div className="grid grid-cols-4 gap-2">
+                {section.items.map(item => (
+                  <Link key={item.href} href={item.href}>
+                    <Button
+                      variant={location === item.href ? "default" : "outline"}
+                      size="sm"
+                      className="w-full"
+                      title={item.label}
+                      data-testid={`nav-button-${item.label.toLowerCase()}`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
+        </div>
+
+        <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+          <div className="font-semibold text-slate-700 mb-1">Navigation Tips</div>
+          <div>• Highlighted icon indicates the current active route.</div>
+          <div>• Use Military links for fleet, combat, and battle log subpages.</div>
+          <div>• Use Galaxy & Social for diplomacy, market, and communication pages.</div>
         </div>
       </CardContent>
     </Card>

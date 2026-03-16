@@ -85,6 +85,10 @@ export default function BiomeDetail() {
     ];
   }, [biome]);
 
+  const hazardCount = biome?.hazards?.length || 0;
+  const strategicUseCount = biome?.strategicUses?.length || 0;
+  const relatedCount = relatedBiomes.length;
+
   if (!biome) {
     return (
       <GameLayout>
@@ -122,6 +126,12 @@ export default function BiomeDetail() {
           <Card><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Sub-Type</div><div className="text-lg font-bold">{biome.biomeSubType}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Class</div><div className="text-lg font-bold">{biome.class}/{biome.subClass}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Size/Capacity</div><div className="text-lg font-bold">{biome.size} / {biome.colonyCapacity}</div></CardContent></Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Hazard Nodes</div><div className="text-2xl font-bold text-rose-700">{hazardCount}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Strategic Uses</div><div className="text-2xl font-bold text-emerald-700">{strategicUseCount}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Related Biomes</div><div className="text-2xl font-bold text-indigo-700">{relatedCount}</div></CardContent></Card>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -176,6 +186,15 @@ export default function BiomeDetail() {
                 </div>
               </Link>
             ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Deployment Checklist</CardTitle></CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Evaluate hazard stack before expanding workforce presence.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Align colony specialization with biome strategic uses.</div>
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">Use related biomes for comparative doctrine planning in adjacent sectors.</div>
           </CardContent>
         </Card>
       </div>
