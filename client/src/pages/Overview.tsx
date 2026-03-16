@@ -597,8 +597,8 @@ export default function Overview() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                    <img src={TECH_BRANCH_ASSETS.SHIELDS.path} alt="alliance" className="w-8 h-8 object-contain" onError={(e) => { (e.target as HTMLImageElement).src = TEMP_THEME_IMAGE; }} />
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">Alliance</div>
