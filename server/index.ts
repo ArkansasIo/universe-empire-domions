@@ -12,6 +12,7 @@ import { registerAllianceRoutes } from "./routes-alliances";
 import { registerArtifactRoutes } from "./routes-artifacts";
 import { registerGuildRoutes } from "./routes-guilds";
 import { registerEmpireCombatUniverseRoutes } from "./routes-empire-combat-universe";
+import { registerForumRoutes } from "./routes-forums";
 import { ServerStatusService } from "./services/serverStatusService";
 
 const runtimeNodeEnv = process.env.NODE_ENV ?? "production";
@@ -215,6 +216,7 @@ import { seedOgameCatalogIfNeeded } from "./services/ogameCatalogService";
   registerAllianceRoutes(app);
   registerArtifactRoutes(app);
   registerGuildRoutes(app);
+  registerForumRoutes(app);
   registerEmpireCombatUniverseRoutes(app);
   app.use(turnSystemRoutes);
   app.use(researchXPRoutes);

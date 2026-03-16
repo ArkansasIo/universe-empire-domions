@@ -2,14 +2,114 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, ArrowLeft, Users, Shield } from "lucide-react";
 import { Link } from "wouter";
+import { useGame } from "@/lib/gameContext";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+
+type ForumReply = {
+  id: string;
+  authorName: string;
+  content: string;
+  createdAt: number;
+};
+
+type ForumThread = {
+  id: string;
+  title: string;
+  category: string;
+  authorName: string;
+  content: string;
+  createdAt: number;
+  replies: ForumReply[];
+};
 
 export default function Forums() {
-  const featuredThreads = [
-    { title: "Empire Opening Build Orders", replies: 184, category: "Strategy" },
-    { title: "Civilization Workforce Optimization", replies: 92, category: "Economy" },
-    { title: "Fleet Counter Meta - Current Season", replies: 147, category: "Combat" },
-    { title: "Alliance Recruitment Board", replies: 231, category: "Diplomacy" },
-  ];
+  const { isLoggedIn, username, isActualAdmin } = useGame();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+
+  const { data } = useQuery({
+    queryKey: ["/api/forums/threads"],
+    queryFn: async () => {
+      const response = await fetch("/api/forums/threads", { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to load forum threads");
+      return response.json() as Promise<{ success: boolean; threads: ForumThread[] }>;
+    },
+    refetchInterval: 30000,
+  });
+
+  const createThreadMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/forums/threads", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content, category: "General", username }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.message || "Failed to create thread");
+      return payload;
+    },
+    onSuccess: () => {
+      setTitle("");
+      setContent("");
+      queryClient.invalidateQueries({ queryKey: ["/api/forums/threads"] });
+      toast({ title: "Thread posted", description: "Your forum thread is now live." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Post failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const replyMutation = useMutation({
+    mutationFn: async ({ threadId, replyText }: { threadId: string; replyText: string }) => {
+      const response = await fetch(`/api/forums/threads/${threadId}/reply`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: replyText, username }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.message || "Failed to post reply");
+      return payload;
+    },
+    onSuccess: (_, variables) => {
+      setReplyDrafts((prev) => ({ ...prev, [variables.threadId]: "" }));
+      queryClient.invalidateQueries({ queryKey: ["/api/forums/threads"] });
+      toast({ title: "Reply posted", description: "Your response has been added." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Reply failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/forums/reset", {
+        method: "POST",
+        credentials: "include",
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.message || "Forum reset failed");
+      return payload;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/forums/threads"] });
+      toast({ title: "Forum reset", description: "All threads and replies were cleared." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Reset failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const forumThreads: ForumThread[] = data?.threads || [];
 
   const moderationRules = [
     "No harassment, hate speech, or targeted abuse.",
@@ -33,9 +133,68 @@ export default function Forums() {
           </div>
           <h1 className="text-4xl font-orbitron font-bold text-slate-900 mb-4">Forums</h1>
           <p className="text-xl text-slate-600 font-rajdhani max-w-2xl mx-auto">
-            Community coordination hub for Universe-Empires-Dominions.
+            Community coordination hub using your main account session.
           </p>
         </div>
+
+        {!isLoggedIn && (
+          <Card className="bg-amber-50 border-amber-200 mb-6">
+            <CardContent className="pt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <div className="font-semibold text-amber-900">Forum login uses your main account</div>
+                <div className="text-sm text-amber-800">Sign in once through game auth to post and reply.</div>
+              </div>
+              <Link href="/auth">
+                <Button className="bg-amber-600 hover:bg-amber-700 text-white">Login with Main Account</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {isLoggedIn && (
+          <Card className="bg-white border-slate-200 shadow-sm mb-6">
+            <CardHeader>
+              <CardTitle className="text-slate-900">Create Thread</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Thread title"
+                data-testid="input-forum-thread-title"
+              />
+              <Textarea
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+                placeholder="What strategy, report, or request do you want to discuss?"
+                rows={4}
+                data-testid="input-forum-thread-content"
+              />
+              <div className="flex justify-between gap-3">
+                <div className="text-xs text-slate-500">Posting as {username || "Commander"}</div>
+                <div className="flex gap-2">
+                  {isActualAdmin && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => resetMutation.mutate()}
+                      disabled={resetMutation.isPending}
+                      data-testid="button-forum-reset"
+                    >
+                      {resetMutation.isPending ? "Resetting..." : "Reset Forum"}
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => createThreadMutation.mutate()}
+                    disabled={createThreadMutation.isPending || title.trim().length < 4 || content.trim().length < 8}
+                    data-testid="button-forum-post-thread"
+                  >
+                    {createThreadMutation.isPending ? "Posting..." : "Post Thread"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="bg-white border-slate-200 shadow-sm">
@@ -73,13 +232,51 @@ export default function Forums() {
               <CardTitle className="text-slate-900">Featured Threads</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {featuredThreads.map((thread) => (
-                <div key={thread.title} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              {forumThreads.length === 0 && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-600 text-sm">
+                  No threads yet. Create the first forum topic.
+                </div>
+              )}
+              {forumThreads.map((thread) => (
+                <div key={thread.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
                   <div className="flex items-center justify-between">
                     <div className="font-semibold text-slate-900">{thread.title}</div>
                     <div className="text-xs text-slate-500">{thread.category}</div>
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">{thread.replies} replies</div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {thread.replies?.length || 0} replies • by {thread.authorName || "Commander"}
+                  </div>
+                  <div className="text-sm text-slate-700 mt-2">{thread.content}</div>
+
+                  {thread.replies?.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {thread.replies.slice(-3).map((reply) => (
+                        <div key={reply.id} className="rounded border border-slate-200 bg-white p-2">
+                          <div className="text-xs text-slate-500">{reply.authorName || "Commander"}</div>
+                          <div className="text-sm text-slate-700">{reply.content}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {isLoggedIn && (
+                    <div className="mt-3 flex gap-2">
+                      <Input
+                        value={replyDrafts[thread.id] || ""}
+                        onChange={(event) => setReplyDrafts((prev) => ({ ...prev, [thread.id]: event.target.value }))}
+                        placeholder="Reply to this thread"
+                        data-testid={`input-forum-reply-${thread.id}`}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => replyMutation.mutate({ threadId: thread.id, replyText: (replyDrafts[thread.id] || "").trim() })}
+                        disabled={replyMutation.isPending || (replyDrafts[thread.id] || "").trim().length < 2}
+                        data-testid={`button-forum-reply-${thread.id}`}
+                      >
+                        Reply
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </CardContent>
