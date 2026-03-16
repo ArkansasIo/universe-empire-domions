@@ -250,6 +250,21 @@ export default function Overview() {
                   )}
                 </Button>
               </Link>
+              <Link href="/story-mode">
+                <Button variant="outline" className="w-full justify-start h-10 text-slate-700 hover:bg-slate-50" data-testid="button-goto-story-mode">
+                  <Target className="w-4 h-4 mr-2 text-indigo-500" /> Story Mode
+                </Button>
+              </Link>
+              <Link href="/season-pass">
+                <Button variant="outline" className="w-full justify-start h-10 text-slate-700 hover:bg-slate-50" data-testid="button-goto-season-pass">
+                  <Trophy className="w-4 h-4 mr-2 text-amber-500" /> Season Pass
+                </Button>
+              </Link>
+              <Link href="/storefront">
+                <Button variant="outline" className="w-full justify-start h-10 text-slate-700 hover:bg-slate-50" data-testid="button-goto-storefront">
+                  <Gem className="w-4 h-4 mr-2 text-blue-500" /> Storefront
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 

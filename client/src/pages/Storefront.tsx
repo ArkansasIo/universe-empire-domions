@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ShoppingBag } from "lucide-react";
+import { Link } from "wouter";
 
 type StoreCategory = "boosters" | "cosmetics" | "resources" | "bundles";
 type StoreCurrency = "silver" | "gold" | "platinum";
@@ -96,7 +97,15 @@ export default function Storefront() {
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-orbitron font-bold text-slate-900">Storefront</h2>
-          <p className="text-muted-foreground font-rajdhani text-lg">Purchase boosters, cosmetics, resources, and bundles.</p>
+          <p className="text-muted-foreground font-rajdhani text-lg">Purchase boosters, cosmetics, resources, and bundles for story and seasonal progression.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href="/story-mode">
+              <Button variant="outline" size="sm">Open Story Mode</Button>
+            </Link>
+            <Link href="/season-pass">
+              <Button variant="outline" size="sm">Open Season Pass</Button>
+            </Link>
+          </div>
         </div>
 
         <Card className="bg-white border-slate-200">

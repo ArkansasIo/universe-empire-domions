@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, CheckCircle2, Compass, Zap } from "lucide-react";
+import { Link } from "wouter";
 
 interface StoryCampaignData {
   currentAct: number;
@@ -124,7 +125,15 @@ export default function StoryMode() {
             <BookOpen className="w-8 h-8 text-primary" />
             Story Mode
           </h1>
-          <p className="text-muted-foreground">Play through 5 acts, 50 main missions, and side directives.</p>
+          <p className="text-muted-foreground">Play through 12 acts, 5 chapters per act, and 50 missions per act including side directives.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href="/season-pass">
+              <Button variant="outline" size="sm">Open Season Pass</Button>
+            </Link>
+            <Link href="/storefront">
+              <Button variant="outline" size="sm">Open Storefront</Button>
+            </Link>
+          </div>
         </div>
 
         {/* Campaign Progress */}
@@ -134,7 +143,7 @@ export default function StoryMode() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-slate-600">Act {campaign?.currentAct || 1} of 5</span>
+              <span className="text-slate-600">Act {campaign?.currentAct || 1} of {campaign?.actDefinitions?.length || 12}</span>
               <div className="w-64 h-2 bg-slate-200 rounded">
                 <div
                   className="h-full bg-primary rounded transition-all"

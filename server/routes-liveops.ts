@@ -13,7 +13,9 @@ import {
   SEASON_PASS_CONFIG,
   STOREFRONT_ITEMS,
   STORY_ACTS,
+  STORY_CHAPTERS_PER_ACT,
   STORY_MISSIONS_ALL,
+  STORY_TOTAL_ACTS,
   type SeasonPassReward,
   type StorefrontItem,
 } from "../shared/config/liveOpsContentConfig";
@@ -133,13 +135,24 @@ function resolveSeasonPassState(playerState: any) {
     xp: seasonXp,
     currentTier,
     claimedFree: Array.isArray(seasonPass.claimedFree) ? seasonPass.claimedFree as number[] : [],
-    claimedPremium: Array.isArray(seasonPass.claimedPremium) ? seasonPass.claimedPremium as number[] : [],
-    premiumUnlocked: Boolean(seasonPass.premiumUnlocked),
+    claimedGold: Array.isArray(seasonPass.claimedGold)
+      ? seasonPass.claimedGold as number[]
+      : Array.isArray(seasonPass.claimedPremium)
+        ? seasonPass.claimedPremium as number[]
+        : [],
+    claimedPlatinum: Array.isArray(seasonPass.claimedPlatinum) ? seasonPass.claimedPlatinum as number[] : [],
+    goldUnlocked: Boolean(seasonPass.goldUnlocked ?? seasonPass.premiumUnlocked),
+    platinumUnlocked: Boolean(seasonPass.platinumUnlocked),
   };
 }
 
-function findSeasonReward(tier: number, premium: boolean): SeasonPassReward | undefined {
-  const rewardPool = premium ? SEASON_PASS_CONFIG.premiumRewards : SEASON_PASS_CONFIG.freeRewards;
+function findSeasonReward(tier: number, track: "free" | "gold" | "platinum"): SeasonPassReward | undefined {
+  const rewardPool =
+    track === "free"
+      ? SEASON_PASS_CONFIG.freeRewards
+      : track === "gold"
+        ? SEASON_PASS_CONFIG.goldRewards
+        : SEASON_PASS_CONFIG.platinumRewards;
   return rewardPool.find((reward) => reward.tier === tier);
 }
 
@@ -288,12 +301,12 @@ export function registerLiveOpsRoutes(app: Express) {
         config: {
           seasonId: SEASON_PASS_CONFIG.seasonId,
           name: SEASON_PASS_CONFIG.name,
-          premiumUnlockCurrency: SEASON_PASS_CONFIG.premiumUnlockCurrency,
-          premiumUnlockCost: SEASON_PASS_CONFIG.premiumUnlockCost,
+          unlockTracks: SEASON_PASS_CONFIG.unlockTracks,
           maxTier: SEASON_PASS_CONFIG.maxTier,
           xpPerTier: SEASON_PASS_CONFIG.xpPerTier,
           freeRewards: SEASON_PASS_CONFIG.freeRewards,
-          premiumRewards: SEASON_PASS_CONFIG.premiumRewards,
+          goldRewards: SEASON_PASS_CONFIG.goldRewards,
+          platinumRewards: SEASON_PASS_CONFIG.platinumRewards,
         },
         state: seasonPass,
       });
@@ -317,7 +330,14 @@ export function registerLiveOpsRoutes(app: Express) {
       seasonPass.seasonId = SEASON_PASS_CONFIG.seasonId;
       seasonPass.xp = Math.max(0, toNumber(seasonPass.xp, 0) + xpGain);
       seasonPass.claimedFree = Array.isArray(seasonPass.claimedFree) ? seasonPass.claimedFree : [];
-      seasonPass.claimedPremium = Array.isArray(seasonPass.claimedPremium) ? seasonPass.claimedPremium : [];
+      seasonPass.claimedGold = Array.isArray(seasonPass.claimedGold)
+        ? seasonPass.claimedGold
+        : Array.isArray(seasonPass.claimedPremium)
+          ? seasonPass.claimedPremium
+          : [];
+      seasonPass.claimedPlatinum = Array.isArray(seasonPass.claimedPlatinum) ? seasonPass.claimedPlatinum : [];
+      seasonPass.goldUnlocked = Boolean(seasonPass.goldUnlocked ?? seasonPass.premiumUnlocked);
+      seasonPass.platinumUnlocked = Boolean(seasonPass.platinumUnlocked);
       commander.seasonPass = seasonPass;
 
       await storage.updatePlayerState(userId, { commander } as any);
@@ -331,6 +351,11 @@ export function registerLiveOpsRoutes(app: Express) {
   app.post("/api/season-pass/premium/unlock", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = getUserId(req);
+      const track = String(req.body?.track || "gold").toLowerCase() as "gold" | "platinum";
+      if (track !== "gold" && track !== "platinum") {
+        return res.status(400).json({ message: "Invalid season track" });
+      }
+
       const playerState = await storage.getPlayerState(userId);
       if (!playerState) {
         return res.status(404).json({ message: "Player state not found" });
@@ -338,13 +363,17 @@ export function registerLiveOpsRoutes(app: Express) {
 
       const commander = { ...((playerState.commander as any) || {}) };
       const seasonPass = resolveSeasonPassState(playerState);
-      if (seasonPass.premiumUnlocked) {
-        return res.json({ success: true, alreadyUnlocked: true, state: seasonPass });
+      if ((track === "gold" && seasonPass.goldUnlocked) || (track === "platinum" && seasonPass.platinumUnlocked)) {
+        return res.json({ success: true, alreadyUnlocked: true, state: seasonPass, track });
+      }
+
+      if (track === "platinum" && !seasonPass.goldUnlocked) {
+        return res.status(400).json({ message: "Unlock Gold track before Platinum" });
       }
 
       const balance = await storage.getPlayerCurrency(userId);
-      const unlockCost = SEASON_PASS_CONFIG.premiumUnlockCost;
-      const currency = SEASON_PASS_CONFIG.premiumUnlockCurrency as "silver" | "gold" | "platinum";
+      const unlockCost = SEASON_PASS_CONFIG.unlockTracks[track].cost;
+      const currency = SEASON_PASS_CONFIG.unlockTracks[track].currency as "silver" | "gold" | "platinum";
 
       if (currency === "silver" && toNumber(balance.silver, 0) < unlockCost) {
         return res.status(400).json({ message: "Insufficient silver" });
@@ -361,7 +390,7 @@ export function registerLiveOpsRoutes(app: Express) {
         currency === "silver" ? -unlockCost : 0,
         currency === "gold" ? -unlockCost : 0,
         currency === "platinum" ? -unlockCost : 0,
-        "season_pass_premium_unlock",
+        `season_pass_${track}_unlock`,
       );
 
       commander.seasonPass = {
@@ -369,12 +398,14 @@ export function registerLiveOpsRoutes(app: Express) {
         seasonId: SEASON_PASS_CONFIG.seasonId,
         xp: seasonPass.xp,
         claimedFree: seasonPass.claimedFree,
-        claimedPremium: seasonPass.claimedPremium,
-        premiumUnlocked: true,
+        claimedGold: seasonPass.claimedGold,
+        claimedPlatinum: seasonPass.claimedPlatinum,
+        goldUnlocked: track === "gold" ? true : seasonPass.goldUnlocked,
+        platinumUnlocked: track === "platinum" ? true : seasonPass.platinumUnlocked,
       };
 
       await storage.updatePlayerState(userId, { commander } as any);
-      return res.json({ success: true, premiumUnlocked: true });
+      return res.json({ success: true, track, unlocked: true });
     } catch (error) {
       console.error("Failed to unlock season pass premium:", error);
       return res.status(500).json({ message: "Failed to unlock season pass premium" });
@@ -385,7 +416,13 @@ export function registerLiveOpsRoutes(app: Express) {
     try {
       const userId = getUserId(req);
       const tier = Math.max(1, Math.min(SEASON_PASS_CONFIG.maxTier, toNumber(req.body?.tier, 1)));
-      const premium = Boolean(req.body?.premium);
+      const requestedTrack = String(req.body?.track || "").toLowerCase();
+      const track: "free" | "gold" | "platinum" =
+        requestedTrack === "gold" || requestedTrack === "platinum" || requestedTrack === "free"
+          ? requestedTrack
+          : Boolean(req.body?.premium)
+            ? "gold"
+            : "free";
 
       const playerState = await storage.getPlayerState(userId);
       if (!playerState) {
@@ -395,20 +432,29 @@ export function registerLiveOpsRoutes(app: Express) {
       const commander = { ...((playerState.commander as any) || {}) };
       const seasonPass = resolveSeasonPassState(playerState);
 
-      if (premium && !seasonPass.premiumUnlocked) {
-        return res.status(403).json({ message: "Premium track is locked" });
+      if (track === "gold" && !seasonPass.goldUnlocked) {
+        return res.status(403).json({ message: "Gold track is locked" });
+      }
+
+      if (track === "platinum" && !seasonPass.platinumUnlocked) {
+        return res.status(403).json({ message: "Platinum track is locked" });
       }
 
       if (tier > seasonPass.currentTier) {
         return res.status(400).json({ message: "Tier is not unlocked yet" });
       }
 
-      const targetClaimed = premium ? seasonPass.claimedPremium : seasonPass.claimedFree;
+      const targetClaimed =
+        track === "free"
+          ? seasonPass.claimedFree
+          : track === "gold"
+            ? seasonPass.claimedGold
+            : seasonPass.claimedPlatinum;
       if (targetClaimed.includes(tier)) {
         return res.status(400).json({ message: "Reward already claimed" });
       }
 
-      const reward = findSeasonReward(tier, premium);
+      const reward = findSeasonReward(tier, track);
       if (!reward) {
         return res.status(404).json({ message: "Reward not found" });
       }
@@ -438,9 +484,11 @@ export function registerLiveOpsRoutes(app: Express) {
         ...((commander.seasonPass as any) || {}),
         seasonId: SEASON_PASS_CONFIG.seasonId,
         xp: seasonPass.xp,
-        claimedFree: premium ? seasonPass.claimedFree : [...seasonPass.claimedFree, tier],
-        claimedPremium: premium ? [...seasonPass.claimedPremium, tier] : seasonPass.claimedPremium,
-        premiumUnlocked: seasonPass.premiumUnlocked,
+        claimedFree: track === "free" ? [...seasonPass.claimedFree, tier] : seasonPass.claimedFree,
+        claimedGold: track === "gold" ? [...seasonPass.claimedGold, tier] : seasonPass.claimedGold,
+        claimedPlatinum: track === "platinum" ? [...seasonPass.claimedPlatinum, tier] : seasonPass.claimedPlatinum,
+        goldUnlocked: seasonPass.goldUnlocked,
+        platinumUnlocked: seasonPass.platinumUnlocked,
       };
       commander.seasonPass = updatedSeasonPass;
 
@@ -449,7 +497,7 @@ export function registerLiveOpsRoutes(app: Express) {
       return res.json({
         success: true,
         tier,
-        premium,
+        track,
         reward,
       });
     } catch (error) {
@@ -607,10 +655,20 @@ export function registerLiveOpsRoutes(app: Express) {
       const completedActs = new Set(completedMissions.filter((entry) => entry.missionType === "main").map((entry) => entry.act)).size;
       const mainMissionCount = userMissions.filter((entry) => entry.missionType === "main").length || 1;
       const storyProgress = Math.min(100, (completedMissions.filter((entry) => entry.missionType === "main").length / mainMissionCount) * 100);
+      const currentAct = Math.min(STORY_TOTAL_ACTS, completedActs + 1);
+      const currentActCompletedMain = completedMissions.filter(
+        (entry) => entry.act === currentAct && entry.missionType === "main",
+      ).length;
+      const currentActMainTotal =
+        userMissions.filter((entry) => entry.act === currentAct && entry.missionType === "main").length || STORY_CHAPTERS_PER_ACT;
+      const mainMissionsPerChapter = Math.max(1, Math.floor(currentActMainTotal / STORY_CHAPTERS_PER_ACT));
 
       await storage.updateStoryCampaign(userId, {
-        currentAct: Math.min(5, completedActs + 1),
-        currentChapter: Math.min(10, (completedMissions.filter((entry) => entry.act === campaign.currentAct && entry.missionType === "main").length || 0) + 1),
+        currentAct,
+        currentChapter: Math.min(
+          STORY_CHAPTERS_PER_ACT,
+          Math.max(1, Math.floor(currentActCompletedMain / mainMissionsPerChapter) + 1),
+        ),
         completedActs,
         storyProgress,
         totalXpEarned: toNumber(campaign.totalXpEarned, 0) + toNumber(mission.rewardXp, 0),

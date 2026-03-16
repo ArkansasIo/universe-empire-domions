@@ -22,20 +22,25 @@ interface SeasonPassOverview {
   config: {
     seasonId: string;
     name: string;
-    premiumUnlockCurrency: "silver" | "gold" | "platinum";
-    premiumUnlockCost: number;
+    unlockTracks: {
+      gold: { currency: "silver" | "gold" | "platinum"; cost: number };
+      platinum: { currency: "silver" | "gold" | "platinum"; cost: number };
+    };
     maxTier: number;
     xpPerTier: number;
     freeRewards: SeasonPassReward[];
-    premiumRewards: SeasonPassReward[];
+    goldRewards: SeasonPassReward[];
+    platinumRewards: SeasonPassReward[];
   };
   state: {
     seasonId: string;
     xp: number;
     currentTier: number;
     claimedFree: number[];
-    claimedPremium: number[];
-    premiumUnlocked: boolean;
+    claimedGold: number[];
+    claimedPlatinum: number[];
+    goldUnlocked: boolean;
+    platinumUnlocked: boolean;
   };
 }
 
@@ -73,8 +78,8 @@ export default function SeasonPass() {
   });
 
   const claimMutation = useMutation({
-    mutationFn: async ({ tier, premium }: { tier: number; premium: boolean }) => {
-      const res = await apiRequest("POST", "/api/season-pass/claim", { tier, premium });
+    mutationFn: async ({ tier, track }: { tier: number; track: "free" | "gold" | "platinum" }) => {
+      const res = await apiRequest("POST", "/api/season-pass/claim", { tier, track });
       return res.json();
     },
     onSuccess: () => {
@@ -86,14 +91,14 @@ export default function SeasonPass() {
     },
   });
 
-  const unlockPremiumMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/season-pass/premium/unlock");
+  const unlockTrackMutation = useMutation({
+    mutationFn: async (track: "gold" | "platinum") => {
+      const res = await apiRequest("POST", "/api/season-pass/premium/unlock", { track });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/season-pass/overview"] });
-      toast({ title: "Premium Unlocked", description: "Premium season track is now active." });
+      toast({ title: "Track Unlocked", description: "Season track is now active." });
     },
     onError: (error: any) => {
       toast({ title: "Unlock failed", description: error?.message || "Unknown error", variant: "destructive" });
@@ -109,7 +114,7 @@ export default function SeasonPass() {
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-orbitron font-bold text-slate-900">Season Pass</h2>
-          <p className="text-muted-foreground font-rajdhani text-lg">Advance through 100 tiers and claim free or premium rewards.</p>
+          <p className="text-muted-foreground font-rajdhani text-lg">Advance through 100 tiers and claim Free, Gold, and Platinum rewards.</p>
         </div>
 
         <Card className="bg-white border-slate-200">
@@ -155,7 +160,8 @@ export default function SeasonPass() {
         <Tabs defaultValue="free" className="w-full">
           <TabsList className="bg-white border border-slate-200 h-11">
             <TabsTrigger value="free">Free Track</TabsTrigger>
-            <TabsTrigger value="premium">Premium Track</TabsTrigger>
+            <TabsTrigger value="gold">Gold Track</TabsTrigger>
+            <TabsTrigger value="platinum">Platinum Track</TabsTrigger>
           </TabsList>
 
           <TabsContent value="free" className="mt-4">
@@ -178,7 +184,7 @@ export default function SeasonPass() {
                         size="sm"
                         variant={claimed ? "secondary" : "default"}
                         disabled={!unlocked || claimed || claimMutation.isPending}
-                        onClick={() => claimMutation.mutate({ tier: reward.tier, premium: false })}
+                        onClick={() => claimMutation.mutate({ tier: reward.tier, track: "free" })}
                       >
                         {claimed ? "Claimed" : unlocked ? "Claim Reward" : "Locked"}
                       </Button>
@@ -189,39 +195,39 @@ export default function SeasonPass() {
             </div>
           </TabsContent>
 
-          <TabsContent value="premium" className="mt-4">
+          <TabsContent value="gold" className="mt-4">
             <Card className="bg-white border-slate-200 mb-4">
               <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold text-slate-900">Premium Track Access</div>
+                  <div className="text-sm font-semibold text-slate-900">Gold Track Access</div>
                   <div className="text-sm text-slate-600">
-                    {season?.premiumUnlocked
-                      ? "Premium track unlocked for this season."
-                      : `Unlock premium for ${config?.premiumUnlockCost || 0} ${config?.premiumUnlockCurrency || "platinum"}.`}
+                    {season?.goldUnlocked
+                      ? "Gold track unlocked for this season."
+                      : `Unlock Gold for ${config?.unlockTracks?.gold?.cost || 0} ${config?.unlockTracks?.gold?.currency || "gold"}.`}
                   </div>
                 </div>
                 <Button
                   size="sm"
-                  variant={season?.premiumUnlocked ? "secondary" : "default"}
-                  disabled={Boolean(season?.premiumUnlocked) || unlockPremiumMutation.isPending}
-                  onClick={() => unlockPremiumMutation.mutate()}
+                  variant={season?.goldUnlocked ? "secondary" : "default"}
+                  disabled={Boolean(season?.goldUnlocked) || unlockTrackMutation.isPending}
+                  onClick={() => unlockTrackMutation.mutate("gold")}
                 >
-                  {season?.premiumUnlocked ? "Unlocked" : "Unlock Premium"}
+                  {season?.goldUnlocked ? "Unlocked" : "Unlock Gold"}
                 </Button>
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(config?.premiumRewards || []).map((reward) => {
-                const claimed = Boolean(season?.claimedPremium?.includes(reward.tier));
+              {(config?.goldRewards || []).map((reward) => {
+                const claimed = Boolean(season?.claimedGold?.includes(reward.tier));
                 const unlocked = (season?.currentTier || 1) >= reward.tier;
-                const premiumActive = Boolean(season?.premiumUnlocked);
+                const goldActive = Boolean(season?.goldUnlocked);
                 return (
-                  <Card key={`premium-${reward.tier}`} className="bg-white border-slate-200">
+                  <Card key={`gold-${reward.tier}`} className="bg-white border-slate-200">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center justify-between">
                         <span>Tier {reward.tier}</span>
-                        <Badge className="bg-amber-100 text-amber-800 border-amber-300">Premium</Badge>
+                        <Badge className="bg-amber-100 text-amber-800 border-amber-300">Gold</Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -230,10 +236,63 @@ export default function SeasonPass() {
                         className="w-full"
                         size="sm"
                         variant={claimed ? "secondary" : "default"}
-                        disabled={!premiumActive || !unlocked || claimed || claimMutation.isPending}
-                        onClick={() => claimMutation.mutate({ tier: reward.tier, premium: true })}
+                        disabled={!goldActive || !unlocked || claimed || claimMutation.isPending}
+                        onClick={() => claimMutation.mutate({ tier: reward.tier, track: "gold" })}
                       >
-                        {claimed ? "Claimed" : !premiumActive ? "Premium Locked" : unlocked ? "Claim Reward" : "Locked"}
+                        {claimed ? "Claimed" : !goldActive ? "Gold Locked" : unlocked ? "Claim Reward" : "Locked"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="platinum" className="mt-4">
+            <Card className="bg-white border-slate-200 mb-4">
+              <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">Platinum Track Access</div>
+                  <div className="text-sm text-slate-600">
+                    {season?.platinumUnlocked
+                      ? "Platinum track unlocked for this season."
+                      : `Unlock Platinum for ${config?.unlockTracks?.platinum?.cost || 0} ${config?.unlockTracks?.platinum?.currency || "platinum"}.`}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant={season?.platinumUnlocked ? "secondary" : "default"}
+                  disabled={Boolean(season?.platinumUnlocked) || !Boolean(season?.goldUnlocked) || unlockTrackMutation.isPending}
+                  onClick={() => unlockTrackMutation.mutate("platinum")}
+                >
+                  {season?.platinumUnlocked ? "Unlocked" : !season?.goldUnlocked ? "Unlock Gold First" : "Unlock Platinum"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(config?.platinumRewards || []).map((reward) => {
+                const claimed = Boolean(season?.claimedPlatinum?.includes(reward.tier));
+                const unlocked = (season?.currentTier || 1) >= reward.tier;
+                const platinumActive = Boolean(season?.platinumUnlocked);
+                return (
+                  <Card key={`platinum-${reward.tier}`} className="bg-white border-slate-200">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        <span>Tier {reward.tier}</span>
+                        <Badge className="bg-indigo-100 text-indigo-800 border-indigo-300">Platinum</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="text-sm text-slate-700 flex items-center gap-2"><Gift className="w-4 h-4" /> {rewardLabel(reward)}</div>
+                      <Button
+                        className="w-full"
+                        size="sm"
+                        variant={claimed ? "secondary" : "default"}
+                        disabled={!platinumActive || !unlocked || claimed || claimMutation.isPending}
+                        onClick={() => claimMutation.mutate({ tier: reward.tier, track: "platinum" })}
+                      >
+                        {claimed ? "Claimed" : !platinumActive ? "Platinum Locked" : unlocked ? "Claim Reward" : "Locked"}
                       </Button>
                     </CardContent>
                   </Card>

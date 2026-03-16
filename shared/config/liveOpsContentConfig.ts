@@ -42,12 +42,25 @@ export interface StoryActDefinition {
   synopsis: string;
 }
 
+export const STORY_TOTAL_ACTS = 12;
+export const STORY_CHAPTERS_PER_ACT = 5;
+export const STORY_MISSIONS_PER_ACT = 50;
+export const STORY_MAIN_MISSIONS_PER_ACT = 25;
+export const STORY_SIDE_MISSIONS_PER_ACT = STORY_MISSIONS_PER_ACT - STORY_MAIN_MISSIONS_PER_ACT;
+
 const ACT_THEMES = [
   { title: 'Embers of Origin', npc: 'Archivist Kora', theme: 'colonial stabilization' },
   { title: 'Fractured Alliances', npc: 'Envoy Halden', theme: 'diplomatic conflict' },
   { title: 'Echoes of the Void', npc: 'Oracle Nira', theme: 'anomaly incursions' },
   { title: 'Siege of the Rift', npc: 'Marshal Vex', theme: 'multi-front war' },
   { title: 'Crown of the Stars', npc: 'Regent Solari', theme: 'endgame sovereignty' },
+  { title: 'Veil of Mirrors', npc: 'Cipher Yva', theme: 'espionage and counter-intelligence' },
+  { title: 'Iron Communion', npc: 'Warden Torin', theme: 'industrial mobilization' },
+  { title: 'Tides of Helios', npc: 'Admiral Zeph', theme: 'deep-space naval campaigns' },
+  { title: 'Ashen Tribunal', npc: 'Magistrate Kheir', theme: 'civil unrest and tribunal politics' },
+  { title: 'Stormline Ascendant', npc: 'Pathfinder Ryl', theme: 'frontier expansion under hostile skies' },
+  { title: 'Shattered Zenith', npc: 'Highseer Vale', theme: 'ancient superweapon race' },
+  { title: 'Dominion Eternal', npc: 'Sovereign Ardent', theme: 'final convergence and galactic rule' },
 ] as const;
 
 const STORE_CATALOG_BLUEPRINT: Array<Omit<StorefrontItem, 'grantItemId'>> = [
@@ -102,6 +115,16 @@ const STORE_CATALOG_BLUEPRINT: Array<Omit<StorefrontItem, 'grantItemId'>> = [
     tags: ['fleet', 'combat', 'booster'],
   },
   {
+    id: 'store-booster-3',
+    name: 'Season XP Accelerator',
+    category: 'boosters',
+    description: 'Boosts seasonal progression efficiency for limited-time operations.',
+    currency: 'gold',
+    price: 95,
+    grantQuantity: 1,
+    tags: ['season', 'xp', 'booster'],
+  },
+  {
     id: 'store-cosmetic-2',
     name: 'Dockyard Skin: Obsidian Frame',
     category: 'cosmetics',
@@ -110,6 +133,56 @@ const STORE_CATALOG_BLUEPRINT: Array<Omit<StorefrontItem, 'grantItemId'>> = [
     price: 18,
     grantQuantity: 1,
     tags: ['cosmetic', 'dockyard'],
+  },
+  {
+    id: 'store-cosmetic-3',
+    name: 'Bridge Theme: Azure Vector',
+    category: 'cosmetics',
+    description: 'High-contrast bridge skin for command interfaces.',
+    currency: 'platinum',
+    price: 14,
+    grantQuantity: 1,
+    tags: ['cosmetic', 'bridge'],
+  },
+  {
+    id: 'store-resource-2',
+    name: 'Rapid Foundry Metals',
+    category: 'resources',
+    description: 'Dense industrial shipment for emergency shipyard cycles.',
+    currency: 'silver',
+    price: 32000,
+    grantQuantity: 8,
+    tags: ['resources', 'metal'],
+  },
+  {
+    id: 'store-resource-3',
+    name: 'Crystal Conduit Cache',
+    category: 'resources',
+    description: 'Refined crystal reserves for advanced research chains.',
+    currency: 'silver',
+    price: 36000,
+    grantQuantity: 8,
+    tags: ['resources', 'crystal'],
+  },
+  {
+    id: 'store-bundle-2',
+    name: 'Story Operations Kit',
+    category: 'bundles',
+    description: 'Narrative progression support crate for story mission runs.',
+    currency: 'gold',
+    price: 260,
+    grantQuantity: 1,
+    tags: ['story', 'bundle'],
+  },
+  {
+    id: 'store-bundle-3',
+    name: 'Season Vanguard Bundle',
+    category: 'bundles',
+    description: 'Premium bundle aligned with season pass grind and unlock goals.',
+    currency: 'platinum',
+    price: 22,
+    grantQuantity: 1,
+    tags: ['season', 'bundle', 'premium'],
   },
 ];
 
@@ -121,8 +194,16 @@ export const STOREFRONT_ITEMS: StorefrontItem[] = STORE_CATALOG_BLUEPRINT.map((i
 export const SEASON_PASS_CONFIG = {
   seasonId: 'season-alpha-01',
   name: 'Ascension Front',
-  premiumUnlockCurrency: 'platinum' as const,
-  premiumUnlockCost: 25,
+  unlockTracks: {
+    gold: {
+      currency: 'gold' as const,
+      cost: 950,
+    },
+    platinum: {
+      currency: 'platinum' as const,
+      cost: 25,
+    },
+  },
   maxTier: 100,
   xpPerTier: 1200,
   freeRewards: Array.from({ length: 100 }, (_, index): SeasonPassReward => {
@@ -138,14 +219,42 @@ export const SEASON_PASS_CONFIG = {
       amount: 1000 + tier * 125,
     };
   }),
-  premiumRewards: Array.from({ length: 100 }, (_, index): SeasonPassReward => {
+  goldRewards: Array.from({ length: 100 }, (_, index): SeasonPassReward => {
+    const tier = index + 1;
+
+    if (tier % 10 === 0) {
+      return {
+        tier,
+        rewardType: 'item',
+        itemId: `season-gold-crate-${tier}`,
+        quantity: 1,
+      };
+    }
+
+    if (tier % 5 === 0) {
+      return {
+        tier,
+        rewardType: 'currency',
+        currency: 'gold',
+        amount: 35 + tier,
+      };
+    }
+
+    return {
+      tier,
+      rewardType: 'currency',
+      currency: 'silver',
+      amount: 1800 + tier * 130,
+    };
+  }),
+  platinumRewards: Array.from({ length: 100 }, (_, index): SeasonPassReward => {
     const tier = index + 1;
 
     if (tier % 5 === 0) {
       return {
         tier,
         rewardType: 'item',
-        itemId: `season-premium-crate-${tier}`,
+        itemId: `season-platinum-crate-${tier}`,
         quantity: 1,
       };
     }
@@ -165,13 +274,17 @@ export const STORY_ACTS: StoryActDefinition[] = ACT_THEMES.map((theme, index) =>
   synopsis: `Act ${index + 1} focuses on ${theme.theme}, escalating your empire toward stellar dominion.`,
 }));
 
-function createMainMission(act: number, chapter: number): StoryMissionTemplate {
+const MAIN_MISSIONS_PER_CHAPTER = Math.max(1, Math.floor(STORY_MAIN_MISSIONS_PER_ACT / STORY_CHAPTERS_PER_ACT));
+const SIDE_MISSIONS_PER_CHAPTER = Math.max(1, Math.floor(STORY_SIDE_MISSIONS_PER_ACT / STORY_CHAPTERS_PER_ACT));
+
+function createMainMission(act: number, indexWithinAct: number): StoryMissionTemplate {
   const theme = ACT_THEMES[act - 1];
-  const missionNumber = (act - 1) * 10 + chapter;
-  const difficultyBase = Math.min(10, 1 + act + Math.floor(chapter / 3));
+  const chapter = Math.min(STORY_CHAPTERS_PER_ACT, Math.floor((indexWithinAct - 1) / MAIN_MISSIONS_PER_CHAPTER) + 1);
+  const missionNumber = (act - 1) * STORY_MAIN_MISSIONS_PER_ACT + indexWithinAct;
+  const difficultyBase = Math.min(10, 1 + Math.floor((act + chapter) / 2));
 
   return {
-    missionCode: `ACT${act}-MAIN-${chapter}`,
+    missionCode: `ACT${act}-MAIN-${indexWithinAct}`,
     act,
     chapter,
     missionType: 'main',
@@ -179,17 +292,17 @@ function createMainMission(act: number, chapter: number): StoryMissionTemplate {
     description: `Advance the primary war effort through chapter ${chapter} operations in ${theme.theme}.`,
     npcName: theme.npc,
     difficulty: difficultyBase,
-    rewardXp: 350 + missionNumber * 35,
-    rewardMetal: 400 + missionNumber * 70,
-    rewardCrystal: 260 + missionNumber * 52,
-    rewardDeuterium: 180 + missionNumber * 44,
+    rewardXp: 350 + missionNumber * 15,
+    rewardMetal: 450 + missionNumber * 32,
+    rewardCrystal: 280 + missionNumber * 28,
+    rewardDeuterium: 210 + missionNumber * 22,
   };
 }
 
 function createSideMission(act: number, indexWithinAct: number): StoryMissionTemplate {
   const theme = ACT_THEMES[act - 1];
-  const chapter = indexWithinAct * 2;
-  const missionNumber = (act - 1) * 5 + indexWithinAct;
+  const chapter = Math.min(STORY_CHAPTERS_PER_ACT, Math.floor((indexWithinAct - 1) / SIDE_MISSIONS_PER_CHAPTER) + 1);
+  const missionNumber = (act - 1) * STORY_SIDE_MISSIONS_PER_ACT + indexWithinAct;
 
   return {
     missionCode: `ACT${act}-SIDE-${indexWithinAct}`,
@@ -199,25 +312,28 @@ function createSideMission(act: number, indexWithinAct: number): StoryMissionTem
     title: `${theme.title}: Auxiliary Directive ${missionNumber}`,
     description: `Optional side objective tied to ${theme.theme}, unlocking support rewards.`,
     npcName: `${theme.npc} Liaison`,
-    difficulty: Math.min(9, act + indexWithinAct),
-    rewardXp: 220 + missionNumber * 24,
-    rewardMetal: 240 + missionNumber * 45,
-    rewardCrystal: 180 + missionNumber * 33,
-    rewardDeuterium: 120 + missionNumber * 28,
+    difficulty: Math.min(10, 1 + Math.floor((act + chapter + 1) / 2)),
+    rewardXp: 220 + missionNumber * 12,
+    rewardMetal: 280 + missionNumber * 20,
+    rewardCrystal: 190 + missionNumber * 16,
+    rewardDeuterium: 130 + missionNumber * 14,
   };
 }
 
-export const STORY_MAIN_MISSIONS_50: StoryMissionTemplate[] = Array.from({ length: 5 }, (_, actIndex) => {
+export const STORY_MAIN_MISSIONS: StoryMissionTemplate[] = Array.from({ length: STORY_TOTAL_ACTS }, (_, actIndex) => {
   const act = actIndex + 1;
-  return Array.from({ length: 10 }, (_, chapterIndex) => createMainMission(act, chapterIndex + 1));
+  return Array.from({ length: STORY_MAIN_MISSIONS_PER_ACT }, (_, missionIndex) => createMainMission(act, missionIndex + 1));
 }).flat();
 
-export const STORY_SIDE_MISSIONS: StoryMissionTemplate[] = Array.from({ length: 5 }, (_, actIndex) => {
+export const STORY_SIDE_MISSIONS: StoryMissionTemplate[] = Array.from({ length: STORY_TOTAL_ACTS }, (_, actIndex) => {
   const act = actIndex + 1;
-  return Array.from({ length: 5 }, (_, sideIndex) => createSideMission(act, sideIndex + 1));
+  return Array.from({ length: STORY_SIDE_MISSIONS_PER_ACT }, (_, sideIndex) => createSideMission(act, sideIndex + 1));
 }).flat();
+
+// Backward-compatible alias retained for older imports.
+export const STORY_MAIN_MISSIONS_50 = STORY_MAIN_MISSIONS;
 
 export const STORY_MISSIONS_ALL: StoryMissionTemplate[] = [
-  ...STORY_MAIN_MISSIONS_50,
+  ...STORY_MAIN_MISSIONS,
   ...STORY_SIDE_MISSIONS,
 ];
