@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { unitData } from "@/lib/unitData";
+import { SHIP_ASSETS } from "@shared/config";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
@@ -208,8 +209,8 @@ export default function Fleet() {
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200" data-testid="card-stats-fleet-power">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <Target className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={SHIP_ASSETS.CAPITALS.BATTLECRUISER.path} alt="Fleet Power" className="w-8 h-8 object-contain" onError={(e)=>{e.currentTarget.onerror=null;e.currentTarget.src="/theme-temp.png";}} />
                 </div>
                 <div>
                   <div className="text-xs text-blue-600 uppercase">Total Fleet Power</div>
@@ -222,8 +223,8 @@ export default function Fleet() {
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200" data-testid="card-stats-active-missions">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                  <Rocket className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={SHIP_ASSETS.FIGHTERS.SCOUT.path} alt="Active Missions" className="w-8 h-8 object-contain" onError={(e)=>{e.currentTarget.onerror=null;e.currentTarget.src="/theme-temp.png";}} />
                 </div>
                 <div>
                   <div className="text-xs text-purple-600 uppercase">Active Missions</div>
@@ -236,8 +237,8 @@ export default function Fleet() {
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200" data-testid="card-stats-ships-available">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <Rocket className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={SHIP_ASSETS.FIGHTERS.FIGHTER.path} alt="Ships Available" className="w-8 h-8 object-contain" onError={(e)=>{e.currentTarget.onerror=null;e.currentTarget.src="/theme-temp.png";}} />
                 </div>
                 <div>
                   <div className="text-xs text-green-600 uppercase">Ships Available</div>
@@ -252,8 +253,8 @@ export default function Fleet() {
           <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200" data-testid="card-stats-ships-deployed">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                  <Anchor className="w-5 h-5 text-orange-600" />
+                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={SHIP_ASSETS.SPECIAL.CARRIER.path} alt="Ships Deployed" className="w-8 h-8 object-contain" onError={(e)=>{e.currentTarget.onerror=null;e.currentTarget.src="/theme-temp.png";}} />
                 </div>
                 <div>
                   <div className="text-xs text-orange-600 uppercase">Ships Deployed</div>

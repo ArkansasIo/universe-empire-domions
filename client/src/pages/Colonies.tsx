@@ -13,6 +13,7 @@ import Navigation from "./Navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { PLANET_ASSETS } from "@shared/config";
 
 type PopulationSnapshotResponse = {
   success: boolean;
@@ -76,6 +77,21 @@ function pressureClasses(pressure: string) {
     default:
       return "bg-red-100 text-red-900";
   }
+}
+
+const TEMP_THEME_IMAGE = "/theme-temp.png";
+
+function getPlanetImagePath(planetClass: string) {
+  const normalized = planetClass.toUpperCase();
+  if (normalized === "M") return PLANET_ASSETS.TERRESTRIAL.EARTH_LIKE.path;
+  if (normalized === "D") return PLANET_ASSETS.TERRESTRIAL.DESERT.path;
+  if (normalized === "V") return PLANET_ASSETS.TERRESTRIAL.VOLCANIC.path;
+  if (normalized === "R") return PLANET_ASSETS.TERRESTRIAL.JUNGLE.path;
+  if (normalized === "G") return PLANET_ASSETS.GAS_GIANTS.JUPITER_CLASS.path;
+  if (normalized === "I") return PLANET_ASSETS.TERRESTRIAL.ICE.path;
+  if (normalized === "A") return PLANET_ASSETS.EXOTIC.RING_WORLD.path;
+  if (normalized === "P") return PLANET_ASSETS.EXOTIC.DYSON_SPHERE.path;
+  return PLANET_ASSETS.TERRESTRIAL.EARTH_LIKE.path;
 }
 
 export default function Colonies() {
@@ -224,9 +240,20 @@ export default function Colonies() {
                 >
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
-                      <div>
-                        <div className="font-orbitron font-bold text-slate-900">{colony.name}</div>
-                        <div className="text-xs text-slate-500 font-mono">{colony.coordinates}</div>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={getPlanetImagePath(colony.class)}
+                          alt={colony.name}
+                          className="w-12 h-12 rounded object-cover border border-slate-200 bg-slate-100"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = TEMP_THEME_IMAGE;
+                          }}
+                        />
+                        <div>
+                          <div className="font-orbitron font-bold text-slate-900">{colony.name}</div>
+                          <div className="text-xs text-slate-500 font-mono">{colony.coordinates}</div>
+                        </div>
                       </div>
                       <Badge className={classColors[colony.class] || "bg-slate-100 text-slate-900"}>
                         {colony.class}
@@ -272,9 +299,20 @@ export default function Colonies() {
                 <Card key={slot.id} className="border-slate-200 bg-slate-50 opacity-60">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
-                      <div>
-                        <div className="font-orbitron font-bold text-slate-700">{slot.name}</div>
-                        <div className="text-xs text-slate-500 font-mono">{slot.coordinates}</div>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={getPlanetImagePath(slot.class)}
+                          alt={slot.name}
+                          className="w-12 h-12 rounded object-cover border border-slate-200 bg-slate-100"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = TEMP_THEME_IMAGE;
+                          }}
+                        />
+                        <div>
+                          <div className="font-orbitron font-bold text-slate-700">{slot.name}</div>
+                          <div className="text-xs text-slate-500 font-mono">{slot.coordinates}</div>
+                        </div>
                       </div>
                       <Badge variant="secondary" className={classColors[slot.class] || "bg-slate-100 text-slate-900"}>
                         {slot.class}
@@ -317,7 +355,15 @@ export default function Colonies() {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Globe className="w-5 h-5 text-blue-600" />
+                      <img
+                        src={getPlanetImagePath(selectedColonyData.class)}
+                        alt={selectedColonyData.name}
+                        className="w-8 h-8 rounded object-cover border border-slate-200 bg-slate-100"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = TEMP_THEME_IMAGE;
+                        }}
+                      />
                       {selectedColonyData.name}
                     </div>
                     <Badge className={classColors[selectedColonyData.class] || "bg-slate-100 text-slate-900"}>

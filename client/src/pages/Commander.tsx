@@ -1,5 +1,6 @@
 import GameLayout from "@/components/layout/GameLayout";
 import { useGame } from "@/lib/gameContext";
+import { TECH_BRANCH_ASSETS } from "@shared/config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,6 +36,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+
+const TEMP_THEME_IMAGE = "/theme-temp.png";
 import {
    COMMANDER_MAX_LEVEL,
    COMMANDER_MAX_TIER,
@@ -216,8 +219,8 @@ export default function Commander() {
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200" data-testid="card-stats-level">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                  <Star className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={TECH_BRANCH_ASSETS.COMPUTING.path} alt="level" className="w-7 h-7 object-contain" onError={(e) => { (e.target as HTMLImageElement).src = TEMP_THEME_IMAGE; }} />
                 </div>
                 <div>
                   <div className="text-xs text-purple-600 uppercase">Commander Level</div>
@@ -230,8 +233,8 @@ export default function Commander() {
           <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200" data-testid="card-stats-xp">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-yellow-600" />
+                <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={TECH_BRANCH_ASSETS.POWER.path} alt="xp" className="w-7 h-7 object-contain" onError={(e) => { (e.target as HTMLImageElement).src = TEMP_THEME_IMAGE; }} />
                 </div>
                 <div>
                   <div className="text-xs text-yellow-600 uppercase">Experience</div>
@@ -244,8 +247,8 @@ export default function Commander() {
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200" data-testid="card-stats-skills">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <Target className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={TECH_BRANCH_ASSETS.ENGINEERING.path} alt="skills" className="w-7 h-7 object-contain" onError={(e) => { (e.target as HTMLImageElement).src = TEMP_THEME_IMAGE; }} />
                 </div>
                 <div>
                            <div className="text-xs text-green-600 uppercase">Available Skill Points</div>
@@ -258,8 +261,8 @@ export default function Commander() {
           <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200" data-testid="card-stats-achievements">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                  <Trophy className="w-5 h-5 text-orange-600" />
+                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={TECH_BRANCH_ASSETS.SENSORS.path} alt="achievements" className="w-7 h-7 object-contain" onError={(e) => { (e.target as HTMLImageElement).src = TEMP_THEME_IMAGE; }} />
                 </div>
                 <div>
                   <div className="text-xs text-orange-600 uppercase">Achievements</div>

@@ -121,6 +121,8 @@ export const STOREFRONT_ITEMS: StorefrontItem[] = STORE_CATALOG_BLUEPRINT.map((i
 export const SEASON_PASS_CONFIG = {
   seasonId: 'season-alpha-01',
   name: 'Ascension Front',
+  premiumUnlockCurrency: 'platinum' as const,
+  premiumUnlockCost: 25,
   maxTier: 100,
   xpPerTier: 1200,
   freeRewards: Array.from({ length: 100 }, (_, index): SeasonPassReward => {
