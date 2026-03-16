@@ -286,6 +286,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
                 { href: "/government", icon: Landmark, label: "Government" },
                 { href: "/factions", icon: Users, label: "Factions" },
                 { href: "/alliance", icon: Shield, label: "Alliance" },
+                { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
                 { href: "/messages", icon: Mail, label: "Messages" },
               ]}
             />
