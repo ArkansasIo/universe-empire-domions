@@ -4,7 +4,7 @@ import GameLayout from "@/components/layout/GameLayout";
 import { TECH_BRANCH_ASSETS } from "@shared/config";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Layers } from "lucide-react";
+import { FileText, Globe, Layers } from "lucide-react";
 
 const TEMP_THEME_IMAGE = "/theme-temp.png";
 
