@@ -5,7 +5,7 @@
   "license": "MIT",
   "author": "Stephen (https://github.com/ArkansasIo | https://github.com/Apocalypsecoder0)",
   "engines": {
-    "node": ">=20 <21"
+    "node": ">=20 <25"
   },
   "scripts": {
     "dev:client": "vite dev --port 5001",
@@ -107,6 +107,7 @@
     "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
+    "baseline-browser-mapping": "^2.10.8",
     "drizzle-kit": "^0.31.9",
     "esbuild": "^0.25.0",
     "postcss": "^8.5.6",
