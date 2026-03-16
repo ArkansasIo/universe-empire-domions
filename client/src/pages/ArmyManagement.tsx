@@ -74,6 +74,7 @@ export default function ArmyManagement() {
   const [selectedUnitType, setSelectedUnitType] = useState<string | null>(null);
   const [trainQuantity, setTrainQuantity] = useState(1);
   const [sortBy, setSortBy] = useState<SortBy>('tier');
+  const [searchTerm, setSearchTerm] = useState('');
 
   if (forceLoading || subsystemsLoading) {
     return (
@@ -95,7 +96,17 @@ export default function ArmyManagement() {
   };
 
   const sortedSubsystems: ArmySubsystem[] = subsystems
-    ? [...subsystems].sort((a: ArmySubsystem, b: ArmySubsystem) => {
+    ? [...subsystems]
+      .filter((subsystem: ArmySubsystem) => {
+        if (!searchTerm.trim()) return true;
+        const term = searchTerm.toLowerCase();
+        return (
+          subsystem.name.toLowerCase().includes(term) ||
+          subsystem.type.toLowerCase().includes(term) ||
+          subsystem.role.toLowerCase().includes(term)
+        );
+      })
+      .sort((a: ArmySubsystem, b: ArmySubsystem) => {
         switch (sortBy) {
           case 'tier':
             return b.tier - a.tier;
@@ -120,8 +131,8 @@ export default function ArmyManagement() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Military Command</h1>
-            <p className="text-sm text-gray-400">
+            <h1 className="text-3xl font-orbitron font-bold text-slate-900">Military Command</h1>
+            <p className="text-sm text-slate-600">
               Manage your military forces and operations
             </p>
           </div>
@@ -136,48 +147,48 @@ export default function ArmyManagement() {
 
         {/* Military Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-white border-slate-200 shadow-sm">
             <CardContent className="pt-6">
               <div className="text-center">
-                <Users className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                <div className="text-3xl font-bold">{force.totalStrength}</div>
-                <div className="text-sm text-gray-400">Total Strength</div>
+                <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                <div className="text-3xl font-bold text-slate-900">{force.totalStrength}</div>
+                <div className="text-sm text-slate-600">Total Strength</div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-white border-slate-200 shadow-sm">
             <CardContent className="pt-6">
               <div className="text-center">
-                <Gauge className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                <div className="text-3xl font-bold">
+                <Gauge className="w-8 h-8 text-amber-600 mx-auto mb-2" />
+                <div className="text-3xl font-bold text-slate-900">
                   {force.totalMorale}%
                 </div>
-                <div className="text-sm text-gray-400">Morale</div>
+                <div className="text-sm text-slate-600">Morale</div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-white border-slate-200 shadow-sm">
             <CardContent className="pt-6">
               <div className="text-center">
-                <TrendingUp className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                <div className="text-3xl font-bold">
+                <TrendingUp className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                <div className="text-3xl font-bold text-slate-900">
                   {force.averageExperience}
                 </div>
-                <div className="text-sm text-gray-400">Avg Experience</div>
+                <div className="text-sm text-slate-600">Avg Experience</div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-white border-slate-200 shadow-sm">
             <CardContent className="pt-6">
               <div className="text-center">
-                <Shield className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                <div className="text-3xl font-bold">
+                <Shield className="w-8 h-8 text-rose-600 mx-auto mb-2" />
+                <div className="text-3xl font-bold text-slate-900">
                   +{force.commanderBonus}%
                 </div>
-                <div className="text-sm text-gray-400">Commander Bonus</div>
+                <div className="text-sm text-slate-600">Commander Bonus</div>
               </div>
             </CardContent>
           </Card>
@@ -198,10 +209,10 @@ export default function ArmyManagement() {
           {/* Active Units Tab */}
           <TabsContent value="units" className="space-y-4">
             {force.squadrons.length === 0 ? (
-              <Card className="bg-slate-900 border-slate-700">
+              <Card className="bg-white border-slate-200 shadow-sm">
                 <CardContent className="pt-6 text-center">
                   <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-                  <p className="text-gray-400">
+                  <p className="text-slate-600">
                     No active units. Start by training units below.
                   </p>
                 </CardContent>
@@ -210,7 +221,7 @@ export default function ArmyManagement() {
               force.squadrons.map((unit: ArmyUnit) => (
                 <Card
                   key={unit.id}
-                  className="bg-gradient-to-r from-slate-800 to-slate-900 border-slate-700 hover:border-slate-500 transition"
+                  className="bg-white border-slate-200 hover:border-slate-300 transition shadow-sm"
                 >
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
@@ -228,20 +239,20 @@ export default function ArmyManagement() {
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mb-4">
                           <div>
-                            <span className="text-gray-500">Morale:</span>{' '}
-                            <span className="text-white font-semibold">
+                            <span className="text-slate-500">Morale:</span>{' '}
+                            <span className="text-slate-900 font-semibold">
                               {unit.morale}%
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Experience:</span>{' '}
-                            <span className="text-white font-semibold">
+                            <span className="text-slate-500">Experience:</span>{' '}
+                            <span className="text-slate-900 font-semibold">
                               {unit.experience}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Location:</span>{' '}
-                            <span className="text-white font-semibold">
+                            <span className="text-slate-500">Location:</span>{' '}
+                            <span className="text-slate-900 font-semibold">
                               {unit.location
                                 ? `Sector ${unit.location.galaxy}`
                                 : 'Home Base'}
@@ -273,11 +284,13 @@ export default function ArmyManagement() {
                 type="search"
                 placeholder="Search units..."
                 className="max-w-xs"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortBy)}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm"
+                className="px-3 py-2 bg-white border border-slate-300 rounded text-sm text-slate-800"
               >
                 <option value="tier">Sort by Tier</option>
                 <option value="type">Sort by Type</option>
@@ -290,7 +303,7 @@ export default function ArmyManagement() {
               {sortedSubsystems.map((subsystem) => (
                 <Card
                   key={subsystem.id}
-                  className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 hover:border-slate-500 transition cursor-pointer"
+                  className="bg-white border-slate-200 hover:border-slate-300 transition cursor-pointer shadow-sm"
                   onClick={() => setSelectedUnitType(subsystem.id)}
                 >
                   <CardHeader className="pb-3">
@@ -309,30 +322,30 @@ export default function ArmyManagement() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <p className="text-sm text-gray-300">{subsystem.description}</p>
+                    <p className="text-sm text-slate-600">{subsystem.description}</p>
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-slate-700 p-2 rounded">
-                        <div className="text-gray-400">ATK</div>
-                        <div className="font-bold text-red-400">{subsystem.combat.attack}</div>
+                      <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                        <div className="text-slate-500">ATK</div>
+                        <div className="font-bold text-rose-600">{subsystem.combat.attack}</div>
                       </div>
-                      <div className="bg-slate-700 p-2 rounded">
-                        <div className="text-gray-400">DEF</div>
-                        <div className="font-bold text-blue-400">{subsystem.combat.defense}</div>
+                      <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                        <div className="text-slate-500">DEF</div>
+                        <div className="font-bold text-blue-600">{subsystem.combat.defense}</div>
                       </div>
-                      <div className="bg-slate-700 p-2 rounded">
-                        <div className="text-gray-400">HP</div>
-                        <div className="font-bold text-green-400">{subsystem.combat.health}</div>
+                      <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                        <div className="text-slate-500">HP</div>
+                        <div className="font-bold text-emerald-600">{subsystem.combat.health}</div>
                       </div>
-                      <div className="bg-slate-700 p-2 rounded">
-                        <div className="text-gray-400">SPD</div>
-                        <div className="font-bold text-yellow-400">{subsystem.combat.speed}</div>
+                      <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                        <div className="text-slate-500">SPD</div>
+                        <div className="font-bold text-amber-600">{subsystem.combat.speed}</div>
                       </div>
                     </div>
 
-                    <div className="bg-slate-700 p-2 rounded text-sm">
-                      <div className="text-gray-400">Cost: {subsystem.cost.credits} Credits</div>
-                      <div className="text-gray-400">Crew: {subsystem.minCrewRequired} min</div>
+                    <div className="bg-slate-50 p-2 rounded text-sm border border-slate-200">
+                      <div className="text-slate-600">Cost: {subsystem.cost.credits} Credits</div>
+                      <div className="text-slate-600">Crew: {subsystem.minCrewRequired} min</div>
                     </div>
 
                     <Button
@@ -353,10 +366,10 @@ export default function ArmyManagement() {
           {/* Campaigns Tab */}
           <TabsContent value="campaigns" className="space-y-4">
             {activeCampaigns.length === 0 ? (
-              <Card className="bg-slate-900 border-slate-700">
+              <Card className="bg-white border-slate-200 shadow-sm">
                 <CardContent className="pt-6 text-center">
                   <Target className="w-12 h-12 text-blue-500 mx-auto mb-4" />
-                  <p className="text-gray-400">
+                  <p className="text-slate-600">
                     No active campaigns. Deploy a campaign to get started.
                   </p>
                 </CardContent>
@@ -365,7 +378,7 @@ export default function ArmyManagement() {
               activeCampaigns.map((campaign) => (
                 <Card
                   key={campaign.id}
-                  className="bg-gradient-to-r from-blue-900 to-slate-900 border-blue-700"
+                  className="bg-white border-blue-200 shadow-sm"
                 >
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
@@ -378,26 +391,26 @@ export default function ArmyManagement() {
                           </Badge>
                           <Badge variant="outline">{campaign.type}</Badge>
                         </div>
-                        <p className="text-sm text-gray-300 mb-2">
+                        <p className="text-sm text-slate-600 mb-2">
                           Galaxy {campaign.targetGalaxy} - System{' '}
                           {campaign.targetSystem}
                         </p>
                         <div className="flex items-center gap-4">
                           <div>
-                            <span className="text-gray-500">Forces:</span>{' '}
+                            <span className="text-slate-500">Forces:</span>{' '}
                             <span className="font-semibold">
                               {campaign.allocatedForces.length} units
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Duration:</span>{' '}
+                            <span className="text-slate-500">Duration:</span>{' '}
                             <span className="font-semibold">
                               {campaign.estimatedDuration} turns
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Success Rate:</span>{' '}
-                            <span className="font-semibold text-green-400">
+                            <span className="text-slate-500">Success Rate:</span>{' '}
+                            <span className="font-semibold text-emerald-600">
                               {Math.round((campaign.successRate || 0) * 100)}%
                             </span>
                           </div>
@@ -442,11 +455,11 @@ export default function ArmyManagement() {
 
       {/* Train Unit Modal */}
       {trainModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md bg-slate-900 border-slate-700">
+        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md bg-white border-slate-200 shadow-lg">
             <CardHeader>
-              <CardTitle>Train Military Unit</CardTitle>
-              <p className="text-sm text-gray-400 mt-2">
+              <CardTitle className="text-slate-900">Train Military Unit</CardTitle>
+              <p className="text-sm text-slate-600 mt-2">
                 Select unit type and quantity to train
               </p>
             </CardHeader>
@@ -458,7 +471,7 @@ export default function ArmyManagement() {
                 <select
                   value={selectedUnitType || ''}
                   onChange={(e) => setSelectedUnitType(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded"
                 >
                   <option value="">Select a unit type...</option>
                   {sortedSubsystems.map((unit) => (
@@ -478,15 +491,15 @@ export default function ArmyManagement() {
                   min={1}
                   max={100}
                   value={trainQuantity}
-                  onChange={(e) => setTrainQuantity(parseInt(e.target.value))}
-                  className="bg-slate-800 border-slate-700"
+                  onChange={(e) => setTrainQuantity(Math.max(1, Number(e.target.value) || 1))}
+                  className="bg-white border-slate-300"
                 />
               </div>
 
-              <div className="bg-slate-800 p-3 rounded text-sm">
+              <div className="bg-slate-50 p-3 rounded text-sm border border-slate-200">
                 <div className="flex justify-between mb-2">
-                  <span className="text-gray-400">Total Cost:</span>
-                  <span className="font-semibold">
+                  <span className="text-slate-600">Total Cost:</span>
+                  <span className="font-semibold text-slate-900">
                     {selectedUnitType
                       ? sortedSubsystems.find((u) => u.id === selectedUnitType)
                           ?.cost.credits! * trainQuantity

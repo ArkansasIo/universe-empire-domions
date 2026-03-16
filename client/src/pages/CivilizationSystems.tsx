@@ -19,10 +19,10 @@ interface CivilizationJob {
   description: string;
   domain: JobDomain;
   class: string;
-  subClass: string;
-  jobType: string;
-  subType: string;
-  unitType: string;
+  subClass?: string;
+  jobType?: string;
+  subType?: string;
+  unitType?: string;
   rank: number;
   tier: number;
   rarity: JobRarity;
@@ -49,6 +49,16 @@ interface JobsMetaResponse {
   };
 }
 
+interface JobsProjectionResponse {
+  success: boolean;
+  projection: {
+    workforce: number;
+    projectedProductivity: number;
+    foodDemandPerHour: number;
+    waterDemandPerHour: number;
+  };
+}
+
 const rarityConfig: Record<JobRarity, { color: string; bg: string; border: string; icon: string }> = {
   common: { color: "text-slate-700", bg: "bg-slate-100", border: "border-slate-300", icon: "⚪" },
   uncommon: { color: "text-emerald-700", bg: "bg-emerald-100", border: "border-emerald-300", icon: "🟢" },
@@ -67,7 +77,7 @@ export default function CivilizationSystems() {
   const [selectedClass, setSelectedClass] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: catalog, isLoading } = useQuery<JobsCatalogResponse>({
+  const { data: catalog, isLoading, isError: catalogError } = useQuery<JobsCatalogResponse>({
     queryKey: ["/api/config/civilization-jobs"],
     queryFn: async () => {
       const res = await fetch("/api/config/civilization-jobs", { credentials: "include" });
@@ -76,7 +86,7 @@ export default function CivilizationSystems() {
     },
   });
 
-  const { data: meta } = useQuery<JobsMetaResponse>({
+  const { data: meta, isError: metaError } = useQuery<JobsMetaResponse>({
     queryKey: ["/api/config/civilization-jobs/meta"],
     queryFn: async () => {
       const res = await fetch("/api/config/civilization-jobs/meta", { credentials: "include" });
@@ -85,18 +95,17 @@ export default function CivilizationSystems() {
     },
   });
 
-  const previewAssignments = useMemo(
-    () => [
-      { jobId: "civ-admin-regional-gov-1", count: 5 },
-      { jobId: "civ-mfg-factory-foreman-5", count: 15 },
-      { jobId: "civ-agr-farmer-overseer-9", count: 30 },
-      { jobId: "mil-nav-fleet-admiral-20", count: 1 },
-    ],
-    []
-  );
+  const previewAssignments = useMemo(() => {
+    const items = catalog?.items || [];
+    return items.slice(0, 4).map((item, index) => ({
+      jobId: item.id,
+      count: index === 0 ? 5 : index === 1 ? 15 : index === 2 ? 30 : 1,
+    }));
+  }, [catalog?.items]);
 
-  const { data: projection } = useQuery({
-    queryKey: ["/api/config/civilization-jobs/projection"],
+  const { data: projection, isError: projectionError } = useQuery<JobsProjectionResponse>({
+    queryKey: ["/api/config/civilization-jobs/projection", previewAssignments],
+    enabled: previewAssignments.length > 0,
     queryFn: async () => {
       const res = await fetch("/api/config/civilization-jobs/projection", {
         method: "POST",
@@ -120,11 +129,13 @@ export default function CivilizationSystems() {
         return (
           entry.name.toLowerCase().includes(term) ||
           entry.class.toLowerCase().includes(term) ||
-          entry.subClass.toLowerCase().includes(term) ||
-          entry.jobType.toLowerCase().includes(term)
+          (entry.subClass || "").toLowerCase().includes(term) ||
+          (entry.jobType || "").toLowerCase().includes(term)
         );
       });
   }, [catalog?.items, domain, selectedClass, searchTerm]);
+
+  const hasError = catalogError || metaError || projectionError;
 
   return (
     <GameLayout>
@@ -135,6 +146,14 @@ export default function CivilizationSystems() {
             Manage 90+ specialized roles across civilization and military domains with dynamic resource demands
           </p>
         </div>
+
+        {hasError && (
+          <Card className="bg-rose-50 border-rose-200">
+            <CardContent className="p-4 text-rose-700 text-sm">
+              Some civilization data failed to load. Please refresh the page.
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -246,7 +265,7 @@ export default function CivilizationSystems() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Classes</SelectItem>
-                {meta?.meta.classes?.map((cls) => (
+                {(meta?.meta.classes || []).filter(Boolean).map((cls) => (
                   <SelectItem key={cls} value={cls}>
                     {cls}
                   </SelectItem>
@@ -348,7 +367,7 @@ export default function CivilizationSystems() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-500">Role:</span>
-                        <span className="font-medium text-slate-700">{job.jobType}</span>
+                        <span className="font-medium text-slate-700">{job.jobType || "General"}</span>
                       </div>
                     </div>
 
