@@ -47,6 +47,8 @@ import {
   Network,
   AlertTriangle,
   Image,
+  Award,
+  Store,
 } from "lucide-react";
 
 const SidebarItem = ({ href, icon: Icon, label, active, className, indent = false }: { href: string, icon: any, label: string, active: boolean, className?: string, indent?: boolean }) => (
@@ -283,6 +285,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
               location={location}
               items={[
                 { href: "/commander", icon: User, label: "Commander" },
+                { href: "/season-pass", icon: Award, label: "Season Pass" },
                 { href: "/government", icon: Landmark, label: "Government" },
                 { href: "/factions", icon: Users, label: "Factions" },
                 { href: "/alliance", icon: Shield, label: "Alliance" },
@@ -299,6 +302,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
               items={[
                 { href: "/market", icon: ShoppingBag, label: "Market" },
                 { href: "/merchants", icon: User, label: "Merchants" },
+                { href: "/storefront", icon: Store, label: "Storefront" },
                 { href: "/achievements", icon: Trophy, label: "Achievements" },
               ]}
             />

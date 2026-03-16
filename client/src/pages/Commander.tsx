@@ -33,6 +33,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+   COMMANDER_MAX_LEVEL,
+   COMMANDER_MAX_TIER,
+   type CommanderTalentNode,
+} from "@shared/config/commanderTalentTreeConfig";
 
 const ItemCard = ({ item, onEquip, onTemper }: { item: Item, onEquip?: (item: Item) => void, onTemper?: (id: string) => void }) => (
    <div className={cn(
@@ -115,6 +122,24 @@ const skillDefinitions = [
    { id: "construction_expert", stat: "engineering" as const, name: "Construction Expert", maxLevel: 10, desc: "-3% build time per level" },
 ];
 
+interface CommanderTalentTreeResponse {
+   tree: {
+      nodes: CommanderTalentNode[];
+   };
+   progression: {
+      level: number;
+      tier: number;
+      title: {
+         title: string;
+         badge: string;
+      };
+      unlockedNodes: Record<string, number>;
+      spentPoints: number;
+      totalPoints: number;
+      availablePoints: number;
+   };
+}
+
 export default function Commander() {
    const { toast } = useToast();
    const { commander, equipItem, unequipItem, craftItem, temperItem, setCommanderIdentity, upgradeCommanderSkill } = useGame();
@@ -134,6 +159,37 @@ export default function Commander() {
    const leaderClasses = Array.from(new Set(GOVERNMENT_LEADER_TYPES_23.map(leader => leader.class)));
    const leadersByType = selectedLeaderType === "all" ? GOVERNMENT_LEADER_TYPES_23 : getGovernmentLeadersByType(selectedLeaderType);
    const filteredGovernmentLeaders = selectedLeaderClass === "all" ? leadersByType : leadersByType.filter(leader => getGovernmentLeadersByClass(selectedLeaderClass).some(match => match.id === leader.id));
+
+   const { data: talentTreeData, isLoading: talentTreeLoading } = useQuery<CommanderTalentTreeResponse>({
+      queryKey: ["/api/commander/talent/tree"],
+      queryFn: async () => {
+         const res = await fetch("/api/commander/talent/tree", { credentials: "include" });
+         if (!res.ok) throw new Error("Failed to load commander talent tree");
+         return res.json();
+      },
+   });
+
+   const unlockTalentMutation = useMutation({
+      mutationFn: async (nodeId: string) => {
+         const res = await apiRequest("POST", "/api/commander/talent/unlock", { nodeId });
+         return res.json();
+      },
+      onSuccess: () => {
+         queryClient.invalidateQueries({ queryKey: ["/api/commander/talent/tree"] });
+         toast({ title: "Talent unlocked", description: "Commander talent point spent successfully." });
+      },
+      onError: (error: any) => {
+         toast({ title: "Unable to unlock talent", description: error?.message || "Unknown error", variant: "destructive" });
+      },
+   });
+
+   const talentNodesByBranch = (talentTreeData?.tree?.nodes || []).reduce<Record<string, CommanderTalentNode[]>>((acc, node) => {
+      if (!acc[node.branch]) {
+         acc[node.branch] = [];
+      }
+      acc[node.branch].push(node);
+      return acc;
+   }, {});
 
    const skills = skillDefinitions.map((skill) => ({
       ...skill,
@@ -217,6 +273,7 @@ export default function Commander() {
           <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start overflow-x-auto">
             <TabsTrigger value="profile" className="font-orbitron" data-testid="tab-profile"><User className="w-4 h-4 mr-2" /> Profile</TabsTrigger>
             <TabsTrigger value="skills" className="font-orbitron" data-testid="tab-skills"><Target className="w-4 h-4 mr-2" /> Skills</TabsTrigger>
+                  <TabsTrigger value="talentTree" className="font-orbitron" data-testid="tab-talent-tree"><History className="w-4 h-4 mr-2" /> Talent Tree</TabsTrigger>
             <TabsTrigger value="achievements" className="font-orbitron" data-testid="tab-achievements"><Trophy className="w-4 h-4 mr-2" /> Achievements</TabsTrigger>
             <TabsTrigger value="identity" className="font-orbitron" data-testid="tab-identity"><Dna className="w-4 h-4 mr-2" /> Identity</TabsTrigger>
             <TabsTrigger value="leaders" className="font-orbitron" data-testid="tab-leaders"><Crown className="w-4 h-4 mr-2" /> Gov Leaders</TabsTrigger>
@@ -370,6 +427,86 @@ export default function Commander() {
                          <div className="text-3xl font-mono font-bold text-green-600">{availableSkillPoints}</div>
                       </div>
                    </div>
+                </CardContent>
+             </Card>
+          </TabsContent>
+
+          <TabsContent value="talentTree" className="mt-6">
+             <Card className="bg-white border-slate-200" data-testid="card-talent-tree">
+                <CardHeader>
+                   <CardTitle className="flex items-center gap-2 text-slate-900">
+                      <History className="w-5 h-5 text-indigo-600" /> Commander Talent Tree
+                   </CardTitle>
+                   <CardDescription>Progression supports level 1-{COMMANDER_MAX_LEVEL} and tier 1-{COMMANDER_MAX_TIER}.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                   {talentTreeLoading ? (
+                      <div className="text-sm text-slate-500">Loading talent tree...</div>
+                   ) : (
+                      <>
+                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="bg-slate-50 border border-slate-200 rounded p-3">
+                               <div className="text-xs uppercase text-slate-500">Level</div>
+                               <div className="text-2xl font-orbitron text-slate-900">{talentTreeData?.progression.level || 1}</div>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-200 rounded p-3">
+                               <div className="text-xs uppercase text-slate-500">Tier</div>
+                               <div className="text-2xl font-orbitron text-slate-900">{talentTreeData?.progression.tier || 1}</div>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-200 rounded p-3">
+                               <div className="text-xs uppercase text-slate-500">Title</div>
+                               <div className="text-base font-semibold text-slate-900">
+                                  {talentTreeData?.progression.title?.badge || "🟢"} {talentTreeData?.progression.title?.title || "Cadet"}
+                               </div>
+                            </div>
+                            <div className="bg-green-50 border border-green-200 rounded p-3">
+                               <div className="text-xs uppercase text-green-600">Talent Points</div>
+                               <div className="text-2xl font-orbitron text-green-900">{talentTreeData?.progression.availablePoints || 0}</div>
+                            </div>
+                         </div>
+
+                         <div className="space-y-4">
+                            {Object.entries(talentNodesByBranch).map(([branch, nodes]) => (
+                               <div key={branch} className="border border-slate-200 rounded p-4 bg-slate-50/40">
+                                  <div className="font-bold text-slate-900 capitalize mb-3">{branch}</div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                     {nodes.slice(0, 6).map((node) => {
+                                        const currentRank = talentTreeData?.progression.unlockedNodes?.[node.id] || 0;
+                                        const unlocked = currentRank > 0;
+                                        const maxed = currentRank >= node.maxRank;
+                                        const hasLevel = (talentTreeData?.progression.level || 1) >= node.requiredLevel;
+                                        const prereqsMet = node.prerequisiteNodeIds.every((prereq) => (talentTreeData?.progression.unlockedNodes?.[prereq] || 0) > 0);
+                                        const canUnlock = !maxed && hasLevel && prereqsMet && (talentTreeData?.progression.availablePoints || 0) > 0;
+
+                                        return (
+                                           <Card key={node.id} className={cn("border", unlocked ? "border-indigo-300 bg-indigo-50/40" : "border-slate-200 bg-white")}>
+                                              <CardContent className="p-3 space-y-2">
+                                                 <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                       <div className="text-sm font-semibold text-slate-900">{node.name}</div>
+                                                       <div className="text-xs text-slate-500">Tier {node.tier} · Req Lv {node.requiredLevel}</div>
+                                                    </div>
+                                                    <Badge variant="outline">{currentRank}/{node.maxRank}</Badge>
+                                                 </div>
+                                                 <div className="text-xs text-slate-600">{node.description}</div>
+                                                 <Button
+                                                    size="sm"
+                                                    className="w-full"
+                                                    disabled={!canUnlock || unlockTalentMutation.isPending}
+                                                    onClick={() => unlockTalentMutation.mutate(node.id)}
+                                                 >
+                                                    {maxed ? "Max Rank" : canUnlock ? "Unlock Rank" : "Locked"}
+                                                 </Button>
+                                              </CardContent>
+                                           </Card>
+                                        );
+                                     })}
+                                  </div>
+                               </div>
+                            ))}
+                         </div>
+                      </>
+                   )}
                 </CardContent>
              </Card>
           </TabsContent>

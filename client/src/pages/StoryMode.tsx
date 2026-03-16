@@ -1,22 +1,79 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import GameLayout from "@/components/layout/GameLayout";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Award, Zap } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookOpen, CheckCircle2, Zap } from "lucide-react";
+
+interface StoryCampaignData {
+  currentAct: number;
+  storyProgress: number;
+  totalXpEarned: number;
+  actDefinitions: Array<{ act: number; title: string; synopsis: string }>;
+  missionCounts: {
+    total: number;
+    main: number;
+    side: number;
+    completed: number;
+  };
+}
+
+interface StoryMission {
+  id: string;
+  title: string;
+  description: string;
+  npcName: string;
+  rewardXp: number;
+  missionType: "main" | "side";
+  act: number;
+  chapter: number;
+  difficulty: number;
+  isCompleted: boolean;
+}
 
 export default function StoryMode() {
-  const [selectedAct, setSelectedAct] = useState<number | null>(null);
+  const { toast } = useToast();
+  const [selectedAct, setSelectedAct] = useState<number>(1);
+  const [missionType, setMissionType] = useState<"all" | "main" | "side">("all");
 
-  const { data: campaign = {} } = useQuery({
+  const { data: campaign } = useQuery<StoryCampaignData>({
     queryKey: ["story-campaign"],
-    queryFn: () => fetch("/api/story/campaign").then(r => r.json()).catch(() => ({})),
+    queryFn: async () => {
+      const res = await fetch("/api/story/campaign", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load story campaign");
+      return res.json();
+    },
   });
 
-  const { data: missions = [] } = useQuery({
-    queryKey: ["story-missions", selectedAct],
-    queryFn: () =>
-      fetch("/api/story/missions").then(r => r.json()).catch(() => []),
+  const { data: missions = [] } = useQuery<StoryMission[]>({
+    queryKey: ["story-missions", selectedAct, missionType],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("act", String(selectedAct));
+      params.set("type", missionType);
+      const res = await fetch(`/api/story/missions?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load story missions");
+      return res.json();
+    },
+  });
+
+  const completeMissionMutation = useMutation({
+    mutationFn: async (missionId: string) => {
+      const res = await apiRequest("POST", `/api/story/missions/${missionId}/complete`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["story-campaign"] });
+      queryClient.invalidateQueries({ queryKey: ["story-missions", selectedAct, missionType] });
+      toast({ title: "Mission completed", description: "Rewards have been applied." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Mission completion failed", description: error?.message || "Unknown error", variant: "destructive" });
+    },
   });
 
   const difficultyColors: Record<number, string> = {
@@ -29,56 +86,59 @@ export default function StoryMode() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6">
-      <div className="max-w-7xl mx-auto">
+    <GameLayout>
+      <div className="space-y-6">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-2">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2 flex items-center gap-2">
             <BookOpen className="w-8 h-8 text-primary" />
             Story Mode
           </h1>
-          <p className="text-slate-400">Follow the epic saga of your empire</p>
+          <p className="text-muted-foreground">Play through 5 acts, 50 main missions, and side directives.</p>
         </div>
 
         {/* Campaign Progress */}
-        <Card className="bg-slate-800 border-slate-700 mb-6">
+        <Card className="bg-white border-slate-200 mb-6">
           <CardHeader>
-            <CardTitle className="text-white">Campaign Progress</CardTitle>
+            <CardTitle className="text-slate-900">Campaign Progress</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-slate-300">Act {campaign.currentAct || 1} of 12</span>
-              <div className="w-64 h-2 bg-slate-700 rounded">
+              <span className="text-slate-600">Act {campaign?.currentAct || 1} of 5</span>
+              <div className="w-64 h-2 bg-slate-200 rounded">
                 <div
                   className="h-full bg-primary rounded transition-all"
-                  style={{ width: `${(campaign.storyProgress || 0)}%` }}
+                  style={{ width: `${campaign?.storyProgress || 0}%` }}
                 />
               </div>
-              <span className="text-primary font-bold">{campaign.storyProgress || 0}%</span>
+              <span className="text-primary font-bold">{campaign?.storyProgress || 0}%</span>
             </div>
-            <p className="text-sm text-slate-400">
-              XP Earned: <span className="text-white">{campaign.totalXpEarned || 0}</span>
-            </p>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+              <div className="bg-slate-50 border border-slate-200 rounded p-2">Main Missions: <span className="font-semibold">{campaign?.missionCounts?.main || 0}</span></div>
+              <div className="bg-slate-50 border border-slate-200 rounded p-2">Side Missions: <span className="font-semibold">{campaign?.missionCounts?.side || 0}</span></div>
+              <div className="bg-slate-50 border border-slate-200 rounded p-2">Completed: <span className="font-semibold">{campaign?.missionCounts?.completed || 0}</span></div>
+              <div className="bg-slate-50 border border-slate-200 rounded p-2">XP Earned: <span className="font-semibold">{campaign?.totalXpEarned || 0}</span></div>
+            </div>
           </CardContent>
         </Card>
 
         {/* Acts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((act) => (
+          {(campaign?.actDefinitions || []).map((actDef) => (
             <Card
-              key={act}
-              onClick={() => setSelectedAct(act)}
-              className={`bg-slate-800 border-slate-700 cursor-pointer transition-all ${
-                selectedAct === act ? "ring-2 ring-primary" : "hover:border-primary"
+              key={actDef.act}
+              onClick={() => setSelectedAct(actDef.act)}
+              className={`bg-white border-slate-200 cursor-pointer transition-all ${
+                selectedAct === actDef.act ? "ring-2 ring-primary" : "hover:border-primary"
               }`}
-              data-testid={`act-card-${act}`}
+              data-testid={`act-card-${actDef.act}`}
             >
               <CardHeader>
-                <CardTitle className="text-white">Act {act}</CardTitle>
-                <CardDescription>Chapter {act} of the saga</CardDescription>
+                <CardTitle className="text-slate-900">Act {actDef.act}: {actDef.title}</CardTitle>
+                <CardDescription>{actDef.synopsis}</CardDescription>
               </CardHeader>
               <CardContent>
-                <Badge className={difficultyColors[Math.min(act, 6)]}>
-                  Difficulty {Math.min(act, 10)}
+                <Badge className={difficultyColors[Math.min(actDef.act, 6)]}>
+                  Difficulty {Math.min(10, actDef.act + 2)}
                 </Badge>
               </CardContent>
             </Card>
@@ -86,40 +146,56 @@ export default function StoryMode() {
         </div>
 
         {/* Selected Act Missions */}
-        {selectedAct && (
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold text-white mb-4">Act {selectedAct} Missions</h2>
+        <div className="mt-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+              <h2 className="text-2xl font-bold text-slate-900">Act {selectedAct} Missions</h2>
+              <Tabs value={missionType} onValueChange={(value) => setMissionType(value as "all" | "main" | "side")}>
+                <TabsList>
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="main">Main</TabsTrigger>
+                  <TabsTrigger value="side">Side</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
             <div className="grid gap-4">
               {missions.map((mission: any) => (
-                <Card key={mission.id} className="bg-slate-800 border-slate-700">
+                <Card key={mission.id} className="bg-white border-slate-200">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-white">{mission.title}</CardTitle>
+                        <CardTitle className="text-slate-900">{mission.title}</CardTitle>
                         <CardDescription>{mission.description}</CardDescription>
                       </div>
-                      <Badge variant="outline" className="text-primary">
-                        {mission.rewardXp} XP
-                      </Badge>
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="text-primary">{mission.rewardXp} XP</Badge>
+                        <Badge className={mission.missionType === "main" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"}>{mission.missionType}</Badge>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <p className="text-sm text-slate-300">
+                    <p className="text-sm text-slate-600">
                       NPC: <span className="text-primary">{mission.npcName}</span>
                     </p>
+                    <p className="text-sm text-slate-600">Difficulty: {mission.difficulty} · Chapter {mission.chapter}</p>
                     <Button
-                      data-testid={`button-start-mission-${mission.id}`}
+                      data-testid={`button-complete-mission-${mission.id}`}
                       className="w-full"
+                      variant={mission.isCompleted ? "secondary" : "default"}
+                      disabled={mission.isCompleted || completeMissionMutation.isPending}
+                      onClick={() => completeMissionMutation.mutate(mission.id)}
                     >
-                      Start Mission
+                      {mission.isCompleted ? (
+                        <span className="inline-flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Completed</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-2"><Zap className="w-4 h-4" /> Complete Mission</span>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </div>
-        )}
       </div>
-    </div>
+    </GameLayout>
   );
 }

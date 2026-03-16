@@ -50,9 +50,11 @@ const EmpireProgression = lazy(() => import("@/pages/EmpireProgression"));
 const WarpNetwork = lazy(() => import("@/pages/WarpNetwork"));
 const Stations = lazy(() => import("@/pages/Stations"));
 const Merchants = lazy(() => import("@/pages/Merchants"));
+const Storefront = lazy(() => import("@/pages/Storefront"));
 const CelestialBrowser = lazy(() => import("@/pages/CelestialBrowser"));
 const Diagnostics = lazy(() => import("@/pages/Diagnostics"));
 const StoryMode = lazy(() => import("@/pages/StoryMode"));
+const SeasonPass = lazy(() => import("@/pages/SeasonPass"));
 const Relics = lazy(() => import("@/pages/Relics"));
 const FriendsList = lazy(() => import("@/pages/FriendsList"));
 const Guilds = lazy(() => import("@/pages/Guilds"));
@@ -210,9 +212,11 @@ function RouterContent() {
       <Route path="/warp-network" component={WarpNetwork} />
       <Route path="/stations" component={Stations} />
       <Route path="/merchants" component={Merchants} />
+      <Route path="/storefront" component={Storefront} />
       <Route path="/celestial-browser" component={CelestialBrowser} />
       <Route path="/diagnostics" component={Diagnostics} />
       <Route path="/story-mode" component={StoryMode} />
+      <Route path="/season-pass" component={SeasonPass} />
       <Route path="/relics" component={Relics} />
       <Route path="/friends" component={FriendsList} />
       <Route path="/guilds" component={Guilds} />
