@@ -253,8 +253,8 @@ export default function Facilities() {
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200" data-testid="card-stats-surface">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={MENU_ASSETS.BUILDINGS.ROBOTICS_FACTORY.path} alt="surface" className="w-7 h-7 object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = TEMP_THEME_IMAGE; }} />
                 </div>
                 <div>
                   <div className="text-xs text-blue-600 uppercase">Surface Level</div>
@@ -267,8 +267,8 @@ export default function Facilities() {
           <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200" data-testid="card-stats-moon">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-500/10 flex items-center justify-center">
-                  <Moon className="w-5 h-5 text-slate-600" />
+                <div className="w-10 h-10 rounded-full bg-slate-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={MENU_ASSETS.BUILDINGS.SPACEPORT.path} alt="moon" className="w-7 h-7 object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = TEMP_THEME_IMAGE; }} />
                 </div>
                 <div>
                   <div className="text-xs text-slate-600 uppercase">Lunar Level</div>
@@ -283,8 +283,8 @@ export default function Facilities() {
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200" data-testid="card-stats-orbital">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                  <Satellite className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={MENU_ASSETS.BUILDINGS.SHIPYARD.path} alt="orbital" className="w-7 h-7 object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = TEMP_THEME_IMAGE; }} />
                 </div>
                 <div>
                   <div className="text-xs text-purple-600 uppercase">Orbital Level</div>
@@ -299,8 +299,8 @@ export default function Facilities() {
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200" data-testid="card-stats-total">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <Factory className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center overflow-hidden">
+                  <img src={MENU_ASSETS.BUILDINGS.RESEARCH_LAB.path} alt="infrastructure" className="w-7 h-7 object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = TEMP_THEME_IMAGE; }} />
                 </div>
                 <div>
                   <div className="text-xs text-green-600 uppercase">Total Infrastructure</div>
