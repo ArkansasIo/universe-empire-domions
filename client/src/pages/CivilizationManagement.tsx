@@ -74,33 +74,33 @@ export default function CivilizationManagement() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Civilization Management</h1>
-            <p className="text-sm text-gray-400">Manage subsystem progression and workforce allocation</p>
+            <p className="text-sm text-slate-500">Manage subsystem progression and workforce allocation</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-white border-slate-200">
             <CardContent className="pt-6">
-              <div className="text-sm text-gray-400">Total Workforce</div>
-              <div className="text-3xl font-bold">{projection?.totalWorkforce ?? 0}</div>
+              <div className="text-sm text-slate-500">Total Workforce</div>
+              <div className="text-3xl font-bold text-slate-900">{projection?.totalWorkforce ?? 0}</div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-white border-slate-200">
             <CardContent className="pt-6">
-              <div className="text-sm text-gray-400">Food Required</div>
-              <div className="text-3xl font-bold">{projection?.foodRequired ?? 0}</div>
+              <div className="text-sm text-slate-500">Food Required</div>
+              <div className="text-3xl font-bold text-slate-900">{projection?.foodRequired ?? 0}</div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-white border-slate-200">
             <CardContent className="pt-6">
-              <div className="text-sm text-gray-400">Water Required</div>
-              <div className="text-3xl font-bold">{projection?.waterRequired ?? 0}</div>
+              <div className="text-sm text-slate-500">Water Required</div>
+              <div className="text-3xl font-bold text-slate-900">{projection?.waterRequired ?? 0}</div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-white border-slate-200">
             <CardContent className="pt-6">
-              <div className="text-sm text-gray-400">Productivity</div>
-              <div className="text-3xl font-bold">{projection?.productivityGenerated ?? 0}</div>
+              <div className="text-sm text-slate-500">Productivity</div>
+              <div className="text-3xl font-bold text-slate-900">{projection?.productivityGenerated ?? 0}</div>
             </CardContent>
           </Card>
         </div>
@@ -119,16 +119,16 @@ export default function CivilizationManagement() {
                 const canUpgrade = currentLevel < system.maxLevel;
 
                 return (
-                  <Card key={system.id} className="bg-slate-900 border-slate-700">
+                  <Card key={system.id} className="bg-white border-slate-200">
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{system.name}</CardTitle>
+                        <CardTitle className="text-lg text-slate-900">{system.name}</CardTitle>
                         <Badge variant="outline">{system.systemType}</Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <p className="text-sm text-gray-300">{system.description}</p>
-                      <div className="text-sm text-gray-400">
+                      <p className="text-sm text-slate-600">{system.description}</p>
+                      <div className="text-sm text-slate-500">
                         Level {currentLevel} / {system.maxLevel}
                       </div>
                       <Button
@@ -151,9 +151,9 @@ export default function CivilizationManagement() {
           </TabsContent>
 
           <TabsContent value="workforce" className="space-y-4">
-            <Card className="bg-slate-900 border-slate-700">
+            <Card className="bg-white border-slate-200">
               <CardHeader>
-                <CardTitle>Assign Workforce</CardTitle>
+                <CardTitle className="text-slate-900">Assign Workforce</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Input
@@ -162,7 +162,7 @@ export default function CivilizationManagement() {
                   onChange={(event) => setJobSearch(event.target.value)}
                 />
                 <select
-                  className="w-full p-2 rounded bg-slate-800 border border-slate-700"
+                  className="w-full p-2 rounded bg-white border border-slate-300 text-slate-900"
                   value={selectedJobId}
                   onChange={(event) => setSelectedJobId(event.target.value)}
                 >
@@ -191,20 +191,20 @@ export default function CivilizationManagement() {
 
             <div className="grid grid-cols-1 gap-3">
               {currentAssignments.length === 0 ? (
-                <Card className="bg-slate-900 border-slate-700">
-                  <CardContent className="pt-6 text-center text-gray-400">No assignments yet.</CardContent>
+                <Card className="bg-white border-slate-200">
+                  <CardContent className="pt-6 text-center text-slate-500">No assignments yet.</CardContent>
                 </Card>
               ) : (
                 currentAssignments.map((assignment: WorkforceAssignment) => (
-                  <Card key={assignment.id} className="bg-slate-900 border-slate-700">
+                  <Card key={assignment.id} className="bg-white border-slate-200">
                     <CardContent className="pt-6 flex items-center justify-between">
                       <div>
-                        <div className="font-semibold">{assignment.jobId}</div>
-                        <div className="text-sm text-gray-400">Employees: {assignment.employees}</div>
+                        <div className="font-semibold text-slate-900">{assignment.jobId}</div>
+                        <div className="text-sm text-slate-500">Employees: {assignment.employees}</div>
                       </div>
                       <Button
                         variant="outline"
-                        className="text-red-400 border-red-400"
+                        className="text-red-600 border-red-300 hover:bg-red-50"
                         onClick={() => removeMutation.mutate(assignment.id)}
                         disabled={removeMutation.isPending}
                       >
