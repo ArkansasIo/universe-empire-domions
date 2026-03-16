@@ -11,7 +11,19 @@ import { eq } from "drizzle-orm";
 function isDevAuthBypassEnabled() {
   const raw = (process.env.DEV_AUTH_BYPASS || "").trim().toLowerCase();
   const isDevelopment = process.env.NODE_ENV === "development";
-  return isDevelopment && ["1", "true", "yes", "on"].includes(raw);
+  if (!isDevelopment) {
+    return false;
+  }
+
+  if (!raw) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(raw)) {
+    return false;
+  }
+
+  return ["1", "true", "yes", "on"].includes(raw);
 }
 
 async function ensureDevBypassUser() {
