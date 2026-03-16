@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ShoppingBag } from "lucide-react";
@@ -44,6 +45,13 @@ const currencyColor: Record<StoreCurrency, string> = {
 export default function Storefront() {
   const { toast } = useToast();
   const [category, setCategory] = useState<"all" | StoreCategory>("all");
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+  const getQuantityForItem = (itemId: string) => quantities[itemId] || 1;
+  const setItemQuantity = (itemId: string, nextQuantity: number) => {
+    const safeQuantity = Math.max(1, Math.min(99, nextQuantity));
+    setQuantities((current) => ({ ...current, [itemId]: safeQuantity }));
+  };
 
   const { data: catalog } = useQuery<StoreCatalogResponse>({
     queryKey: ["/api/storefront/catalog"],
@@ -64,13 +72,13 @@ export default function Storefront() {
   });
 
   const purchaseMutation = useMutation({
-    mutationFn: async (itemId: string) => {
-      const res = await apiRequest("POST", "/api/storefront/purchase", { itemId, quantity: 1 });
+    mutationFn: async ({ itemId, quantity }: { itemId: string; quantity: number }) => {
+      const res = await apiRequest("POST", "/api/storefront/purchase", { itemId, quantity });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/storefront/balance"] });
-      toast({ title: "Purchase successful", description: "Item delivered to your inventory." });
+      toast({ title: "Purchase successful", description: `Bought ${variables.quantity}x item(s).` });
     },
     onError: (error: any) => {
       toast({ title: "Purchase failed", description: error?.message || "Unknown error", variant: "destructive" });
@@ -124,7 +132,10 @@ export default function Storefront() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {visibleItems.map((item) => {
-            const canAfford = (balance?.[item.currency] || 0) >= item.price;
+            const quantity = getQuantityForItem(item.id);
+            const totalCost = item.price * quantity;
+            const totalGrant = item.grantQuantity * quantity;
+            const canAfford = (balance?.[item.currency] || 0) >= totalCost;
             return (
               <Card key={item.id} className="bg-white border-slate-200">
                 <CardHeader>
@@ -135,9 +146,50 @@ export default function Storefront() {
                   <CardDescription>{item.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="text-sm text-slate-600">Grants: {item.grantQuantity}x {item.grantItemId}</div>
+                  <div className="text-sm text-slate-600">Grants: {totalGrant}x {item.grantItemId}</div>
+                  <div className="space-y-2">
+                    <div className="text-xs uppercase text-slate-500">Quantity</div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setItemQuantity(item.id, quantity - 1)}
+                        disabled={quantity <= 1 || purchaseMutation.isPending}
+                      >
+                        -
+                      </Button>
+                      <Select
+                        value={String(quantity)}
+                        onValueChange={(value) => setItemQuantity(item.id, Number(value))}
+                      >
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 5, 10, 20, 50, 99].map((value) => (
+                            <SelectItem key={`${item.id}-qty-${value}`} value={String(value)}>
+                              {value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setItemQuantity(item.id, quantity + 1)}
+                        disabled={quantity >= 99 || purchaseMutation.isPending}
+                      >
+                        +
+                      </Button>
+                      <div className="ml-auto flex items-center gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setItemQuantity(item.id, 1)} disabled={purchaseMutation.isPending}>x1</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setItemQuantity(item.id, 5)} disabled={purchaseMutation.isPending}>x5</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setItemQuantity(item.id, 10)} disabled={purchaseMutation.isPending}>x10</Button>
+                      </div>
+                    </div>
+                  </div>
                   <div className={`text-lg font-orbitron ${currencyColor[item.currency]}`}>
-                    {item.price.toLocaleString()} {item.currency}
+                    {totalCost.toLocaleString()} {item.currency}
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {item.tags.map((tag) => (
@@ -147,9 +199,9 @@ export default function Storefront() {
                   <Button
                     className="w-full"
                     disabled={!canAfford || purchaseMutation.isPending}
-                    onClick={() => purchaseMutation.mutate(item.id)}
+                    onClick={() => purchaseMutation.mutate({ itemId: item.id, quantity })}
                   >
-                    {canAfford ? "Purchase" : "Insufficient Funds"}
+                    {canAfford ? `Purchase x${quantity}` : "Insufficient Funds"}
                   </Button>
                 </CardContent>
               </Card>
