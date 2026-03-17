@@ -713,8 +713,9 @@ function getTierSubClass(tier: number): ResearchTechSubClass {
 function getTierRank(tier: number): string {
   const tierClass = getTierClass(tier)
   const rankNum = ((tier - 1) % 10) + 1
-  const romanMap: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X' }
-  return `${tierClass} Researcher ${romanMap[rankNum] ?? 'X'}`
+  // rankNum is always 1-10 due to the modulo above; the map is exhaustive
+  const romanMap: Record<1|2|3|4|5|6|7|8|9|10, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X' }
+  return `${tierClass} Researcher ${romanMap[rankNum as 1|2|3|4|5|6|7|8|9|10]}`
 }
 
 function getTierTitle(tier: number): string {
@@ -845,7 +846,7 @@ export const RESEARCH_TECH_TIERS: ResearchTechTier[] = generateTiers()
 // ============================================================================
 
 function calculateLevelXP(level: number): number {
-  // Levels 1-10 intentionally use a gentle 1.05 ramp for easy onboarding
+  // Levels 1-10 use a gentle 1.05 multiplier (~+5% XP per level, ~100–163 XP range) to ease new players in
   if (level <= 10) return Math.floor(100 * Math.pow(1.05, level - 1))
   if (level <= 50) return Math.floor(100 * Math.pow(1.08, level - 1))
   if (level <= 100) return Math.floor(100 * Math.pow(1.10, level - 1))
@@ -856,7 +857,8 @@ function calculateLevelXP(level: number): number {
 }
 
 function calculateTierUnlockForLevel(level: number): number {
-  return Math.min(99, Math.max(1, Math.floor((level / 999) * 99) + 1))
+  // Maps level 1 → tier 1, level 999 → tier 99 without over-counting
+  return Math.min(99, Math.max(1, Math.ceil((level / 999) * 99)))
 }
 
 function generateLevels(): ResearchTechLevel[] {
