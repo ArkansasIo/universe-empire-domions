@@ -18,6 +18,12 @@ interface SystemPosition {
   activity?: number; // minutes since last activity (undefined = no activity data)
 }
 
+interface GeneratedSystem {
+  systemName: string;
+  star: { type: string; name: string };
+  positions: SystemPosition[];
+}
+
 type ScanReport = {
   targetName: string;
   targetType: SystemObjectType;
@@ -27,56 +33,187 @@ type ScanReport = {
   timestamp: number;
 };
 
-/** Deterministic seeded random: same inputs always produce the same output. */
-function seededRandom(seed: number): number {
-  return ((seed * 9301 + 49297) % 233280) / 233280;
+// ---------------------------------------------------------------------------
+// NMS-style deterministic universe seed system
+// ---------------------------------------------------------------------------
+
+/** Maximum orbital positions displayed in a system (matches the client table). */
+const MAX_SYSTEM_POSITIONS = 15;
+
+/** FNV-1a 32-bit hash of an arbitrary string. */
+function fnv1a(str: string): number {
+  let hash = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = Math.imul(hash ^ str.charCodeAt(i), 16777619) >>> 0;
+  }
+  return hash || 1;
 }
 
-const PLANET_CLASSES = ["M", "H", "L", "K", "Y", "D", "J", "T"];
+/**
+ * Derive a pseudo-random float in [0, 1) from a base hash at a given slot.
+ * Different slots produce independent streams from the same base.
+ */
+function seededAt(baseHash: number, slot: number): number {
+  let h = (baseHash + Math.imul(slot >>> 0, 2654435761)) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 2246822519) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 3266489917) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
 
-function generateSystemPosition(
+/** Phonemic syllables used for NMS-style procedural name generation. */
+const SYLLABLES = [
+  "al", "an", "ar", "as", "ba", "be", "bi", "bo", "ca", "ce", "ci", "co",
+  "da", "de", "di", "do", "el", "en", "er", "es", "fa", "fe", "fi", "ga",
+  "ge", "gi", "go", "ha", "he", "hi", "ia", "io", "ja", "ka", "ke", "ki",
+  "ko", "la", "le", "li", "lo", "ma", "me", "mi", "mo", "na", "ne", "ni",
+  "no", "on", "or", "os", "pa", "pe", "pi", "ra", "re", "ri", "ro", "sa",
+  "se", "si", "so", "ta", "te", "ti", "to", "ul", "un", "ur", "va", "ve",
+  "vi", "vo", "xa", "xe", "za", "ze", "zo",
+] as const;
+
+/** Generate a 2-3 syllable procedural name from a hash + slot offset. */
+function generateName(hash: number, slot = 0): string {
+  const numSyl = seededAt(hash, slot) > 0.55 ? 3 : 2;
+  let name = "";
+  for (let i = 0; i < numSyl; i++) {
+    const idx = Math.floor(seededAt(hash, slot + i + 1) * SYLLABLES.length);
+    name += SYLLABLES[idx];
+  }
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** Star type thresholds matching real astronomical frequency distribution. */
+const STAR_TYPE_THRESHOLDS: Array<[string, number]> = [
+  ["O", 0.00003],
+  ["B", 0.0013],
+  ["A", 0.006],
+  ["F", 0.03],
+  ["G", 0.076],
+  ["K", 0.121],
+  ["M", 1],
+];
+
+function pickStarType(r: number): string {
+  let cumulative = 0;
+  for (const [type, weight] of STAR_TYPE_THRESHOLDS) {
+    cumulative += weight;
+    if (r < cumulative) return type;
+  }
+  return "M";
+}
+
+/**
+ * Planet class distribution (Star Trek-style classes).
+ * Each entry is [class, cumulative upper bound].
+ */
+const PLANET_CLASS_THRESHOLDS: Array<[string, number]> = [
+  ["M", 0.10], // Earth-like (Minshara)
+  ["H", 0.25], // Desert
+  ["L", 0.32], // Marginally Habitable
+  ["Y", 0.39], // Volcanic / Demon
+  ["T", 0.49], // Frozen
+  ["J", 0.64], // Gas Giant / Ice Giant
+  ["K", 0.84], // Rocky / Adaptable
+  ["D", 1.00], // Barren
+];
+
+function pickPlanetClass(r: number): string {
+  for (const [cls, threshold] of PLANET_CLASS_THRESHOLDS) {
+    if (r < threshold) return cls;
+  }
+  return "K";
+}
+
+/**
+ * Generate a full star system using NMS-style deterministic seeding.
+ * The star type and planet count are derived from the system seed; planets
+ * are placed sequentially in positions 1..N, followed by optional special
+ * objects (asteroid belt, nebula, station, black hole).
+ */
+function generateSystem(
   universe: string,
   galaxy: number,
   sector: number,
   system: number,
-  pos: number,
-): SystemPosition {
-  const seed = (universe.length * 17 + galaxy * 1000 + sector * 100 + system + pos) * 1.1;
-  const r = seededRandom(seed);
+): GeneratedSystem {
+  const baseKey = `${universe}:${galaxy}:${sector}:${system}`;
+  const sysHash = fnv1a(`${baseKey}:sys`);
 
-  if (r > 0.95)
-    return {
-      position: pos,
-      type: "blackhole",
-      name: "Singularity",
-      debris: { metal: 50000, crystal: 50000 },
-    };
-  if (r > 0.90)
-    return { position: pos, type: "nebula", name: "Ion Cloud" };
-  if (r > 0.85)
-    return {
-      position: pos,
-      type: "asteroid",
-      name: "Asteroid Field",
-      debris: { metal: Math.floor(r * 10000), crystal: Math.floor(r * 4000) },
-    };
-  if (r > 0.80)
-    return { position: pos, type: "station", name: "Pirate Outpost", owner: "Pirates" };
-  if (r > 0.60) {
-    const classIdx = Math.floor(r * PLANET_CLASSES.length);
-    const ownerSeed = seededRandom(seed * 1.7);
-    return {
+  // Star
+  const starType = pickStarType(seededAt(sysHash, 0));
+  const starName = generateName(fnv1a(`${baseKey}:star-name`));
+  const systemName = generateName(fnv1a(`${baseKey}:sys-name`));
+
+  // Planet count: 2-9 planets per system (NMS-style)
+  const planetCount = Math.floor(seededAt(sysHash, 1) * 8) + 2;
+
+  const positions: SystemPosition[] = [];
+
+  // Place planets in sequential orbital positions starting at 1
+  for (let i = 0; i < planetCount; i++) {
+    const pos = i + 1;
+    const planetHash = fnv1a(`${baseKey}:planet-${pos}`);
+    const planetClass = pickPlanetClass(seededAt(planetHash, 0));
+    const hasMoon = seededAt(planetHash, 1) < 0.42;
+    const planetName = generateName(fnv1a(`${baseKey}:pname-${pos}`));
+
+    positions.push({
       position: pos,
       type: "planet",
-      name: `Colony ${pos}`,
-      owner: `Explorer-${Math.floor(ownerSeed * 9000 + 1000)}`,
-      alliance: ownerSeed > 0.7 ? `TAG${Math.floor(ownerSeed * 900)}` : undefined,
-      moon: r > 0.75,
-      class: PLANET_CLASSES[classIdx % PLANET_CLASSES.length],
-    };
+      name: planetName,
+      moon: hasMoon,
+      class: planetClass,
+    });
   }
 
-  return { position: pos, type: "empty", name: "" };
+  // Optional asteroid belt immediately after the last planet
+  const hasBelt = seededAt(sysHash, 2) < 0.35;
+  const beltPos = planetCount + 1;
+  if (hasBelt && beltPos <= MAX_SYSTEM_POSITIONS - 1) {
+    const beltHash = fnv1a(`${baseKey}:belt`);
+    positions.push({
+      position: beltPos,
+      type: "asteroid",
+      name: "Asteroid Belt",
+      debris: {
+        metal: Math.floor(seededAt(beltHash, 0) * 9000 + 1000),
+        crystal: Math.floor(seededAt(beltHash, 1) * 4500 + 500),
+      },
+    });
+  }
+
+  // Rare phenomena in the outer system
+  const rarePos = beltPos + (hasBelt ? 1 : 0);
+  if (rarePos <= MAX_SYSTEM_POSITIONS - 1) {
+    const rareHash = fnv1a(`${baseKey}:rare`);
+    const rareRoll = seededAt(rareHash, 0);
+    if (rareRoll < 0.02) {
+      positions.push({
+        position: rarePos,
+        type: "blackhole",
+        name: "Singularity",
+        debris: { metal: 50000, crystal: 50000 },
+      });
+    } else if (rareRoll < 0.06) {
+      positions.push({ position: rarePos, type: "nebula", name: "Ion Cloud" });
+    } else if (rareRoll < 0.10) {
+      positions.push({
+        position: rarePos,
+        type: "station",
+        name: "Pirate Outpost",
+        owner: "Pirates",
+      });
+    }
+  }
+
+  // Fill remaining slots as empty
+  for (let pos = 1; pos <= MAX_SYSTEM_POSITIONS; pos++) {
+    if (!positions.find((p) => p.position === pos)) {
+      positions.push({ position: pos, type: "empty", name: "" });
+    }
+  }
+
+  return { systemName, star: { type: starType, name: starName }, positions };
 }
 
 function generateScanReport(
@@ -88,10 +225,10 @@ function generateScanReport(
   targetName: string,
   targetType: SystemObjectType,
 ): ScanReport {
-  const seed = (universe.length * 19 + galaxy * 1000 + sector * 100 + system + position) * 1.3;
-  const r1 = seededRandom(seed);
-  const r2 = seededRandom(seed * 1.37);
-  const r3 = seededRandom(seed * 1.91);
+  const scanHash = fnv1a(`${universe}:${galaxy}:${sector}:${system}:${position}:scan`);
+  const r1 = seededAt(scanHash, 0);
+  const r2 = seededAt(scanHash, 1);
+  const r3 = seededAt(scanHash, 2);
 
   const anomalyPool = [
     "Ion turbulence",
@@ -104,7 +241,7 @@ function generateScanReport(
   ];
 
   const anomalies = anomalyPool.filter((_, index) => {
-    const roll = seededRandom(seed + index * 11);
+    const roll = seededAt(scanHash, index + 10);
     return roll > 0.72;
   }).slice(0, 3);
 
@@ -141,7 +278,7 @@ function isAuthenticated(req: Request, res: Response, next: Function) {
 export function registerGalaxyRoutes(app: Express) {
   /**
    * GET /api/galaxy/:universe/:galaxy/:sector/:system
-   * Returns 16 canonical position entries for the given system.
+   * Returns canonical position entries for the given system.
    * Real player homeworlds overlay the generated data.
    */
   app.get(
@@ -165,10 +302,9 @@ export function registerGalaxyRoutes(app: Express) {
           return res.status(400).json({ error: "Invalid coordinates" });
         }
 
-        // Generate base positions 1-16
-        const positions: SystemPosition[] = Array.from({ length: 16 }, (_, i) =>
-          generateSystemPosition(universe, galaxy, sector, system, i + 1),
-        );
+        // Generate base system data using NMS-style seeded generation
+        const generated = generateSystem(universe, galaxy, sector, system);
+        const positions: SystemPosition[] = generated.positions;
 
         // Overlay real player data from DB.
         // Player coordinate format in DB: "[galaxy:sector:system:pos]" or "[galaxy:system:pos]"
@@ -212,26 +348,40 @@ export function registerGalaxyRoutes(app: Express) {
             const parts = inner.split(":");
             if (parts.length < 4) continue;
             const pos = parseInt(parts[3], 10);
-            if (isNaN(pos) || pos < 1 || pos > 16) continue;
+            if (isNaN(pos) || pos < 1 || pos > MAX_SYSTEM_POSITIONS) continue;
 
-            const idx = pos - 1;
+            const existingPos = positions.find((p) => p.position === pos);
             const owner = usernameMap[player.userId] || `Player-${player.userId.slice(0, 6)}`;
             const alliance = allianceMap[player.userId];
-            positions[idx] = {
+            const entry: SystemPosition = {
               position: pos,
               type: "planet",
               name: player.planetName || `${owner}'s World`,
               owner,
               alliance,
-              moon: positions[idx].moon,
-              class: positions[idx].class || "M",
+              moon: existingPos?.moon,
+              class: existingPos?.class || "M",
             };
+            const idx = positions.findIndex((p) => p.position === pos);
+            if (idx >= 0) {
+              positions[idx] = entry;
+            } else {
+              positions.push(entry);
+            }
           }
         } catch {
           // DB lookup failure is non-fatal; fall back to generated data
         }
 
-        res.json({ universe, galaxy, sector, system, positions });
+        res.json({
+          universe,
+          galaxy,
+          sector,
+          system,
+          systemName: generated.systemName,
+          star: generated.star,
+          positions,
+        });
       } catch (error) {
         console.error("Galaxy route error:", error);
         res.status(500).json({ error: "Failed to load system data" });
@@ -262,7 +412,7 @@ export function registerGalaxyRoutes(app: Express) {
           sector < 1 ||
           system < 1 ||
           position < 1 ||
-          position > 16
+          position > MAX_SYSTEM_POSITIONS
         ) {
           return res.status(400).json({ error: "Invalid scan coordinates" });
         }

@@ -26,7 +26,7 @@ export const getPlanetDetails = (seed: number): PlanetDetails => {
       temperature: "480K - 800K",
       hydrosphere: "0%",
       features: ["Lava Lakes", "Ionic Storms", "Crystalline Formations"],
-      image: "https://images.unsplash.com/photo-1614730341194-75c6074065db?q=80&w=2000" // Placeholder
+      image: "https://images.unsplash.com/photo-1614730341194-75c6074065db?q=80&w=2000"
     };
   } else if (random > 0.8) {
     return {
@@ -40,7 +40,7 @@ export const getPlanetDetails = (seed: number): PlanetDetails => {
       features: ["Ring System", "Great Red Spot", "Multiple Moons"],
       image: "https://images.unsplash.com/photo-1614730341194-75c6074065db?q=80&w=2000"
     };
-  } else if (random > 0.6) {
+  } else if (random > 0.65) {
     return {
       class: "L",
       type: "Marginally Habitable",
@@ -52,7 +52,7 @@ export const getPlanetDetails = (seed: number): PlanetDetails => {
       features: ["Dense Forests", "Swamps", "High Humidity"],
       image: "https://images.unsplash.com/photo-1614730341194-75c6074065db?q=80&w=2000"
     };
-  } else if (random > 0.4) {
+  } else if (random > 0.45) {
     return {
       class: "K",
       type: "Adaptable",
@@ -64,7 +64,7 @@ export const getPlanetDetails = (seed: number): PlanetDetails => {
       features: ["Craters", "Dust Storms", "Subterranean Ice"],
       image: "https://images.unsplash.com/photo-1614730341194-75c6074065db?q=80&w=2000"
     };
-  } else if (random > 0.25) {
+  } else if (random > 0.32) {
      return {
       class: "H",
       type: "Desert",
@@ -74,6 +74,30 @@ export const getPlanetDetails = (seed: number): PlanetDetails => {
       temperature: "310K - 350K",
       hydrosphere: "10%",
       features: ["Dunes", "Oases", "Salt Flats"],
+      image: "https://images.unsplash.com/photo-1614730341194-75c6074065db?q=80&w=2000"
+    };
+  } else if (random > 0.20) {
+    return {
+      class: "T",
+      type: "Frozen",
+      description: "Ice-covered world in the outer system. Frozen methane oceans and nitrogen ice geysers characterise the surface.",
+      atmosphere: "Thin (Nitrogen/Methane)",
+      gravity: "0.7 G",
+      temperature: "60K - 120K",
+      hydrosphere: "80% (Ice)",
+      features: ["Ice Plains", "Nitrogen Geysers", "Methane Lakes"],
+      image: "https://images.unsplash.com/photo-1614730341194-75c6074065db?q=80&w=2000"
+    };
+  } else if (random > 0.10) {
+    return {
+      class: "D",
+      type: "Barren",
+      description: "Completely barren world with no atmosphere or liquid water. Mineral-rich crust suitable for deep-core mining.",
+      atmosphere: "None",
+      gravity: "0.3 G",
+      temperature: "90K - 400K",
+      hydrosphere: "0%",
+      features: ["Craters", "Exposed Rock", "Dust Plains"],
       image: "https://images.unsplash.com/photo-1614730341194-75c6074065db?q=80&w=2000"
     };
   } else {

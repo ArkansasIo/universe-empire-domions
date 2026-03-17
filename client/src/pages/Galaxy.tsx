@@ -41,6 +41,8 @@ interface SystemData {
   galaxy: number;
   sector: number;
   system: number;
+  systemName?: string;
+  star?: { type: string; name: string };
   positions: SystemPosition[];
 }
 
@@ -69,6 +71,44 @@ interface MessageActionPayload {
    recipientName: string;
    destination: string;
 }
+
+/** Planet class → Tailwind gradient classes for the visual circle. */
+const PLANET_GRADIENT: Record<string, string> = {
+  M: "from-blue-400 to-emerald-600",
+  H: "from-yellow-500 to-orange-700",
+  L: "from-lime-500 to-emerald-700",
+  K: "from-red-700 to-stone-500",
+  Y: "from-red-500 to-orange-900",
+  D: "from-slate-400 to-stone-600",
+  J: "from-amber-400 to-orange-700",
+  T: "from-sky-300 to-indigo-600",
+};
+
+const getPlanetGradient = (cls?: string) =>
+  cls && PLANET_GRADIENT[cls] ? PLANET_GRADIENT[cls] : "from-blue-500 to-purple-800";
+
+/** Planet class → badge colour classes. */
+const PLANET_CLASS_BADGE: Record<string, string> = {
+  M: "bg-green-100 text-green-700",
+  H: "bg-yellow-100 text-yellow-700",
+  L: "bg-lime-100 text-lime-700",
+  K: "bg-stone-100 text-stone-600",
+  Y: "bg-red-100 text-red-700",
+  D: "bg-slate-100 text-slate-600",
+  J: "bg-orange-100 text-orange-700",
+  T: "bg-sky-100 text-sky-700",
+};
+
+/** Star type labels and visual colours for the system info bar. */
+const STAR_INFO: Record<string, { label: string; color: string; glow: string }> = {
+  O: { label: "Blue Giant",    color: "#9bb0ff", glow: "shadow-[0_0_16px_#9bb0ff]" },
+  B: { label: "Blue-White",    color: "#aabfff", glow: "shadow-[0_0_14px_#aabfff]" },
+  A: { label: "White Star",    color: "#e0e8ff", glow: "shadow-[0_0_12px_#cad7ff]" },
+  F: { label: "Yellow-White",  color: "#fff8dc", glow: "shadow-[0_0_12px_#f8f7ff]" },
+  G: { label: "Yellow Dwarf",  color: "#fff4ea", glow: "shadow-[0_0_12px_#ffe4a0]" },
+  K: { label: "Orange Dwarf",  color: "#ffd2a1", glow: "shadow-[0_0_12px_#ffa060]" },
+  M: { label: "Red Dwarf",     color: "#ffcc6f", glow: "shadow-[0_0_12px_#ff6040]" },
+};
 
 export default function Galaxy() {
    const { toast } = useToast();
@@ -259,6 +299,30 @@ export default function Galaxy() {
            </Button>
         </div>
 
+        {/* System Info / Star Display */}
+        {systemData?.star && (
+          <div className="bg-white border border-slate-200 p-4 rounded-lg flex items-center gap-4 shadow-sm">
+            <div
+              className={cn(
+                "w-12 h-12 rounded-full flex-shrink-0",
+                STAR_INFO[systemData.star.type]?.glow,
+              )}
+              style={{ background: `radial-gradient(circle at 35% 35%, white, ${STAR_INFO[systemData.star.type]?.color ?? "#ffe4a0"})` }}
+            />
+            <div>
+              <div className="font-bold text-slate-900 font-orbitron text-lg">
+                {systemData.systemName ?? systemData.star.name} System
+              </div>
+              <div className="text-sm text-muted-foreground font-rajdhani">
+                Star: <span className="font-semibold text-slate-700">{systemData.star.name}</span>
+                {" · "}Type <span className="font-semibold text-slate-700">{systemData.star.type}</span>
+                {" · "}
+                <span className="italic">{STAR_INFO[systemData.star.type]?.label ?? "Unknown"}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Galaxy Table */}
         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
            <Table>
@@ -291,7 +355,7 @@ export default function Galaxy() {
                       {/* Visual Column */}
                       <TableCell>
                          {data.type === "planet" && (
-                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-800 shadow-sm border border-slate-200"></div>
+                           <div className={cn("w-10 h-10 rounded-full bg-gradient-to-br shadow-sm border border-slate-200", getPlanetGradient(data.class))}></div>
                          )}
                          {data.type === "asteroid" && (
                            <div className="w-10 h-10 flex items-center justify-center">
@@ -331,10 +395,9 @@ export default function Galaxy() {
                          {data.type === "nebula" && <Badge variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-100">Nebula</Badge>}
                          {data.type === "station" && <Badge variant="outline" className="border-red-400 text-red-600">Pirate Base</Badge>}
                          {data.type === "planet" && <Badge variant="secondary" className={cn(
-                            data.class === "M" ? "bg-green-100 text-green-700" :
-                            data.class === "Y" ? "bg-red-100 text-red-700" :
-                            data.class === "J" ? "bg-orange-100 text-orange-700" :
-                            "bg-blue-100 text-blue-700"
+                            data.class && PLANET_CLASS_BADGE[data.class]
+                              ? PLANET_CLASS_BADGE[data.class]
+                              : "bg-blue-100 text-blue-700"
                          )}>Class {data.class}</Badge>}
                       </TableCell>
                       
