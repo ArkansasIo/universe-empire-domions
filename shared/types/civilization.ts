@@ -4,6 +4,34 @@
  * @tag #civilization #types #military #jobs #subsystems
  */
 
+// Re-export the expanded army unit classification system
+export type {
+  UnitCategory,
+  UnitSubCategory,
+  ClassTier,
+  SubClassTier,
+  UnitClassRank,
+  UnitClass,
+  UnitSubClass,
+  UnitSubType,
+  UnitRank,
+  UnitTitle,
+  UnitStats,
+  UnitSubStats,
+  AttributeKey,
+  UnitAttributes,
+  UnitSubAttributes,
+  UnitSubject,
+  SubjectDetail,
+  UnitDescriptions,
+  UnitLevel,
+  LevelTier,
+  UnitCategoryMeta,
+  UnitSubCategoryMeta,
+  ArmyUnitDefinition,
+} from './armyUnitTypes';
+export { getLevelTier, getClassTierLabel } from './armyUnitTypes';
+
 // ============================================================================
 // JOB & WORKFORCE TYPES
 // ============================================================================

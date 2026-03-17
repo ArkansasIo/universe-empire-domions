@@ -2,10 +2,59 @@
  * Army Subsystems Configuration
  * Military units, formations, and combat capabilities
  * @tag #military #army #units #combat #subsystems
+ *
+ * For the expanded 18-category / 32-subcategory army classification system
+ * (with tiers 1-99, levels 1-999, types/sub-types, ranks, titles, stats,
+ * sub-stats, attributes, sub-attributes, subjects, descriptions, and more),
+ * see:
+ *   shared/config/armyCategoriesConfig.ts
+ *   shared/types/armyUnitTypes.ts
  */
 
 export type { ArmySubsystem } from '../types/civilization';
 import type { ArmySubsystem } from '../types/civilization';
+
+// Re-export the expanded army classification system for convenience
+export {
+  getAllCategories,
+  getAllSubCategories,
+  getSubCategoriesForCategory,
+  getCategoryById,
+  getSubCategoryById,
+  getUnitsByCategory,
+  getUnitsBySubCategory,
+  getUnitsAvailableAtLevel,
+  isValidClassTier,
+  isValidUnitLevel,
+  UNIT_CATEGORY_META,
+  UNIT_SUB_CATEGORY_META,
+  ARMY_UNIT_CATALOG,
+} from './armyCategoriesConfig';
+export type {
+  UnitCategory,
+  UnitSubCategory,
+  UnitCategoryMeta,
+  UnitSubCategoryMeta,
+  ArmyUnitDefinition,
+  UnitClass,
+  UnitSubClass,
+  ClassTier,
+  SubClassTier,
+  UnitType as ArmyUnitType,
+  UnitSubType,
+  UnitRank,
+  UnitTitle,
+  UnitStats,
+  UnitSubStats,
+  UnitAttributes,
+  UnitSubAttributes,
+  UnitSubject,
+  SubjectDetail,
+  UnitDescriptions,
+  UnitLevel,
+  LevelTier,
+} from '../types/armyUnitTypes';
+export { getLevelTier, getClassTierLabel } from '../types/armyUnitTypes';
 
 // ============================================================================
 // GROUND FORCES (Tier 1-3)
