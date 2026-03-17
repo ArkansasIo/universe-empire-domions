@@ -131,8 +131,42 @@ export function registerMissingRoutes(app: Express) {
 
   app.post("/api/expeditions", isAuthenticated, async (req: Request, res: Response) => {
     const userId = getUserId(req);
-    const { name, type = "exploration", targetCoordinates = "0:0:0" } = req.body as { name?: string; type?: string; targetCoordinates?: string };
+    const {
+      name,
+      type = "exploration",
+      subType,
+      categoryId,
+      subCategoryId,
+      tier = 1,
+      level = 1,
+      rank,
+      title,
+      targetCoordinates = "0:0:0",
+      fleetComposition = {},
+      troopComposition = {},
+    } = req.body as {
+      name?: string;
+      type?: string;
+      subType?: string;
+      categoryId?: string;
+      subCategoryId?: string;
+      tier?: number;
+      level?: number;
+      rank?: string;
+      title?: string;
+      targetCoordinates?: string;
+      fleetComposition?: Record<string, number>;
+      troopComposition?: Record<string, number>;
+    };
     if (!name) return res.status(400).json({ error: "Expedition name is required" });
+    const tierNum = Number(tier);
+    const levelNum = Number(level);
+    if (!Number.isInteger(tierNum) || tierNum < 1 || tierNum > 99) {
+      return res.status(400).json({ error: "tier must be an integer between 1 and 99" });
+    }
+    if (!Number.isInteger(levelNum) || levelNum < 1 || levelNum > 999) {
+      return res.status(400).json({ error: "level must be an integer between 1 and 999" });
+    }
     try {
       const playerState = await storage.getPlayerState(userId);
       const expeditions: any[] = (playerState as any)?.expeditions || [];
@@ -140,10 +174,17 @@ export function registerMissingRoutes(app: Express) {
         id: `exp-${Date.now()}`,
         name,
         type,
+        subType: subType ?? null,
+        categoryId: categoryId ?? null,
+        subCategoryId: subCategoryId ?? null,
+        tier: tierNum,
+        level: levelNum,
+        rank: rank ?? null,
+        title: title ?? null,
         targetCoordinates,
         status: "preparing",
-        fleetComposition: {},
-        troopComposition: {},
+        fleetComposition,
+        troopComposition,
         discoveries: [],
         casualties: {},
         resources: {},
