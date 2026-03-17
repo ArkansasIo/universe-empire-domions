@@ -131,14 +131,45 @@ export {
   type EntityArchetype,
 } from './entityArchetypesConfig';
 export {
+  BUILDING_ARCHETYPES,
   BUILDING_ARCHETYPES_90,
+  FACTORY_JOB_ARCHETYPES,
   FACTORY_JOB_ARCHETYPES_90,
   BUILDING_ARCHETYPES_GROUPED_BY_CATEGORY,
+  BUILDING_ARCHETYPES_GROUPED_BY_SUBCATEGORY,
   FACTORY_JOB_ARCHETYPES_GROUPED_BY_JOB_CATEGORY,
   BUILDING_FACTORY_JOB_META,
   type BuildingArchetype,
+  type BuildingArchetypeStats,
+  type BuildingArchetypeSubStats,
+  type BuildingArchetypeAttributes,
+  type BuildingArchetypeSubAttributes,
   type FactoryJobArchetype,
+  type FactoryJobArchetypeStats,
+  type FactoryJobArchetypeSubStats,
+  type FactoryJobArchetypeAttributes,
+  type FactoryJobArchetypeSubAttributes,
 } from './buildingFactoryJobArchetypesConfig';
+export {
+  BUILDING_FACTORY_TIER_CATALOG,
+  BUILDING_FACTORY_TIER_META,
+  getTierDefinition,
+  getTiersByClass,
+  getTiersBySubClass,
+  getTiersByRank,
+  getTierClassNames,
+  getTierSubClassNames,
+  type BuildingFactoryTierDefinition,
+  type TierClassName,
+  type TierSubClassName,
+  type TierTypeName,
+  type TierSubTypeName,
+  type TierRankName,
+  type TierStats,
+  type TierSubStats,
+  type TierAttributes,
+  type TierSubAttributes,
+} from './buildingFactoryTierConfig';
 export {
   CIVILIZATION_MILITARY_JOB_ARCHETYPES_90,
   CIVILIZATION_MILITARY_JOB_META,
@@ -579,6 +610,7 @@ export * as AutoBuyResourcesConfig from './autoBuyResourcesConfig';
 export * as ResearchTradingConfig from './researchTradingConfig';
 export * as UnitSystemsConfig from './unitSystemsConfig';
 export * as GovernmentLeadersConfig from './governmentLeadersConfig';
+<<<<<<< HEAD
 
 // Resource Elements Exports
 export {
@@ -706,3 +738,5 @@ export {
   type StaryardSubCategory,
 } from './staryardConfig';
 export * as StaryardConfig from './staryardConfig';
+export * as BuildingFactoryJobArchetypesConfig from './buildingFactoryJobArchetypesConfig';
+export * as BuildingFactoryTierConfig from './buildingFactoryTierConfig';
