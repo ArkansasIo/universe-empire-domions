@@ -1,5 +1,5 @@
 
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 
 type Category = {
   name: string;
