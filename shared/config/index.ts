@@ -683,3 +683,26 @@ export {
   type OrbitalStationSubType,
   type OrbitalStationRank,
 } from './orbitalStationsConfig';
+
+// Staryard System Exports
+export {
+  STARYARD_CATEGORIES,
+  STARYARD_SUB_CATEGORIES,
+  STARYARD_TIER_CATALOG,
+  STARYARD_META,
+  getStaryardTierEntry,
+  getStaryardTiersByCategory,
+  getStaryardTiersBySubCategory,
+  getStaryardTiersByClass,
+  getStaryardCategoryById,
+  getStaryardSubCategoryById,
+  type StaryardStats,
+  type StaryardSubStats,
+  type StaryardAttributes,
+  type StaryardSubAttributes,
+  type StaryardSubject,
+  type StaryardTierEntry,
+  type StaryardCategory,
+  type StaryardSubCategory,
+} from './staryardConfig';
+export * as StaryardConfig from './staryardConfig';
