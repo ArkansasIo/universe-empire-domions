@@ -558,3 +558,58 @@ export * as AutoBuyResourcesConfig from './autoBuyResourcesConfig';
 export * as ResearchTradingConfig from './researchTradingConfig';
 export * as UnitSystemsConfig from './unitSystemsConfig';
 export * as GovernmentLeadersConfig from './governmentLeadersConfig';
+
+// Resource Elements Exports
+export {
+  RESOURCE_ELEMENTS,
+  RESOURCE_ELEMENT_ECONOMIES,
+  RESOURCE_ELEMENTS_META,
+  getElement,
+  getElementsByCategory,
+  getElementsByRank,
+  getElementsForTier,
+  calculateElementExtractionRate,
+  calculateElementStorageCapacity,
+  calculateElementMarketValue,
+  calculateElementDecay,
+  computeSubStats,
+  getResourceElementLevelProfile,
+  getTierClass,
+  getTierSubClass,
+  // Individual element constants
+  SOLAR_PLASMA,
+  STELLAR_ASH,
+  NEBULA_GAS,
+  NEBULA_DUST,
+  COLD_PLASMA,
+  HOT_PLASMA,
+  QUANTUM_FIBER,
+  SUPERPOSED_CRYSTAL,
+  RIFT_SHARD,
+  FOLD_ESSENCE,
+  TEMPORAL_ECHO,
+  TEMPORAL_SHARD,
+  PSIONIC_CRYSTAL,
+  BIO_RESIN,
+  NANO_ALLOY,
+  RESONANT_LATTICE,
+  GRAVITON_ORE,
+  EM_FLUX_COMPOUND,
+  // Types
+  type ResourceElement,
+  type ResourceElementCategory,
+  type ResourceElementSubCategory,
+  type ResourceElementType,
+  type ResourceElementSubType,
+  type ResourceElementRank,
+  type TierClass,
+  type TierSubClass,
+  type ResourceElementStats,
+  type ResourceElementSubStats,
+  type ResourceElementAttributes,
+  type ResourceElementSubAttributes,
+  type ResourceElementSubject,
+  type ResourceElementLevelProfile,
+  type ResourceElementEconomy,
+} from './resourceElementsConfig';
+export * as ResourceElementsConfig from './resourceElementsConfig';
