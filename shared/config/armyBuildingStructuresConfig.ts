@@ -1832,18 +1832,18 @@ export function computeArmyStructureStats(
     trainingSpeed: parseFloat(
       (ARMY_STRUCTURE_LEVEL_CONFIG.baseTrainingSpeed * combined).toFixed(4),
     ),
-    // Maintenance scales by sqrt(level) rather than linearly to prevent
-    // exponential cost growth that would make high-level structures prohibitively
-    // expensive to maintain during normal gameplay.
+    // Maintenance scales by sqrt(levelMultiplier) to moderate the exponential
+    // growth of levelMultiplier itself, keeping maintenance costs sub-linear
+    // with level so high-level structures remain maintainable during gameplay.
     maintenanceCost: Math.round(
       ARMY_STRUCTURE_LEVEL_CONFIG.baseMaintenanceCost * tierMultiplier * Math.sqrt(levelMultiplier),
     ),
     structureHealth: Math.round(
       ARMY_STRUCTURE_LEVEL_CONFIG.baseStructureHealth * combined,
     ),
-    // Influence radius scales by sqrt(combined) for game-balance: a structure's
-    // area of effect grows proportionally to its power, not quadratically, so
-    // high-tier structures do not dominate an unreasonably large map area.
+    // Influence radius scales by sqrt(combined) so the covered area grows
+    // linearly with power (area ∝ radius²), preventing quadratic map domination
+    // at high tiers and levels.
     influenceRadius: parseFloat(
       (ARMY_STRUCTURE_LEVEL_CONFIG.baseInfluenceRadius * Math.sqrt(combined)).toFixed(2),
     ),
