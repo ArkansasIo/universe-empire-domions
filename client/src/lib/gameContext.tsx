@@ -9,6 +9,7 @@ import { CronJob, DEFAULT_CRON_JOBS } from './cronData';
 import { calculateConstructionCost, getMegaStructureTemplateById } from './megaStructures';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Megastructure, createMegastructure } from '@shared/config/megastructuresConfig';
+import { blink } from './blink';
 
 async function apiRequest(method: string, url: string, data?: any) {
   const headers: Record<string, string> = data ? { 'Content-Type': 'application/json' } : {};
@@ -400,6 +401,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [username, setUsername] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const channelRef = useRef<any>(null);
 
   const { data: authUser, isLoading: authLoading, error: authError, isSuccess: authSuccess } = useQuery({
     queryKey: ['/api/auth/user'],
@@ -435,11 +437,125 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     staleTime: 30000
   });
 
+  const { data: turnData, refetch: refetchTurns } = useQuery({
+    queryKey: ['/api/turns'],
+    queryFn: () => apiRequest('GET', '/api/turns'),
+    enabled: !!authUser,
+    refetchInterval: 15000 // Sync turns every 15s
+  });
+
+  useEffect(() => {
+    if (!authUser?.id) return;
+
+    let mounted = true;
+    let channel: any = null;
+
+    const setupRealtime = async () => {
+      try {
+        const channelName = `user_${authUser.id}`;
+        channel = blink.realtime.channel(channelName);
+        channelRef.current = channel;
+
+        await channel.subscribe({
+          userId: authUser.id,
+          metadata: { status: 'online' }
+        });
+
+        if (!mounted) return;
+
+        channel.onMessage((msg: any) => {
+          if (!mounted) return;
+          
+          if (msg.type === "game_tick") {
+            // Server-side tick received, refresh state
+            queryClient.invalidateQueries({ queryKey: ['/api/game/state'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/game/missions'] });
+            
+            if (msg.data.resources) {
+              setResources(prev => normalizeResources(msg.data.resources, prev));
+            }
+            
+            if (msg.data.turnsAvailable !== undefined) {
+              setCurrentTurns(msg.data.turnsAvailable);
+            }
+            
+            if (msg.data.completedBuildings?.length > 0) {
+              addEvent("Infrastructure Update", "Buildings updated via central command.", "success");
+            }
+          } else if (msg.type === "queue_completed") {
+            refetchGameState();
+            addEvent("Infrastructure Update", "A construction project has been finalized.", "success");
+          } else if (msg.type === "turn_accrued") {
+            refetchTurns();
+          }
+        });
+
+        console.log(`[REALTIME] Subscribed to ${channelName}`);
+      } catch (err) {
+        console.error("[REALTIME] Subscription error:", err);
+      }
+    };
+
+    setupRealtime();
+
+    return () => {
+      mounted = false;
+      channel?.unsubscribe();
+      channelRef.current = null;
+    };
+  }, [authUser?.id, queryClient]);
+
+
   const { data: serverMissions, refetch: refetchMissions } = useQuery({
     queryKey: ['/api/game/missions'],
     queryFn: () => apiRequest('GET', '/api/game/missions'),
     enabled: !!authUser,
     staleTime: 5000
+  });
+
+  const startResearchMutation = useMutation({
+    mutationFn: (techId: string) => apiRequest('POST', '/api/research/player/start', { techId }),
+    onSuccess: () => {
+      refetchGameState();
+      addEvent("Research Started", "Technological initiative confirmed.", "info");
+    },
+    onError: (error: any) => {
+      addEvent("Research Error", error.message || "Failed to start research", "danger");
+    }
+  });
+
+  const completeResearchMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/research/player/complete', {}),
+    onSuccess: () => refetchGameState()
+  });
+
+  const processQueueMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/game/process-queue', {}),
+    onSuccess: (data) => {
+      refetchGameState();
+      if (data.completed && data.completed.length > 0) {
+        data.completed.forEach((item: any) => {
+          if (item.type === "building") {
+            addEvent("Construction Complete", `${item.buildingType} upgrade finished on server.`, "success");
+          } else if (item.type === "unit") {
+            addEvent("Shipyard Order", `${item.amount}x ${item.unitType} constructed on server.`, "success");
+          }
+        });
+      }
+    }
+  });
+
+  const syncTickMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/game/sync-tick', {}),
+    onSuccess: (data) => {
+      // Sync resources if backend is more authoritative
+      if (data.resourceTick?.resources) {
+        setResources(normalizeResources(data.resourceTick.resources, resources));
+      }
+      if (data.queueTick?.completed && data.queueTick.completed.length > 0) {
+        refetchGameState();
+      }
+    }
   });
 
   const createMissionMutation = useMutation({
@@ -468,6 +584,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     queryFn: () => apiRequest('GET', '/api/messages?limit=50'),
     enabled: !!authUser,
     staleTime: 10000
+  });
+
+  const collectResourcesMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/game/collect-resources'),
+    onSuccess: (data) => {
+      setResources(normalizeResources(data.resources, resources));
+    }
   });
 
   const sendMessageMutation = useMutation({
@@ -564,11 +687,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if ((state as any).cronJobs) setCronJobs((state as any).cronJobs);
     setPlanetName((state as any).planetName || "Earth");
     setCoordinates((state as any).coordinates || "1:1:100:3");
-    setTotalTurns((state as any).totalTurns || 0);
-    setCurrentTurns((state as any).currentTurns || 0);
+    
+    // Sync turns from server
+    if (turnData) {
+      setTotalTurns(turnData.totalTurns || 0);
+      setCurrentTurns(turnData.currentTurns || 0);
+    } else {
+      setTotalTurns((state as any).totalTurns || 0);
+      setCurrentTurns((state as any).currentTurns || 0);
+    }
+    
     setNeedsSetup(Boolean((state as any).setupComplete === false));
     setIsInitialized(true);
-  }, [authUser, serverGameState, gameStateLoading, isInitialized]);
+  }, [authUser, serverGameState, gameStateLoading, isInitialized, turnData]);
 
   useEffect(() => {
     if (serverMissions && Array.isArray(serverMissions)) {
@@ -639,7 +770,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         coordinates
       });
     }
-  }, [resources, buildings, orbitalBuildings, research, units, megastructures, commander, government, artifacts, cronJobs, planetName, coordinates, isInitialized, isLoggedIn, debouncedSave]);
+  }, [buildings, orbitalBuildings, research, units, megastructures, commander, government, artifacts, cronJobs, planetName, coordinates, isInitialized, isLoggedIn, debouncedSave]);
 
   // Calculate production
   const getProduction = () => {
@@ -682,192 +813,34 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  // Main Game Loop
+  // Main Game Loop (Visual interpolation between server ticks)
   useEffect(() => {
+    let tickCount = 0;
     const interval = setInterval(() => {
       const now = Date.now();
       const production = getProduction();
       const speedMult = config?.gameSpeed || 1;
+      tickCount++;
 
-      // 1. Resource Production (Now formally part of "resource_tick" logic, but kept inline for smooth UI)
-      // We sync this with the cron job update visually
+      // 1. Resource Production (Visual interpolation only)
       setResources(prev => ({
         ...prev,
-        metal: prev.metal + (production.metal * 10 * speedMult),
-        crystal: prev.crystal + (production.crystal * 10 * speedMult),
-        deuterium: prev.deuterium + (production.deuterium * 10 * speedMult),
+        metal: prev.metal + (production.metal * speedMult),
+        crystal: prev.crystal + (production.crystal * speedMult),
+        deuterium: prev.deuterium + (production.deuterium * speedMult),
         energy: production.energy
       }));
 
-      // 2. Process Cron Jobs
-      setCronJobs(prev => prev.map(job => {
-        if (job.enabled && now - job.lastRun >= job.interval) {
-           // Execute Job Logic
-           if (job.id === "auto_mine" && research["aiTech"] > 0) {
-              // Logic for auto-mine
-              // addEvent("Auto-Mine", "Automated drones collected nearby debris.", "info");
-           }
-           
-           return { ...job, lastRun: now };
-        }
-        return job;
-      }));
-
-      // 3. Process Queue
-      setQueue(prev => {
-        const finished = prev.filter(item => item.endTime <= now);
-        const remaining = prev.filter(item => item.endTime > now);
-
-        finished.forEach(item => {
-           if (item.type === "building") {
-             setBuildings(b => ({ ...b, [item.id]: b[item.id as keyof Buildings] + 1 }));
-             addEvent("Construction Complete", `${item.name} upgrade finished.`, "success");
-             setCommander(c => ({ ...c, stats: { ...c.stats, xp: c.stats.xp + 100 } }));
-           } else if (item.type === "research") {
-             setResearch(r => ({ ...r, [item.id]: (r[item.id] || 0) + 1 }));
-             addEvent("Research Complete", `${item.name} research finished.`, "info");
-             setCommander(c => ({ ...c, stats: { ...c.stats, xp: c.stats.xp + 200 } }));
-           } else if (item.type === "unit" && item.amount) {
-             setUnits(u => ({ ...u, [item.id]: (u[item.id] || 0) + item.amount! }));
-             addEvent("Shipyard Order", `${item.amount}x ${item.name} constructed.`, "success");
-           } else if (item.type === "megastructure") {
-             const newMega = createMegastructure(item.id, `mega-${Date.now()}`);
-             if (newMega) {
-               setMegastructures(m => [...m, newMega]);
-               addEvent("Megastructure Complete", `${item.name} is now operational.`, "success");
-             }
-           }
-        });
-
-        return remaining;
-      });
-
-      // 4. Process Missions
-      setActiveMissions(prev => {
-         const arriving = prev.filter(m => m.status === "outbound" && m.arrivalTime <= now && !m.processed);
-         const returning = prev.filter(m => m.status === "return" && m.returnTime <= now);
-         const ongoing = prev.filter(m => !((m.status === "outbound" && m.arrivalTime <= now) || (m.status === "return" && m.returnTime <= now)));
-
-         if (arriving.length > 0) {
-            arriving.forEach(m => {
-               if (m.type === "attack") {
-                  const defenders: Units = { lightFighter: Math.floor(Math.random() * 50), heavyFighter: Math.floor(Math.random() * 10) };
-                  const report = simulateCombat(m.units, defenders);
-                  
-                  // Apply loot if attacker won
-                  if (report.winner === "attacker") {
-                      setResources(prev => ({
-                          ...prev,
-                          metal: prev.metal + report.loot.metal,
-                          crystal: prev.crystal + report.loot.crystal,
-                          deuterium: prev.deuterium + report.loot.deuterium
-                      }));
-                  }
-
-                  const newMsg: Message = {
-                     id: Math.random().toString(36).substr(2, 9),
-                     from: "Fleet Command",
-                     to: "Commander",
-                     subject: `Combat Report: [${m.target}]`,
-                     body: `Battle against Pirates at ${m.target}.\nResult: ${report.winner.toUpperCase()}\nRounds: ${report.rounds}\nAttacker Losses: ${report.attackerLosses.toLocaleString()}\nDefender Losses: ${report.defenderLosses.toLocaleString()}\nLoot: ${report.loot.metal} Metal, ${report.loot.crystal} Crystal`,
-                     timestamp: now,
-                     read: false,
-                     type: "combat",
-                     battleReport: report
-                  };
-                  setMessages(prevMsgs => [newMsg, ...prevMsgs]);
-                  addEvent("Battle Engaged", `Fleet engaged hostiles at ${m.target}.`, "warning");
-               } else if (m.type === "espionage") {
-                  // Mock espionage check
-                  const probeCount = m.units.espionageProbe || 0;
-                  const report = simulateEspionage(probeCount, 3, research.espionageTech || 0);
-                  
-                  const newMsg: Message = {
-                     id: Math.random().toString(36).substr(2, 9),
-                     from: "Intel Ops",
-                     to: "Commander",
-                     subject: `Espionage Report: [${m.target}]`,
-                     body: `Intelligence gathered from ${m.target}. Counter-espionage chance: ${report.counterEspionage}%`,
-                     timestamp: now,
-                     read: false,
-                     type: "espionage",
-                     espionageReport: report
-                  };
-                  setMessages(prevMsgs => [newMsg, ...prevMsgs]);
-                  addEvent("Espionage Success", `Data retrieved from ${m.target}.`, "info");
-               } else if (m.type === "sabotage") {
-                  const saboteurs = m.units.spy || 0; // Assume 'spy' unit or just any unit for now, let's say marines
-                  const result = simulateSabotage(10); // Mock count
-                  
-                  const newMsg: Message = {
-                     id: Math.random().toString(36).substr(2, 9),
-                     from: "Spec Ops",
-                     to: "Commander",
-                     subject: `Sabotage Result: [${m.target}]`,
-                     body: result.log,
-                     timestamp: now,
-                     read: false,
-                     type: "combat"
-                  };
-                  setMessages(prevMsgs => [newMsg, ...prevMsgs]);
-                  addEvent("Sabotage Mission", result.success ? "Sabotage successful!" : "Sabotage failed.", result.success ? "success" : "danger");
-               } else {
-                  addEvent("Fleet Arrived", `Fleet reached destination ${m.target}.`, "info");
-               }
-               m.status = "return";
-               m.processed = true;
-            });
-         }
-
-         if (returning.length > 0) {
-            returning.forEach(m => {
-               addEvent("Fleet Returned", `Fleet returned from ${m.target}.`, "info");
-               setUnits(u => {
-                  const newUnits = {...u};
-                  Object.entries(m.units).forEach(([id, count]) => {
-                     newUnits[id] = (newUnits[id] || 0) + count;
-                  });
-                  return newUnits;
-               });
-            });
-         }
-
-         const nextActive = [
-            ...ongoing,
-            ...arriving 
-         ];
-
-         return nextActive;
-      });
-
-      // 5. Random Events (Cron-like random trigger)
-      if (Math.random() > 0.995) {
-         const randomEvents = [
-            { title: "Merchant Arrival", desc: "A wandering trader has docked at the spaceport.", type: "info" },
-            { title: "Solar Flare", desc: "Energy production increased by 10% momentarily.", type: "success" },
-            { title: "Pirate Signal", desc: "Intercepcted coded transmission from local pirate gang.", type: "warning" },
-            { title: "Sensor Malfunction", desc: "Long range scanners offline for maintenance.", type: "danger" }
-         ];
-         const ev = randomEvents[Math.floor(Math.random() * randomEvents.length)];
-         addEvent(ev.title, ev.desc, ev.type as any);
-      }
-
-      // 6. Turn generation (3-5 turns per minute = 1 turn every 12-20 seconds)
-      const nowTurns = Date.now();
-      const timeSinceLastTurn = nowTurns - lastTurnUpdateRef.current;
-      const turnInterval = Math.random() * 8000 + 12000; // 12-20 seconds for 3-5 turns per minute
-      
-      if (timeSinceLastTurn >= turnInterval) {
-        setTotalTurns(prev => prev + 1);
-        setCurrentTurns(prev => prev + 1);
-        lastTurnUpdateRef.current = nowTurns;
-        addEvent("Turn Generated", "A new turn has arrived!", "info");
+      // 2. Refresh state every 30 seconds as fallback
+      if (tickCount >= 30) {
+        syncTickMutation.mutate();
+        tickCount = 0;
       }
 
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [buildings, commander, government, config, research, cronJobs]);
+  }, [buildings, commander, government, config, research]);
 
   const addEvent = (title: string, description: string, type: GameEvent["type"]) => {
     setEvents(prev => [{
@@ -882,7 +855,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const updateBuilding = async (building: keyof Buildings, name: string, time: number = 5000) => {
     const turnCost = 2; // 2 turns per building
 
-    if (!spendTurns(turnCost)) return;
+    if (!await spendTurns(turnCost)) return;
 
     try {
       // Call backend API to build
@@ -918,13 +891,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateResearch = (tech: string, name: string, time: number = 5000) => {
+  const updateResearch = async (tech: string, name: string, time: number = 5000) => {
      const turnCost = 3; // 3 turns per research
-     if (!spendTurns(turnCost)) return;
+     if (!await spendTurns(turnCost)) return;
      
      const currentLevel = research[tech] || 0;
      const adjustedTime = (time * Math.pow(1.2, currentLevel)) / (config?.gameSpeed || 1);
      const now = Date.now();
+
+     startResearchMutation.mutate(tech);
+
      setQueue(prev => [...prev, {
         id: tech,
         name: name,
@@ -937,7 +913,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const buildUnit = async (unitId: string, amount: number, name: string, time: number = 2000) => {
     const turnCost = amount; // 1 turn per unit
-    if (!spendTurns(turnCost)) return;
+    if (!await spendTurns(turnCost)) return;
     
     try {
       // Call backend API to build ships
@@ -974,9 +950,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const constructMegastructure = (templateId: string, name: string, time: number = 3600000) => {
+  const constructMegastructure = async (templateId: string, name: string, time: number = 3600000) => {
     const turnCost = 100;
-    if (!spendTurns(turnCost)) return;
+    if (!await spendTurns(turnCost)) return;
 
     const template = getMegaStructureTemplateById(templateId);
     if (!template) {
@@ -1165,13 +1141,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
      setGovernment(prev => ({ ...prev, taxRate: rate }));
   };
 
-  const spendTurns = (amount: number): boolean => {
-    if (currentTurns >= amount) {
-      setCurrentTurns(prev => prev - amount);
-      addEvent("Turns Spent", `Used ${amount} turn(s) for action`, "info");
-      return true;
-    } else {
+  const spendTurns = async (amount: number): Promise<boolean> => {
+    if (currentTurns < amount) {
       addEvent("Insufficient Turns", `Need ${amount} turn(s), have ${currentTurns}`, "warning");
+      return false;
+    }
+
+    try {
+      const response = await apiRequest("POST", "/api/turns/spend", { amount });
+      if (response.success) {
+        setCurrentTurns(response.currentTurns);
+        addEvent("Turns Spent", `Used ${amount} turn(s) for action`, "info");
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to spend turns:", error);
       return false;
     }
   };
@@ -1299,10 +1284,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      console.error("Logout API failed", e);
+    }
     setIsLoggedIn(false);
     setUsername("");
     setIsInitialized(false);
-    window.location.href = '/api/logout';
+    localStorage.removeItem('stellar_username');
+    localStorage.removeItem('stellar_password');
+    window.location.href = '/';
   };
 
   const toggleAdmin = () => {
@@ -1405,7 +1397,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        totalTurns,
        currentTurns,
        spendTurns,
-       processMissions
+       processMissions,
+       completeResearch: completeResearchMutation.mutate,
+       processQueue: processQueueMutation.mutate
     }}>
       {children}
     </GameContext.Provider>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import GameLayout from "@/components/layout/GameLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,8 +7,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BriefcaseBusiness, Shield, Wheat, Droplets, Users, Zap, Lock, Star } from "lucide-react";
+import { BriefcaseBusiness, Shield, Wheat, Droplets, Users, Zap, Lock, Star, Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 type JobDomain = "civilization" | "military";
 type JobRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
@@ -73,9 +74,12 @@ const domainIcons: Record<JobDomain, React.ReactElement> = {
 };
 
 export default function CivilizationSystems() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [domain, setDomain] = useState<"all" | JobDomain>("all");
   const [selectedClass, setSelectedClass] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [assignAmount, setAssignAmount] = useState<Record<string, number>>({});
 
   const { data: catalog, isLoading, isError: catalogError } = useQuery<JobsCatalogResponse>({
     queryKey: ["/api/config/civilization-jobs"],
@@ -117,6 +121,36 @@ export default function CivilizationSystems() {
       return res.json();
     },
   });
+
+  const assignWorkerMutation = useMutation({
+    mutationFn: async ({ jobId, employees }: { jobId: string; employees: number }) => {
+      const res = await fetch("/api/civilization/workforce/assign", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, employees }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Assignment failed");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config/civilization-jobs/projection"] });
+      toast({ title: "Workers Assigned", description: data.message });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Assignment failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleAmountChange = (jobId: string, delta: number) => {
+    setAssignAmount(prev => ({
+      ...prev,
+      [jobId]: Math.max(1, (prev[jobId] || 1) + delta)
+    }));
+  };
 
   const filteredItems = useMemo(() => {
     const source = catalog?.items || [];
@@ -405,9 +439,34 @@ export default function CivilizationSystems() {
                   </CardContent>
 
                   {/* Button */}
-                  <div className="border-t border-slate-200 p-3 bg-slate-50">
-                    <Button size="sm" variant="outline" className="w-full text-xs">
-                      Assign Worker
+                  <div className="border-t border-slate-200 p-3 bg-slate-50 space-y-3">
+                    <div className="flex items-center justify-center gap-3">
+                      <Button 
+                        size="icon" 
+                        variant="outline" 
+                        className="h-8 w-8"
+                        onClick={() => handleAmountChange(job.id, -1)}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="font-mono font-bold w-8 text-center">{assignAmount[job.id] || 1}</span>
+                      <Button 
+                        size="icon" 
+                        variant="outline" 
+                        className="h-8 w-8"
+                        onClick={() => handleAmountChange(job.id, 1)}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="default" 
+                      className="w-full text-xs font-orbitron"
+                      onClick={() => assignWorkerMutation.mutate({ jobId: job.id, employees: assignAmount[job.id] || 1 })}
+                      disabled={assignWorkerMutation.isPending}
+                    >
+                      {assignWorkerMutation.isPending ? "ASSIGNING..." : "ASSIGN WORKERS"}
                     </Button>
                   </div>
                 </Card>
