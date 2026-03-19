@@ -5,7 +5,7 @@
 
 ## Implementation Summary
 
-A complete EVE-style Government Progression Tree system has been created for StellarDominion-2, featuring three core pillars (Stability, Law, Economic Doctrine) with 15 unique governance nodes across 3 tiers.
+A complete EVE-style Government Progression Tree system has been created for universe-empire-dominion, featuring three core pillars (Stability, Law, Economic Doctrine) with 15 unique governance nodes across 3 tiers.
 
 ## Files Created
 

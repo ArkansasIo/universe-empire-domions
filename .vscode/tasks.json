@@ -7,7 +7,7 @@
 			"command": "npm",
 			"args": [
 				"--prefix",
-				"./StellarDominion-2",
+				"./universe-empire-dominion",
 				"run",
 				"dev"
 			],

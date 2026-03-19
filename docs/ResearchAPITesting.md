@@ -6,7 +6,7 @@ Fast-track guide to testing and integrating the Research API.
 
 ### 1. Start the Server
 ```bash
-cd "d:\New folder\StellarDominion-2\StellarDominion-2"
+cd "d:\New folder\universe-empire-dominion\universe-empire-dominion"
 npm run dev
 ```
 

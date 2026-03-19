@@ -49,7 +49,7 @@
 
 2. **Create Project**
    - [ ] Click "New Project" → "Deploy from GitHub repo"
-   - [ ] Select your `StellarDominion-2` repository
+   - [ ] Select your `universe-empire-dominion` repository
    - [ ] Railway auto-detects Node.js and uses `railway.json` config
 
 3. **Add Database**
@@ -284,8 +284,8 @@ docker-compose down
 4. **Deploy Application**
    ```bash
    # Clone repository
-   git clone https://github.com/yourusername/StellarDominion-2.git
-   cd StellarDominion-2
+   git clone https://github.com/yourusername/universe-empire-dominion.git
+   cd universe-empire-dominion
    
    # Install dependencies
    npm ci --production

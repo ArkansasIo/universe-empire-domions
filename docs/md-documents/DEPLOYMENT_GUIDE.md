@@ -85,7 +85,7 @@ git add .
 git commit -m "Initial commit"
 
 # Push to GitHub
-git remote add origin https://github.com/yourusername/StellarDominion-2.git
+git remote add origin https://github.com/yourusername/universe-empire-dominion.git
 git push -u origin main
 ```
 
@@ -281,7 +281,7 @@ cat .gitignore | grep .env
 **Step 2: New Project**
 1. Click "New Project"
 2. Select "Deploy from GitHub repo"
-3. Choose `StellarDominion-2` repository
+3. Choose `universe-empire-dominion` repository
 4. Railway auto-detects Node.js
 
 **Step 3: Add Database**
@@ -990,7 +990,7 @@ Already configured in `server/db/index.ts` ✅
 - Fly.io: [Community](https://community.fly.io) | [Docs](https://fly.io/docs)
 
 ### Issues
-- GitHub Issues: [Create Issue](https://github.com/yourusername/StellarDominion-2/issues)
+- GitHub Issues: [Create Issue](https://github.com/yourusername/universe-empire-dominion/issues)
 
 ---
 

@@ -9,7 +9,7 @@
 
 ### Starting the Dev Server
 ```bash
-cd "d:\New folder\StellarDominion-2\StellarDominion-2"
+cd "d:\New folder\universe-empire-dominion\universe-empire-dominion"
 npm run dev
 # Server running on http://localhost:5000
 ```
@@ -110,7 +110,7 @@ const menuAssets = MENU_ASSETS.filter(a => a.size === 'large');
 ## 📁 Project Structure Quick Guide
 
 ```
-StellarDominion-2/
+universe-empire-dominion/
 ├─ client/                    # React Frontend
 │  ├─ src/pages/
 │  │  ├─ ResearchLab.tsx       # 🆕 Lab management UI

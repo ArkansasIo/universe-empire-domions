@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Rocket, Shield, Info, Loader2, Eye, EyeOff, Copy, Check } from "lucide-react";
+import { Rocket, Shield, Info, Loader2, Eye, EyeOff, Copy, Check, Github, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { MENU_ASSETS } from "@shared/config";
@@ -115,6 +115,21 @@ export default function Auth() {
       <header className="fixed top-0 inset-x-0 h-16 border-b border-slate-200 bg-white/95 backdrop-blur-sm z-30">
         <div className="max-w-6xl mx-auto h-full px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="text-xs text-slate-700 border-slate-300 hover:bg-slate-100"
+            >
+              <a
+                href="https://github.com/ArkansasIo/stellar-dominion"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="button-github-top-left"
+              >
+                <Github className="w-4 h-4 mr-1" /> GitHub
+              </a>
+            </Button>
             <Rocket className="w-5 h-5 text-primary" />
             <span className="font-orbitron font-bold text-sm text-slate-900 tracking-wide">Universe-Empires-Dominions</span>
           </div>
@@ -436,6 +451,22 @@ export default function Auth() {
           <span>Developed by Stephen</span>
         </div>
       </div>
+
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="fixed bottom-20 right-4 z-30 border-slate-300 text-slate-700 hover:bg-slate-100"
+      >
+        <a
+          href="https://github.com/ArkansasIo/stellar-dominion/blob/master/LICENSE"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="button-license-bottom-right"
+        >
+          <FileText className="w-4 h-4 mr-1" /> License
+        </a>
+      </Button>
     </div>
   );
 }

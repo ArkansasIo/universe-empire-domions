@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Rocket, Shield, Info, Loader2, Eye, EyeOff, Copy, Check } from "lucide-react";
+import { Rocket, Shield, Info, Loader2, Eye, EyeOff, Copy, Check, Github, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -102,6 +102,22 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="fixed top-4 left-4 z-30 text-xs text-slate-700 border-slate-300 hover:bg-slate-100"
+      >
+        <a
+          href="https://github.com/ArkansasIo/stellar-dominion"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="button-github-top-left"
+        >
+          <Github className="w-4 h-4 mr-1" /> GitHub
+        </a>
+      </Button>
+
       {error?.includes("Database is temporarily") && (
         <div className="fixed top-4 right-4 z-50 max-w-sm">
           <div className="bg-yellow-900 border-2 border-yellow-500 text-yellow-100 px-4 py-3 rounded-lg shadow-xl">
@@ -389,6 +405,22 @@ export default function Auth() {
            </div>
         </CardFooter>
       </Card>
+
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="fixed bottom-4 right-4 z-30 border-slate-300 text-slate-700 hover:bg-slate-100"
+      >
+        <a
+          href="https://github.com/ArkansasIo/stellar-dominion/blob/master/LICENSE"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="button-license-bottom-right"
+        >
+          <FileText className="w-4 h-4 mr-1" /> License
+        </a>
+      </Button>
     </div>
   );
 }

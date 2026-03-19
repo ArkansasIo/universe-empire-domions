@@ -48,7 +48,7 @@ A comprehensive research management system for Stellar Dominion featuring:
 
 ### Start Development Server
 ```bash
-cd "d:\New folder\StellarDominion-2\StellarDominion-2"
+cd "d:\New folder\universe-empire-dominion\universe-empire-dominion"
 npm run dev
 # Server runs on http://localhost:5000
 ```
