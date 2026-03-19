@@ -6,8 +6,6 @@
 			"type": "shell",
 			"command": "npm",
 			"args": [
-				"--prefix",
-				"./universe-empire-dominion",
 				"run",
 				"dev"
 			],

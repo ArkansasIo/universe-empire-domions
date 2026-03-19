@@ -404,7 +404,6 @@ export default function ResearchLabPage() {
                         <div className="flex items-center gap-1 shrink-0">
                           {idx > 0 && (
                             <>
-                              <Button size="icon" variant="ghost" className="h-7 w-7">
                               <Button
                                 size="icon"
                                 variant="ghost"
@@ -415,7 +414,7 @@ export default function ResearchLabPage() {
                                     newPosition: idx - 1,
                                   })
                                 }
-                                disabled={reorderQueueMutation.isPending || idx <= 1}
+                                disabled={reorderQueueMutation.isPending}
                               >
                                 <ChevronUp className="w-3 h-3" />
                               </Button>
