@@ -449,6 +449,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!authUser?.id) return;
+    if (!blink) {
+      console.warn('[REALTIME] Blink is not configured; skipping realtime subscription.');
+      return;
+    }
+    const blinkClient = blink;
 
     let mounted = true;
     let channel: any = null;
@@ -456,7 +461,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const setupRealtime = async () => {
       try {
         const channelName = `user_${authUser.id}`;
-        channel = blink.realtime.channel(channelName);
+        channel = blinkClient.realtime.channel(channelName);
         channelRef.current = channel;
 
         await channel.subscribe({
