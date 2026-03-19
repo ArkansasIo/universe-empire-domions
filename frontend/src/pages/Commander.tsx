@@ -30,6 +30,12 @@ import {
    SubClassId,
    CommanderEquipmentType,
 } from "@/lib/commanderTypes";
+import {
+   COMMANDER_TALENT_TREE,
+   getCommanderTierForLevel,
+   getCommanderTitleByTier,
+   type CommanderTalentBranch,
+} from "@shared/config/commanderTalentTreeConfig";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -116,6 +122,24 @@ const skills = [
   { id: "construction_expert", name: "Construction Expert", maxLevel: 10, currentLevel: 2, desc: "-3% build time per level" }
 ];
 
+const branchLabels: Record<CommanderTalentBranch, string> = {
+   warfare: "Warfare",
+   logistics: "Logistics",
+   science: "Science",
+   engineering: "Engineering",
+   diplomacy: "Diplomacy",
+   espionage: "Espionage",
+};
+
+const commanderAbilities = [
+   { id: "orbital_bombardment", name: "Orbital Bombardment", unlockLevel: 6, cooldown: "8m", effect: "+18% Fleet opening strike damage" },
+   { id: "rapid_deploy", name: "Rapid Deploy", unlockLevel: 10, cooldown: "12m", effect: "+25% Fleet dispatch speed for 10 minutes" },
+   { id: "emergency_fortify", name: "Emergency Fortify", unlockLevel: 14, cooldown: "15m", effect: "+22% Planetary defense strength for 1 battle" },
+   { id: "research_burst", name: "Research Burst", unlockLevel: 18, cooldown: "20m", effect: "-20% research time on next queued project" },
+   { id: "supply_surge", name: "Supply Surge", unlockLevel: 22, cooldown: "18m", effect: "+15% metal/crystal/deuterium production for 20 minutes" },
+   { id: "shadow_network", name: "Shadow Network", unlockLevel: 30, cooldown: "30m", effect: "+30% espionage success rate for next operation" },
+];
+
 export default function Commander() {
   const { commander, equipItem, unequipItem, craftItem, temperItem, setCommanderIdentity } = useGame();
 
@@ -137,6 +161,23 @@ export default function Commander() {
 
   const totalSkillPoints = skills.reduce((acc, s) => acc + s.currentLevel, 0);
   const unlockedAchievements = achievements.filter(a => a.unlocked).length;
+   const commanderLevel = commander?.stats?.level || 1;
+   const commanderTier = getCommanderTierForLevel(commanderLevel);
+   const commanderTitle = getCommanderTitleByTier(commanderTier);
+
+   const equipmentStats = [commander?.equipment?.weapon, commander?.equipment?.armor, commander?.equipment?.module]
+      .filter(Boolean)
+      .reduce(
+         (acc, item) => {
+            if (!item?.stats) return acc;
+            acc.warfare += item.stats.warfare || 0;
+            acc.logistics += item.stats.logistics || 0;
+            acc.science += item.stats.science || 0;
+            acc.engineering += item.stats.engineering || 0;
+            return acc;
+         },
+         { warfare: 0, logistics: 0, science: 0, engineering: 0 }
+      );
 
   return (
     <GameLayout>
@@ -206,6 +247,7 @@ export default function Commander() {
 
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start overflow-x-auto">
+                  <TabsTrigger value="character-menu" className="font-orbitron" data-testid="tab-character-menu"><Sparkles className="w-4 h-4 mr-2" /> Character Menu</TabsTrigger>
             <TabsTrigger value="profile" className="font-orbitron" data-testid="tab-profile"><User className="w-4 h-4 mr-2" /> Profile</TabsTrigger>
             <TabsTrigger value="skills" className="font-orbitron" data-testid="tab-skills"><Target className="w-4 h-4 mr-2" /> Skills</TabsTrigger>
             <TabsTrigger value="achievements" className="font-orbitron" data-testid="tab-achievements"><Trophy className="w-4 h-4 mr-2" /> Achievements</TabsTrigger>
@@ -214,6 +256,197 @@ export default function Commander() {
             <TabsTrigger value="inventory" className="font-orbitron" data-testid="tab-inventory"><Box className="w-4 h-4 mr-2" /> Inventory</TabsTrigger>
             <TabsTrigger value="smithy" className="font-orbitron" data-testid="tab-smithy"><Anvil className="w-4 h-4 mr-2" /> Smithy</TabsTrigger>
           </TabsList>
+
+               <TabsContent value="character-menu" className="mt-6">
+                  <Card className="bg-white border-slate-200">
+                     <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-slate-900">
+                           <Sparkles className="w-5 h-5 text-indigo-600" /> Commander Character Menu
+                        </CardTitle>
+                        <CardDescription>Manage talent tree, skills, abilities, active effects, and full commander details.</CardDescription>
+                     </CardHeader>
+                     <CardContent>
+                        <Tabs defaultValue="talent-tree" className="w-full">
+                           <TabsList className="grid w-full grid-cols-5">
+                              <TabsTrigger value="talent-tree">Talent Tree</TabsTrigger>
+                              <TabsTrigger value="skills-menu">Skills</TabsTrigger>
+                              <TabsTrigger value="abilities-menu">Abilities</TabsTrigger>
+                              <TabsTrigger value="effects-menu">Effects</TabsTrigger>
+                              <TabsTrigger value="details-menu">Details</TabsTrigger>
+                           </TabsList>
+
+                           <TabsContent value="talent-tree" className="mt-4 space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                 <Card className="bg-indigo-50 border-indigo-200">
+                                    <CardContent className="p-4">
+                                       <div className="text-xs uppercase text-indigo-600">Commander Tier</div>
+                                       <div className="text-3xl font-orbitron text-indigo-900">T{commanderTier}</div>
+                                       <div className="text-sm text-indigo-700">Level {commanderLevel}</div>
+                                    </CardContent>
+                                 </Card>
+                                 <Card className="bg-amber-50 border-amber-200">
+                                    <CardContent className="p-4">
+                                       <div className="text-xs uppercase text-amber-600">Current Title</div>
+                                       <div className="text-xl font-bold text-amber-900">{commanderTitle.badge} {commanderTitle.title}</div>
+                                       <div className="text-sm text-amber-700">Tier-based command rank</div>
+                                    </CardContent>
+                                 </Card>
+                                 <Card className="bg-emerald-50 border-emerald-200">
+                                    <CardContent className="p-4">
+                                       <div className="text-xs uppercase text-emerald-600">Talent Nodes</div>
+                                       <div className="text-3xl font-orbitron text-emerald-900">{COMMANDER_TALENT_TREE.branches.length}</div>
+                                       <div className="text-sm text-emerald-700">Branches active this tier</div>
+                                    </CardContent>
+                                 </Card>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 {COMMANDER_TALENT_TREE.branches.map((branch) => {
+                                    const currentNode = COMMANDER_TALENT_TREE.nodes.find(
+                                       (node) => node.branch === branch && node.tier === commanderTier
+                                    );
+                                    const nextNode = COMMANDER_TALENT_TREE.nodes.find(
+                                       (node) => node.branch === branch && node.tier === commanderTier + 1
+                                    );
+
+                                    return (
+                                       <Card key={branch} className="border-slate-200">
+                                          <CardHeader className="pb-2">
+                                             <CardTitle className="text-base">{branchLabels[branch]} Track</CardTitle>
+                                             <CardDescription>Progression node and upcoming unlock</CardDescription>
+                                          </CardHeader>
+                                          <CardContent className="space-y-3">
+                                             {currentNode ? (
+                                                <div className="p-3 rounded border bg-slate-50">
+                                                   <div className="font-bold text-slate-900">{currentNode.name}</div>
+                                                   <div className="text-xs text-slate-500 mb-2">{currentNode.description}</div>
+                                                   <div className="grid grid-cols-2 gap-2 text-xs">
+                                                      {Object.entries(currentNode.effects).map(([key, value]) => (
+                                                         <div key={`${currentNode.id}-${key}`} className="flex justify-between bg-white border rounded px-2 py-1">
+                                                            <span>{key}</span>
+                                                            <span className="font-semibold">+{value}</span>
+                                                         </div>
+                                                      ))}
+                                                   </div>
+                                                </div>
+                                             ) : (
+                                                <div className="p-3 rounded border bg-slate-50 text-sm text-slate-500">No node available at current tier.</div>
+                                             )}
+
+                                             {nextNode && (
+                                                <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-3 py-2">
+                                                   Next unlock: <span className="font-semibold">{nextNode.name}</span> at level {nextNode.requiredLevel}
+                                                </div>
+                                             )}
+                                          </CardContent>
+                                       </Card>
+                                    );
+                                 })}
+                              </div>
+                           </TabsContent>
+
+                           <TabsContent value="skills-menu" className="mt-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 {skills.map(skill => (
+                                    <div key={`menu-${skill.id}`} className="bg-slate-50 p-4 rounded border border-slate-200">
+                                       <div className="flex items-center justify-between mb-2">
+                                          <div>
+                                             <div className="font-bold text-slate-900">{skill.name}</div>
+                                             <div className="text-xs text-muted-foreground">{skill.desc}</div>
+                                          </div>
+                                          <Badge variant="outline" className="font-mono">{skill.currentLevel}/{skill.maxLevel}</Badge>
+                                       </div>
+                                       <Progress value={(skill.currentLevel / skill.maxLevel) * 100} className="h-2" />
+                                    </div>
+                                 ))}
+                              </div>
+                           </TabsContent>
+
+                           <TabsContent value="abilities-menu" className="mt-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 {commanderAbilities.map((ability) => {
+                                    const unlocked = commanderLevel >= ability.unlockLevel;
+                                    return (
+                                       <Card key={ability.id} className={cn("border", unlocked ? "border-green-200 bg-green-50" : "border-slate-200 bg-slate-50")}> 
+                                          <CardContent className="p-4 space-y-2">
+                                             <div className="flex items-center justify-between">
+                                                <div className="font-bold text-slate-900">{ability.name}</div>
+                                                <Badge variant={unlocked ? "default" : "secondary"}>{unlocked ? "Unlocked" : `Lvl ${ability.unlockLevel}`}</Badge>
+                                             </div>
+                                             <div className="text-sm text-slate-600">{ability.effect}</div>
+                                             <div className="text-xs text-slate-500">Cooldown: {ability.cooldown}</div>
+                                          </CardContent>
+                                       </Card>
+                                    );
+                                 })}
+                              </div>
+                           </TabsContent>
+
+                           <TabsContent value="effects-menu" className="mt-4 space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                                 <Card className="border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Warfare Effect</div><div className="text-2xl font-orbitron">+{(commander.stats.warfare + equipmentStats.warfare) * 5}%</div></CardContent></Card>
+                                 <Card className="border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Logistics Effect</div><div className="text-2xl font-orbitron">+{(commander.stats.logistics + equipmentStats.logistics) * 2}%</div></CardContent></Card>
+                                 <Card className="border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Science Effect</div><div className="text-2xl font-orbitron">-{(commander.stats.science + equipmentStats.science) * 3}%</div></CardContent></Card>
+                                 <Card className="border-slate-200"><CardContent className="p-4"><div className="text-xs uppercase text-slate-500">Engineering Effect</div><div className="text-2xl font-orbitron">-{(commander.stats.engineering + equipmentStats.engineering) * 3}%</div></CardContent></Card>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                 <Card className="border-slate-200">
+                                    <CardHeader className="pb-2"><CardTitle className="text-base">Race Effects</CardTitle></CardHeader>
+                                    <CardContent className="space-y-2 text-sm">
+                                       {RACES[commander.race].bonuses.map((bonus, idx) => (
+                                          <div key={`race-effect-${idx}`} className="bg-slate-50 border rounded px-2 py-1">{bonus}</div>
+                                       ))}
+                                    </CardContent>
+                                 </Card>
+                                 <Card className="border-slate-200">
+                                    <CardHeader className="pb-2"><CardTitle className="text-base">Class Effects</CardTitle></CardHeader>
+                                    <CardContent className="space-y-2 text-sm">
+                                       {CLASSES[commander.class].bonuses.map((bonus, idx) => (
+                                          <div key={`class-effect-${idx}`} className="bg-slate-50 border rounded px-2 py-1">{bonus}</div>
+                                       ))}
+                                    </CardContent>
+                                 </Card>
+                                 <Card className="border-slate-200">
+                                    <CardHeader className="pb-2"><CardTitle className="text-base">Subclass Effects</CardTitle></CardHeader>
+                                    <CardContent className="space-y-2 text-sm">
+                                       {commander.subClass ? SUBCLASSES[commander.subClass].bonuses.map((bonus, idx) => (
+                                          <div key={`subclass-effect-${idx}`} className="bg-slate-50 border rounded px-2 py-1">{bonus}</div>
+                                       )) : <div className="text-slate-500">No specialization selected.</div>}
+                                    </CardContent>
+                                 </Card>
+                              </div>
+                           </TabsContent>
+
+                           <TabsContent value="details-menu" className="mt-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <Card className="border-slate-200">
+                                    <CardHeader className="pb-2"><CardTitle className="text-base">Commander Identity Details</CardTitle></CardHeader>
+                                    <CardContent className="space-y-2 text-sm">
+                                       <div className="flex justify-between"><span>Name</span><span className="font-semibold">{commander.name || "Commander"}</span></div>
+                                       <div className="flex justify-between"><span>Race</span><span className="font-semibold">{RACES[commander.race].name}</span></div>
+                                       <div className="flex justify-between"><span>Class</span><span className="font-semibold">{CLASSES[commander.class].name}</span></div>
+                                       <div className="flex justify-between"><span>Subclass</span><span className="font-semibold">{commander.subClass ? SUBCLASSES[commander.subClass].name : "None"}</span></div>
+                                       <div className="flex justify-between"><span>Title</span><span className="font-semibold">{commanderTitle.badge} {commanderTitle.title}</span></div>
+                                    </CardContent>
+                                 </Card>
+
+                                 <Card className="border-slate-200">
+                                    <CardHeader className="pb-2"><CardTitle className="text-base">Combat & Utility Snapshot</CardTitle></CardHeader>
+                                    <CardContent className="space-y-2 text-sm">
+                                       <div className="flex justify-between"><span>Weapon</span><span className="font-semibold">{commander.equipment.weapon?.name || "None"}</span></div>
+                                       <div className="flex justify-between"><span>Armor</span><span className="font-semibold">{commander.equipment.armor?.name || "None"}</span></div>
+                                       <div className="flex justify-between"><span>Module</span><span className="font-semibold">{commander.equipment.module?.name || "None"}</span></div>
+                                       <div className="flex justify-between"><span>Inventory Used</span><span className="font-semibold">{commander.inventory.length}/20</span></div>
+                                       <div className="flex justify-between"><span>Unlocked Abilities</span><span className="font-semibold">{commanderAbilities.filter(a => commanderLevel >= a.unlockLevel).length}/{commanderAbilities.length}</span></div>
+                                    </CardContent>
+                                 </Card>
+                              </div>
+                           </TabsContent>
+                        </Tabs>
+                     </CardContent>
+                  </Card>
+               </TabsContent>
 
           <TabsContent value="profile" className="mt-6">
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

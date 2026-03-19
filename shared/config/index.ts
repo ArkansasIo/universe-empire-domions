@@ -630,6 +630,8 @@ export * as ResearchTradingConfig from './researchTradingConfig';
 export * as UnitSystemsConfig from './unitSystemsConfig';
 export * as GovernmentLeadersConfig from './governmentLeadersConfig';
 export * as GovernmentProgressionTreeConfig from './governmentProgressionTreeConfig';
+export * as StarshipSystemsAndStructuresTaxonomyConfig from './starshipSystemsAndStructuresTaxonomyConfig';
+export * as ConstructorYardSystemsConfig from './constructorYardSystemsConfig';
 
 // Resource Elements Exports
 export {
@@ -734,6 +736,46 @@ export {
   type OrbitalStationSubType,
   type OrbitalStationRank,
 } from './orbitalStationsConfig';
+
+// Starship Systems & Structures Taxonomy Exports (240 entries)
+export {
+  STARSHIP_SYSTEMS_AND_STRUCTURES_TAXONOMY_240,
+  STARSHIP_SYSTEMS_AND_STRUCTURES_TAXONOMY_META,
+  getTaxonomyEntryById,
+  getTaxonomyEntriesByCategory,
+  getTaxonomyEntriesByClass,
+  getTaxonomyEntriesBySubClass,
+  getTaxonomyEntriesByType,
+  getTaxonomyEntriesBySubType,
+  getTaxonomyEntriesByRarity,
+  type TaxonomyRarity,
+  type TaxonomyCategory,
+  type TaxonomyProfile,
+  type StarshipStructureTaxonomyEntry,
+} from './starshipSystemsAndStructuresTaxonomyConfig';
+
+// Constructor Yard Systems Exports
+export {
+  MOTHERSHIP_CONSTRUCTOR_YARD_99,
+  STARSHIP_SHIPYARD_99,
+  CONSTRUCTOR_YARD_CATALOG,
+  CONSTRUCTOR_YARD_META,
+  getYardEntriesByDomain,
+  getYardEntryById,
+  getYardEntriesByRarity,
+  getYardEntriesByTierRange,
+  calculateYardUpgradeCost,
+  calculateYardUpgradeTimeSec,
+  calculateYardScaledStats,
+  calculateYardScaledSubStats,
+  type YardDomain,
+  type YardStats,
+  type YardSubStats,
+  type YardEffect,
+  type YardBuff,
+  type YardDebuff,
+  type YardEntry,
+} from './constructorYardSystemsConfig';
 
 // Staryard System Exports
 export {

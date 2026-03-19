@@ -251,6 +251,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
               location={location}
               items={[
                 { href: "/shipyard", icon: Rocket, label: "Shipyard" },
+                { href: "/constructor-yard", icon: Hammer, label: "Constructor Yard" },
                 { href: "/fleet", icon: Send, label: "Fleet Command" },
                 { href: "/army", icon: Users, label: "Army" },
                 { href: "/expeditions", icon: Compass, label: "Expeditions" },
