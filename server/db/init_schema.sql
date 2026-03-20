@@ -1,4 +1,4 @@
--- Initialize schema for Stellar Dominion
+-- Initialize schema for universe-empire-domions
 -- This file can be used to bootstrap the database if drizzle-kit fails
 
 CREATE TABLE IF NOT EXISTS sessions (

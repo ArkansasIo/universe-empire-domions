@@ -1,4 +1,4 @@
-# 🌍 Free Hosting Options for Stellar Dominion
+# 🌍 Free Hosting Options for universe-empire-domions
 
 ## Best Free Hosting Platforms for TypeScript + Node.js + PostgreSQL
 
@@ -14,7 +14,7 @@
 1. Go to https://railway.app
 2. Sign up with GitHub
 3. Create new project → Deploy from GitHub
-4. Select your Stellar Dominion repo
+4. Select your universe-empire-domions repo
 5. Add PostgreSQL database
 6. Deploy!
 
@@ -34,8 +34,8 @@
 2. Go to https://render.com and sign in with GitHub.
 3. Click **New +** → **Blueprint** and select your repository.
 4. Confirm the detected blueprint resources:
-   - Web service: `stellar-dominion`
-   - Database: `stellar-dominion-db`
+   - Web service: `universe-empire-domions`
+   - Database: `universe-empire-domions-db`
 5. Review web service settings (from `render.yaml`):
    - Build command: `npm ci --include=dev && npm run build`
    - Start command: `npm start`
@@ -122,7 +122,7 @@
    - Sign in with GitHub
    - Click "New Project"
    - Select "Deploy from GitHub"
-   - Choose your Stellar Dominion repo
+   - Choose your universe-empire-domions repo
    - Click "Deploy Now"
    - Add PostgreSQL database
    - Set `DATABASE_URL` environment variable
@@ -200,7 +200,7 @@ Once deployed, your game will be live at:
 - **Railway:** `your-app.up.railway.app`
 - **Render:** `your-app.onrender.com`
 - **Fly.io:** `your-app.fly.dev`
-- **Replit:** `stellar-dominion.replit.dev`
+- **Replit:** `universe-empire-domions.replit.dev`
 
 You can add custom domains on any platform!
 
@@ -234,4 +234,4 @@ You can add custom domains on any platform!
 5. Add `DATABASE_URL` secret
 6. Deploy!
 
-Your Stellar Dominion game will be live within 10 minutes! 🚀
+Your universe-empire-domions game will be live within 10 minutes! 🚀

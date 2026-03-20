@@ -1,6 +1,6 @@
 # 📜 Scripts Reference
 
-Complete guide to all npm scripts and CLI tools for Stellar Dominion.
+Complete guide to all npm scripts and CLI tools for universe-empire-domions.
 
 **Developer:** Stephen ([@ArkansasIo](https://github.com/ArkansasIo) | [@Apocalypsecoder0](https://github.com/Apocalypsecoder0))
 
@@ -264,7 +264,7 @@ npm run admin
 
 **Interactive Menu:**
 ```
-Stellar Dominion - Admin CLI
+universe-empire-domions - Admin CLI
 1. Create Admin User
 2. Reset Admin Password
 3. List All Users

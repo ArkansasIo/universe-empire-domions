@@ -1,5 +1,5 @@
 """
-Stellar Dominion - Starship Configuration
+universe-empire-domions - Starship Configuration
 90 Starships + Motherships with complete stats, classes, types, and attributes
 """
 

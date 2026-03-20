@@ -1,6 +1,6 @@
 # Backend Console Workflows
 
-This folder contains multiple server management workflows for Stellar Dominion.
+This folder contains multiple server management workflows for universe-empire-domions.
 
 ## Available Workflows
 

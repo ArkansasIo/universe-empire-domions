@@ -1,8 +1,8 @@
-# Railway Deployment Guide for Stellar Dominion
+# Railway Deployment Guide for universe-empire-domions
 
 ## Quick Deploy
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/stellar-dominion)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/universe-empire-domions)
 
 ## Prerequisites
 
@@ -62,7 +62,7 @@ railway link
 Or use Railway dashboard:
 1. Create new project
 2. Select "Deploy from GitHub repo"
-3. Choose your Stellar Dominion repository
+3. Choose your universe-empire-domions repository
 
 ### 2. Add PostgreSQL Database
 

@@ -1,5 +1,5 @@
 // 1000 Different Items with Types, Classes, Ranks, Descriptions
-// Comprehensive item system for Stellar Dominion
+// Comprehensive item system for universe-empire-domions
 
 export const ITEMS_DATABASE = [
   // ===== WEAPONS (100 items) =====

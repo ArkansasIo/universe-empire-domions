@@ -61,7 +61,7 @@ async function ensureAdminUser() {
       .values({
         username: adminUsername,
         passwordHash: hashPassword('admin123'),
-        email: 'admin@stellardominion.game',
+        email: 'admin@universe-empire-domions.game',
         createdAt: new Date(),
       })
       .returning();
@@ -98,7 +98,7 @@ async function ensureTestAccounts() {
         await db.insert(users).values({
           username: account.username,
           passwordHash: hashPassword(account.password),
-          email: `${account.username}@stellardominion.game`,
+          email: `${account.username}@universe-empire-domions.game`,
           createdAt: new Date(),
         });
         console.log(`✅ Created test account: ${account.username}`);

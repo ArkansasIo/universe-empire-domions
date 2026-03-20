@@ -1,6 +1,6 @@
 # Combat System
 
-The combat system in Stellar Dominion is a round-based simulation where fleets clash for supremacy.
+The combat system in universe-empire-domions is a round-based simulation where fleets clash for supremacy.
 
 ## ⚔️ Battle Mechanics
 

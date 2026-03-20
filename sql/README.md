@@ -1,6 +1,6 @@
-# Stellar Dominion Database Schema
+# universe-empire-domions Database Schema
 
-This directory contains all SQL schema and seed data files for the Stellar Dominion game database.
+This directory contains all SQL schema and seed data files for the universe-empire-domions game database.
 
 ## Directory Structure
 

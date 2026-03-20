@@ -1,5 +1,5 @@
 """
-Stellar Dominion Backend - Complete Game Server v2.0
+universe-empire-domions Backend - Complete Game Server v2.0
 Enhanced with comprehensive planet system, combat, moons, stations, and empire management
 """
 import os
@@ -617,7 +617,7 @@ def require_auth(request: Request) -> dict:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 Stellar Dominion Server v2.0 Starting...")
+    print("🚀 universe-empire-domions Server v2.0 Starting...")
     users_collection.create_index("username", unique=True)
     player_states_collection.create_index("userId")
     planets_collection.create_index("userId")
@@ -628,10 +628,10 @@ async def lifespan(app: FastAPI):
     print("✅ Database indexes created")
     print(f"📊 Connected to MongoDB: {DB_NAME}")
     yield
-    print("👋 Stellar Dominion Server Shutting Down...")
+    print("👋 universe-empire-domions Server Shutting Down...")
 
 app = FastAPI(
-    title="Stellar Dominion API v2.0",
+    title="universe-empire-domions API v2.0",
     description="A comprehensive 4X space strategy game backend with enhanced planet system",
     version="2.0.0",
     lifespan=lifespan
@@ -2279,7 +2279,7 @@ async def get_status():
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "service": "stellar-dominion-api"}
+    return {"status": "healthy", "service": "universe-empire-domions-api"}
 
 
 @app.get("/health")

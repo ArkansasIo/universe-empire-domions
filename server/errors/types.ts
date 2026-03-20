@@ -1,6 +1,6 @@
 /**
  * Error Types and Definitions
- * Comprehensive error classification system for Stellar Dominion
+ * Comprehensive error classification system for universe-empire-domions
  */
 
 export enum ErrorSeverity {

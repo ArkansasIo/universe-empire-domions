@@ -41,7 +41,7 @@
   },
   "services": [
     {
-      "name": "stellar-dominion-web",
+      "name": "universe-empire-domions-web",
       "type": "web",
       "region": "us-west",
       "plan": "starter",
@@ -69,7 +69,7 @@
   "plugins": [
     {
       "type": "postgresql",
-      "name": "stellar-dominion-db",
+      "name": "universe-empire-domions-db",
       "plan": "starter",
       "region": "us-west"
     }

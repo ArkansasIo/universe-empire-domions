@@ -8,7 +8,7 @@
 
 ## 📊 System Overview
 
-A comprehensive research management system for Stellar Dominion featuring:
+A comprehensive research management system for universe-empire-domions featuring:
 - 8 configurable research labs with progression
 - 20-item research queue with priority management
 - Research acceleration with 4 speedup options (25/50/75/100%)

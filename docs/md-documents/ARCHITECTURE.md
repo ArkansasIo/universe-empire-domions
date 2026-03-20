@@ -1,4 +1,4 @@
-# Stellar Dominion - Architecture Document
+# universe-empire-domions - Architecture Document
 
 **Version:** 0.8.2-beta  
 **Last Updated:** December 2, 2024

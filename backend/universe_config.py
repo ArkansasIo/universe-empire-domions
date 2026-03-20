@@ -1,5 +1,5 @@
 """
-Stellar Dominion - Commander, Government, Population & Universe Configuration
+universe-empire-domions - Commander, Government, Population & Universe Configuration
 """
 
 # ==================== UNIVERSE CONFIGURATION ====================

@@ -1,4 +1,4 @@
--- Stellar Dominion - Full Game Foundation SQL Pack
+-- universe-empire-domions - Full Game Foundation SQL Pack
 -- Safe to run multiple times (IF NOT EXISTS).
 
 BEGIN;

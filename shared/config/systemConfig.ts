@@ -64,7 +64,7 @@ export const SYSTEM_CONFIG = {
   // Email settings (for notifications)
   email: {
     provider: ENV.EMAIL_PROVIDER || 'sendgrid',
-    from: ENV.EMAIL_FROM || 'noreply@stellardominion.game',
+    from: ENV.EMAIL_FROM || 'noreply@universe-empire-domions.game',
     apiKey: ENV.EMAIL_API_KEY,
   },
 
@@ -121,7 +121,7 @@ export const SYSTEM_CONFIG = {
   // CDN and static assets
   cdn: {
     enabled: ENV.CDN_ENABLED === 'true',
-    url: ENV.CDN_URL || 'https://cdn.stellardominion.game',
+    url: ENV.CDN_URL || 'https://cdn.universe-empire-domions.game',
   },
 
   // Third-party integrations
@@ -148,7 +148,7 @@ export const getEnvConfig = () => {
         ...SYSTEM_CONFIG,
         server: {
           ...SYSTEM_CONFIG.server,
-          corsOrigins: ['https://stellardominion.game'],
+          corsOrigins: ['https://universe-empire-domions.game'],
         },
         auth: {
           ...SYSTEM_CONFIG.auth,

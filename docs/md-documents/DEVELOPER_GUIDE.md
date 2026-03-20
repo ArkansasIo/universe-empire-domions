@@ -1,4 +1,4 @@
-# Stellar Dominion - Developer Guide
+# universe-empire-domions - Developer Guide
 
 **Version:** 0.8.2-beta  
 **Last Updated:** December 2, 2024
@@ -11,7 +11,7 @@
 ```bash
 # Clone repository
 git clone <repo-url>
-cd stellar-dominion
+cd universe-empire-domions
 
 # Install dependencies
 npm install
@@ -64,7 +64,7 @@ npm run check -- --watch
 ### Directory Structure
 
 ```
-stellar-dominion/
+universe-empire-domions/
 ├── client/                          # Frontend application
 │   ├── src/
 │   │   ├── pages/                  # Page components (one per route)

@@ -61,7 +61,7 @@ export default function Privacy() {
 
           <section>
             <h3 className="font-semibold text-slate-900 mb-2">7. Children's Privacy</h3>
-            <p>Stellar Dominion is not intended for children under 13. We do not knowingly collect information from children under 13.</p>
+            <p>universe-empire-domions is not intended for children under 13. We do not knowingly collect information from children under 13.</p>
           </section>
 
           <section>

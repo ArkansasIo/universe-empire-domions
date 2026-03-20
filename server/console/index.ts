@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Stellar Dominion - Backend Console Workflow
+ * universe-empire-domions - Backend Console Workflow
  * 
  * This is a separate workflow for running the backend console menu interactively.
  * It provides a CLI interface for server management, log viewing, and diagnostics.

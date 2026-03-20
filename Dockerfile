@@ -1,4 +1,4 @@
-# Stellar Dominion - Production Dockerfile
+# universe-empire-domions - Production Dockerfile
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed

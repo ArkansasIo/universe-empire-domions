@@ -1,7 +1,7 @@
-# Stellar Dominion 1.5 - Complete Enhanced Edition PRD
+# universe-empire-domions 1.5 - Complete Enhanced Edition PRD
 
 ## Project Overview
-**Name:** Stellar Dominion 1.5 Enhanced  
+**Name:** universe-empire-domions 1.5 Enhanced  
 **Version:** 2.0.0  
 **Date:** March 12, 2026
 

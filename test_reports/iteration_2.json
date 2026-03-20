@@ -1,5 +1,5 @@
 {
-  "summary": "Completed comprehensive testing of Stellar Dominion 1.5 FastAPI backend and React frontend. Backend shows 87.5% success rate with excellent API functionality. Frontend successfully integrates with backend, login works perfectly, and game interface loads with full navigation and features.",
+  "summary": "Completed comprehensive testing of universe-empire-domions 1.5 FastAPI backend and React frontend. Backend shows 87.5% success rate with excellent API functionality. Frontend successfully integrates with backend, login works perfectly, and game interface loads with full navigation and features.",
   
   "backend_issues": {
     "critical_bugs": [],

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Universe & Planets system is the foundation for galaxy-wide exploration, travel, and discovery in Stellar Dominion. It encompasses:
+The Universe & Planets system is the foundation for galaxy-wide exploration, travel, and discovery in universe-empire-domions. It encompasses:
 
 - **Interstellar Travel**: Stargates, Jumpgates, Wormholes, and FTL Drives
 - **Navigation & Exploration**: Stellar mapping, hazards, and discovery mechanics  

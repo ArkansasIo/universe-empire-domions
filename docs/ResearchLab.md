@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Research Lab system provides comprehensive management of player research activities in Stellar Dominion, including lab management, research queuing, acceleration mechanics, and bonus tracking.
+The Research Lab system provides comprehensive management of player research activities in universe-empire-domions, including lab management, research queuing, acceleration mechanics, and bonus tracking.
 
 **Status**: ✅ Complete and Production-Ready
 - API Endpoints: 13+ endpoints implemented

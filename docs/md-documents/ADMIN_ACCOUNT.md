@@ -1,6 +1,6 @@
 # Admin Account Information
 
-This document contains details about the administrative accounts configured in Stellar Dominion.
+This document contains details about the administrative accounts configured in universe-empire-domions.
 
 ---
 

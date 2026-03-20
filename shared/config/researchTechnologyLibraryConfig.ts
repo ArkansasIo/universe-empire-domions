@@ -1587,7 +1587,7 @@ export const RESEARCH_TECH_META = {
   categoryIds: RESEARCH_TECH_CATEGORIES.map(c => c.id),
   subCategoryIds: RESEARCH_TECH_SUBCATEGORIES.map(s => s.id),
   version: '1.0.0',
-  description: 'Comprehensive Research & Technology Library for Stellar Dominion',
+  description: 'Comprehensive Research & Technology Library for universe-empire-domions',
 } as const
 
 // ============================================================================

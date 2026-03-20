@@ -1,6 +1,6 @@
 # Complete list of all available properties: https://docs.upsun.com/create-apps/app-reference/single-runtime-image.html
 applications:
-  stellar-dominion-1-5:
+  universe-empire-domions-1-5:
     # Application source code directory
     source:
       root: "/"
@@ -138,7 +138,7 @@ applications:
 routes:
   "https://{default}/":
     type: upstream
-    upstream: "stellar-dominion-1-5:http"
+    upstream: "universe-empire-domions-1-5:http"
   # A basic redirect definition
   # More information: https://docs.upsun.com/define-routes.html#basic-redirect-definition
   "https://www.{default}":

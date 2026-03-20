@@ -1,4 +1,4 @@
-// Advanced Combat Engine System for Stellar Dominion MMORPG
+// Advanced Combat Engine System for universe-empire-domions MMORPG
 // Turn-based real-time combat with detailed mechanics, armor, shields, and tactics
 
 export type ShipType = "scout" | "fighter" | "cruiser" | "battleship" | "carrier" | "support";

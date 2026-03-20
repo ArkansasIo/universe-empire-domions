@@ -1,5 +1,5 @@
 """
-Stellar Dominion - Planet & Empire Configuration
+universe-empire-domions - Planet & Empire Configuration
 Comprehensive planet types, biomes, moons, stations, and combat systems
 """
 

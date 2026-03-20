@@ -1,4 +1,4 @@
-# 🚀 Complete Deployment Guide for Stellar Dominion
+# 🚀 Complete Deployment Guide for universe-empire-domions
 
 **Developer:** Stephen ([@ArkansasIo](https://github.com/ArkansasIo) | [@Apocalypsecoder0](https://github.com/Apocalypsecoder0))
 
@@ -190,7 +190,7 @@ cat .gitignore | grep .env
 
 2. **Create Database**
    - Click "New Project"
-   - Name: `stellar-dominion`
+   - Name: `universe-empire-domions`
    - Region: Choose closest to your users
    - PostgreSQL version: 16
 
@@ -324,7 +324,7 @@ cat .gitignore | grep .env
 
 **Step 2: Create PostgreSQL Database**
 1. Click "New +" → "PostgreSQL"
-2. Name: `stellar-dominion-db`
+2. Name: `universe-empire-domions-db`
 3. Database: `stellar_dominion`
 4. User: `stellar_user`
 5. Region: Choose closest to users
@@ -341,7 +341,7 @@ cat .gitignore | grep .env
 1. Click "New +" → "Web Service"
 2. Connect your GitHub repository
 3. Configure:
-   - **Name:** stellar-dominion
+   - **Name:** universe-empire-domions
    - **Region:** Same as database
    - **Branch:** main
    - **Build Command:** `npm install && npm run build`
@@ -360,7 +360,7 @@ NODE_ENV=production
 1. Click "Create Web Service"
 2. Watch build logs
 3. First deploy takes ~5-10 minutes
-4. Service URL: `https://stellar-dominion.onrender.com`
+4. Service URL: `https://universe-empire-domions.onrender.com`
 
 **Step 7: Initialize Database**
 1. Go to web service → "Shell"
@@ -398,7 +398,7 @@ fly auth login
 fly launch
 
 # Prompts:
-# ? Choose an app name: stellar-dominion
+# ? Choose an app name: universe-empire-domions
 # ? Choose a region: sea (Seattle)
 # ? Setup PostgreSQL database? Yes
 # ? Setup PgBouncer? Yes
@@ -411,7 +411,7 @@ Fly creates `fly.toml` (already exists in repo ✅)
 
 Edit if needed:
 ```toml
-app = "stellar-dominion"
+app = "universe-empire-domions"
 primary_region = "sea"
 
 [env]
@@ -422,10 +422,10 @@ primary_region = "sea"
 **Step 4: Create Database**
 ```bash
 # Create PostgreSQL cluster
-fly postgres create --name stellar-dominion-db --region sea
+fly postgres create --name universe-empire-domions-db --region sea
 
 # Attach to app
-fly postgres attach stellar-dominion-db
+fly postgres attach universe-empire-domions-db
 # This sets DATABASE_URL automatically
 ```
 
@@ -523,7 +523,7 @@ docker-compose down
 
 **Step 1: Build Image**
 ```bash
-docker build -t stellar-dominion:latest .
+docker build -t universe-empire-domions:latest .
 ```
 
 **Step 2: Run PostgreSQL**
@@ -547,7 +547,7 @@ docker run -d \
   -e SESSION_SECRET="your_secret_here" \
   -e NODE_ENV="production" \
   --link stellar-db \
-  stellar-dominion:latest
+  universe-empire-domions:latest
 ```
 
 **Step 4: Initialize Database**
@@ -742,10 +742,10 @@ railway run psql $DATABASE_URL < backup.sql
 **Manual Backups:**
 ```bash
 # Dump database
-pg_dump DATABASE_URL > stellar-dominion-backup-$(date +%Y%m%d).sql
+pg_dump DATABASE_URL > universe-empire-domions-backup-$(date +%Y%m%d).sql
 
 # Restore
-psql DATABASE_URL < stellar-dominion-backup-20260309.sql
+psql DATABASE_URL < universe-empire-domions-backup-20260309.sql
 ```
 
 **Automate with Cron:**
@@ -768,7 +768,7 @@ git push origin main
 **Docker:**
 ```bash
 # Rebuild image
-docker build -t stellar-dominion:latest .
+docker build -t universe-empire-domions:latest .
 
 # Stop old container
 docker stop stellar-app
@@ -996,7 +996,7 @@ Already configured in `server/db/index.ts` ✅
 
 ## 🎉 Success!
 
-Your Stellar Dominion game is now deployed and accessible worldwide!
+Your universe-empire-domions game is now deployed and accessible worldwide!
 
 **What now?**
 - Share with friends

@@ -1,4 +1,4 @@
-# ✅ Deployment Checklist for Stellar Dominion
+# ✅ Deployment Checklist for universe-empire-domions
 
 **Developer:** Stephen ([@ArkansasIo](https://github.com/ArkansasIo) | [@Apocalypsecoder0](https://github.com/Apocalypsecoder0))
 
@@ -146,8 +146,8 @@
 
 4. **Create Database**
    ```bash
-   fly postgres create --name stellar-dominion-db
-   fly postgres attach stellar-dominion-db
+   fly postgres create --name universe-empire-domions-db
+   fly postgres attach universe-empire-domions-db
    ```
    - [ ] Database created and attached
 
@@ -190,7 +190,7 @@ docker-compose down
 #### Production Docker Deployment:
 1. **Build Image**
    ```bash
-   docker build -t stellar-dominion:latest .
+   docker build -t universe-empire-domions:latest .
    ```
 
 2. **Run Container**
@@ -200,7 +200,7 @@ docker-compose down
      -e DATABASE_URL="postgresql://user:pass@host:5432/db" \
      -e SESSION_SECRET="your-secret" \
      -e NODE_ENV="production" \
-     stellar-dominion:latest
+     universe-empire-domions:latest
    ```
 
 3. **Or use Docker Compose**
@@ -303,8 +303,8 @@ docker-compose down
 
 5. **Configure Nginx** (copy from `nginx.conf`)
    ```bash
-   sudo cp nginx.conf /etc/nginx/sites-available/stellar-dominion
-   sudo ln -s /etc/nginx/sites-available/stellar-dominion /etc/nginx/sites-enabled/
+   sudo cp nginx.conf /etc/nginx/sites-available/universe-empire-domions
+   sudo ln -s /etc/nginx/sites-available/universe-empire-domions /etc/nginx/sites-enabled/
    sudo nginx -t
    sudo systemctl reload nginx
    ```
@@ -312,7 +312,7 @@ docker-compose down
 6. **Setup PM2 (Process Manager)**
    ```bash
    npm install -g pm2
-   pm2 start npm --name "stellar-dominion" -- start
+   pm2 start npm --name "universe-empire-domions" -- start
    pm2 startup
    pm2 save
    ```
@@ -534,7 +534,7 @@ Once deployed, your app will be live at:
 
 ---
 
-**Good luck deploying Stellar Dominion! May your empire span the stars! 🌌✨**
+**Good luck deploying universe-empire-domions! May your empire span the stars! 🌌✨**
 
 ---
 

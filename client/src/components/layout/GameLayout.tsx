@@ -732,7 +732,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       <footer className="h-8 border-t border-slate-200 bg-white px-6 flex items-center justify-between text-[11px] text-slate-500 font-mono" data-testid="footer-build-info">
-        <div>Universe-Empires-Dominions</div>
+        <div>universe-empire-domions</div>
         <div className="flex items-center gap-4">
           <span>Version: {appVersion}</span>
           <span>Build: {buildId}</span>

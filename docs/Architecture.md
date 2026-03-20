@@ -1,6 +1,6 @@
 # Architecture & Technical Overview
 
-Stellar Dominion is built as a modern Single Page Application (SPA) designed for speed and interactivity.
+universe-empire-domions is built as a modern Single Page Application (SPA) designed for speed and interactivity.
 
 ## 🛠️ Tech Stack
 *   **Frontend**: React (Vite), TypeScript.

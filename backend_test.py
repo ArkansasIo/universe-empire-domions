@@ -508,7 +508,7 @@ class StellarDominionAPITester:
                     print(f"   ✓ Edge position has smaller size: {base_fields} fields")
 
     def test_v20_starships_system(self):
-        """Test Stellar Dominion v2.0 - All 90 Starships System"""
+        """Test universe-empire-domions v2.0 - All 90 Starships System"""
         print("\n🚀 Testing v2.0 - 90 Starships System...")
         
         if not self.session_token:
@@ -538,7 +538,7 @@ class StellarDominionAPITester:
                 print(f"   ✓ {ship_name}: {ship_class} class, Tier {ship_tier}, Hull: {hull}, Weapons: {weapons}")
 
     def test_v20_motherships_system(self):
-        """Test Stellar Dominion v2.0 - 10 Motherships System"""
+        """Test universe-empire-domions v2.0 - 10 Motherships System"""
         print("\n🛸 Testing v2.0 - 10 Motherships System...")
         
         if not self.session_token:
@@ -567,7 +567,7 @@ class StellarDominionAPITester:
                 print(f"   ✓ {ms_name}: {ms_class} class, Tier {ms_tier}, Hull: {hull:,}")
 
     def test_v20_universes_system(self):
-        """Test Stellar Dominion v2.0 - 9 Universes System"""
+        """Test universe-empire-domions v2.0 - 9 Universes System"""
         print("\n🌌 Testing v2.0 - 9 Universes × 30 Galaxies System...")
         
         if not self.session_token:
@@ -611,7 +611,7 @@ class StellarDominionAPITester:
                 print(f"   ⚠️ Expected 30+ galaxies, only found {len(galaxies)}")
 
     def test_v20_planet_scanner_system(self):
-        """Test Stellar Dominion v2.0 - Planet Scanner System"""
+        """Test universe-empire-domions v2.0 - Planet Scanner System"""
         print("\n🔍 Testing v2.0 - Planet Scanner System...")
         
         if not self.session_token:
@@ -647,7 +647,7 @@ class StellarDominionAPITester:
                 print(f"   ✓ Scan result: {planet_type}, Size: {size_estimate}")
 
     def test_v20_commander_system(self):
-        """Test Stellar Dominion v2.0 - Commander System"""
+        """Test universe-empire-domions v2.0 - Commander System"""
         print("\n👤 Testing v2.0 - Commander System...")
         
         if not self.session_token:
@@ -683,7 +683,7 @@ class StellarDominionAPITester:
                 print(f"   ⚠️ Expected 24+ commander skills, only found {len(skills)}")
 
     def test_v20_government_system(self):
-        """Test Stellar Dominion v2.0 - Government System"""
+        """Test universe-empire-domions v2.0 - Government System"""
         print("\n🏛️ Testing v2.0 - Government System...")
         
         if not self.session_token:
@@ -709,7 +709,7 @@ class StellarDominionAPITester:
                 print(f"   ⚠️ Expected 10+ government types, only found {len(gov_types)}")
 
     def test_v20_population_system(self):
-        """Test Stellar Dominion v2.0 - Population System"""
+        """Test universe-empire-domions v2.0 - Population System"""
         print("\n👥 Testing v2.0 - Population System...")
         
         if not self.session_token:
@@ -742,7 +742,7 @@ class StellarDominionAPITester:
                 print(f"   ⚠️ Expected 6+ population classes, only found {len(classes)}")
 
     def test_v20_station_fields_system(self):
-        """Test Stellar Dominion v2.0 - Station Fields System"""
+        """Test universe-empire-domions v2.0 - Station Fields System"""
         print("\n🛰️ Testing v2.0 - Station Fields System...")
         
         if not self.session_token:
@@ -770,7 +770,7 @@ class StellarDominionAPITester:
                 print(f"   ✓ {station_type}: {base_fields}-{max_fields} fields")
 
     def test_v20_all_config_endpoint(self):
-        """Test Stellar Dominion v2.0 - All Config Endpoint"""
+        """Test universe-empire-domions v2.0 - All Config Endpoint"""
         print("\n⚙️ Testing v2.0 - All Config Endpoint...")
         
         if not self.session_token:
@@ -809,7 +809,7 @@ class StellarDominionAPITester:
                     print(f"   ✓ {section}: configured")
 
 def main():
-    print("🚀 Starting Stellar Dominion v2.0 FastAPI Backend Tests...")
+    print("🚀 Starting universe-empire-domions v2.0 FastAPI Backend Tests...")
     print("🎯 Focus: 90 Starships, 10 Motherships, 9 Universes, Commander & Government Systems")
     print("=" * 70)
     
@@ -850,7 +850,7 @@ def main():
     print(f"\n📈 Success Rate: {success_rate:.1f}%")
     
     if success_rate >= 80:
-        print("🎉 Stellar Dominion v2.0 backend tests mostly successful!")
+        print("🎉 universe-empire-domions v2.0 backend tests mostly successful!")
     elif success_rate >= 50:
         print("⚠️  Backend has some issues but core v2.0 functionality works")
     else:

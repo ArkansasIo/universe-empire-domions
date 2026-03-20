@@ -1,8 +1,8 @@
-# Stellar Dominion
+# universe-empire-domions
 
 A comprehensive 4X space strategy game built with React, Express, and PostgreSQL. Explore the galaxy, manage your empire, research technologies, and engage in epic space battles.
 
-**Website:** [stellar-dominion.replit.dev](https://stellardominion.ca
+**Website:** [universe-empire-domions.replit.dev](https://universe-empire-domions.ca
 **Version:** 1.0.0-release  
 **Status:** 🟢 PRODUCTION READY
 **Last Updated:** March 14, 2026
@@ -339,7 +339,7 @@ The life-support smoke test targets `http://localhost:5001` by default and accep
 ### Project Structure
 
 ```
-stellar-dominion/
+universe-empire-domions/
 ├── client/                    # Frontend React application
 │   ├── src/
 │   │   ├── pages/            # Page components

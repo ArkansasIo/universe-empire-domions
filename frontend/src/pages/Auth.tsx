@@ -109,7 +109,7 @@ export default function Auth() {
         className="fixed top-4 left-4 z-30 text-xs text-slate-700 border-slate-300 hover:bg-slate-100"
       >
         <a
-          href="https://github.com/ArkansasIo/stellar-dominion"
+          href="https://github.com/ArkansasIo/universe-empire-domions"
           target="_blank"
           rel="noopener noreferrer"
           data-testid="button-github-top-left"
@@ -387,7 +387,7 @@ export default function Auth() {
         <CardFooter className="flex flex-col items-center gap-4 pb-6 border-t border-slate-300 pt-6">
            <Link href="/about">
              <Button variant="ghost" className="text-slate-700 hover:text-slate-900 transition-colors" data-testid="button-about">
-               <Info className="w-4 h-4 mr-2" /> About Stellar Dominion
+               <Info className="w-4 h-4 mr-2" /> About universe-empire-domions
              </Button>
            </Link>
            <div className="flex items-center gap-4 text-xs text-slate-600">
@@ -413,7 +413,7 @@ export default function Auth() {
         className="fixed bottom-4 right-4 z-30 border-slate-300 text-slate-700 hover:bg-slate-100"
       >
         <a
-          href="https://github.com/ArkansasIo/stellar-dominion/blob/master/LICENSE"
+          href="https://github.com/ArkansasIo/universe-empire-domions/blob/master/LICENSE"
           target="_blank"
           rel="noopener noreferrer"
           data-testid="button-license-bottom-right"

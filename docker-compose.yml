@@ -4,7 +4,7 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:16-alpine
-    container_name: stellar-dominion-db
+    container_name: universe-empire-domions-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: stellar_dominion
@@ -21,12 +21,12 @@ services:
       timeout: 5s
       retries: 5
 
-  # Stellar Dominion Application
+  # universe-empire-domions Application
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: stellar-dominion-app
+    container_name: universe-empire-domions-app
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -48,7 +48,7 @@ services:
   # Nginx Reverse Proxy (Optional)
   nginx:
     image: nginx:alpine
-    container_name: stellar-dominion-nginx
+    container_name: universe-empire-domions-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -65,4 +65,4 @@ volumes:
 
 networks:
   default:
-    name: stellar-dominion-network
+    name: universe-empire-domions-network

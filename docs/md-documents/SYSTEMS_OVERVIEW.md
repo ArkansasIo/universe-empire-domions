@@ -1,4 +1,4 @@
-# Stellar Dominion - Systems Overview
+# universe-empire-domions - Systems Overview
 
 **Version:** 0.9.0-beta  
 **Last Updated:** December 2, 2024

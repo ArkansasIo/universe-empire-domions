@@ -1,4 +1,4 @@
-# Stellar Dominion - Game Design Document
+# universe-empire-domions - Game Design Document
 
 **Version:** 0.8.2-beta  
 **Last Updated:** December 2, 2024  
@@ -21,7 +21,7 @@
 ## Game Overview
 
 ### Concept
-Stellar Dominion is a turn-based 4X space strategy game inspired by Stellaris. Players control an interstellar empire, managing resources, researching technologies, and expanding across the galaxy through exploration, trade, and conquest.
+universe-empire-domions is a turn-based 4X space strategy game inspired by Stellaris. Players control an interstellar empire, managing resources, researching technologies, and expanding across the galaxy through exploration, trade, and conquest.
 
 ### Target Audience
 - 4X Strategy Game Fans (Stellaris, Civilization, Master of Orion)

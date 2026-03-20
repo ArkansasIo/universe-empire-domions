@@ -1,4 +1,4 @@
-# Railway Configuration for Stellar Dominion
+# Railway Configuration for universe-empire-domions
 # Documentation: https://docs.railway.app/deploy/config-as-code
 
 [build]
@@ -28,7 +28,7 @@ PORT = "5000"
 
 # Service Configuration
 [[services]]
-name = "stellar-dominion-web"
+name = "universe-empire-domions-web"
 type = "web"
 
   [services.build]
@@ -48,7 +48,7 @@ type = "web"
 # PostgreSQL Database Plugin
 [[plugins]]
 type = "postgresql"
-name = "stellar-dominion-db"
+name = "universe-empire-domions-db"
 
 # Cron Jobs (optional - for scheduled tasks)
 # [[crons]]

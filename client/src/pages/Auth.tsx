@@ -122,7 +122,7 @@ export default function Auth() {
               className="text-xs text-slate-700 border-slate-300 hover:bg-slate-100"
             >
               <a
-                href="https://github.com/ArkansasIo/stellar-dominion"
+                href="https://github.com/ArkansasIo/universe-empire-domions"
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="button-github-top-left"
@@ -131,7 +131,7 @@ export default function Auth() {
               </a>
             </Button>
             <Rocket className="w-5 h-5 text-primary" />
-            <span className="font-orbitron font-bold text-sm text-slate-900 tracking-wide">Universe-Empires-Dominions</span>
+            <span className="font-orbitron font-bold text-sm text-slate-900 tracking-wide">universe-empire-domions</span>
           </div>
           <div className="flex items-center gap-1">
             <Link href="/forums">
@@ -167,12 +167,12 @@ export default function Auth() {
           <div className="w-16 h-16 bg-gradient-to-br from-slate-800 to-slate-900 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden">
              <img
                src={MENU_ASSETS.NAVIGATION.EXPLORATION.path}
-               alt="Universe-Empires-Dominions"
+               alt="universe-empire-domions"
                className="w-10 h-10 object-contain"
                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = TEMP_THEME_IMAGE; }}
              />
           </div>
-          <CardTitle className="text-4xl font-orbitron font-bold tracking-wider text-slate-900">Universe-Empires-Dominions</CardTitle>
+          <CardTitle className="text-4xl font-orbitron font-bold tracking-wider text-slate-900">universe-empire-domions</CardTitle>
           <CardDescription className="text-slate-700 font-rajdhani text-lg font-medium mt-2">⚡ Command your fleet. Conquer the stars.</CardDescription>
         </CardHeader>
         
@@ -423,7 +423,7 @@ export default function Auth() {
         <CardFooter className="flex flex-col items-center gap-4 pb-6 border-t border-slate-300 pt-6">
            <Link href="/about">
              <Button variant="ghost" className="text-slate-700 hover:text-slate-900 transition-colors" data-testid="button-about">
-               <Info className="w-4 h-4 mr-2" /> About Universe-Empires-Dominions
+               <Info className="w-4 h-4 mr-2" /> About universe-empire-domions
              </Button>
            </Link>
            <div className="flex items-center gap-4 text-xs text-slate-600">
@@ -440,7 +440,7 @@ export default function Auth() {
 
       <div className="fixed bottom-0 inset-x-0 border-t border-slate-300 bg-white/95 backdrop-blur-sm z-20">
         <div className="max-w-4xl mx-auto px-4 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-600">
-          <span className="font-semibold text-slate-700">Universe-Empires-Dominions</span>
+          <span className="font-semibold text-slate-700">universe-empire-domions</span>
           <span>•</span>
           <span>Version {GAME_VERSION}</span>
           <span>•</span>
@@ -459,7 +459,7 @@ export default function Auth() {
         className="fixed bottom-20 right-4 z-30 border-slate-300 text-slate-700 hover:bg-slate-100"
       >
         <a
-          href="https://github.com/ArkansasIo/stellar-dominion/blob/master/LICENSE"
+          href="https://github.com/ArkansasIo/universe-empire-domions/blob/master/LICENSE"
           target="_blank"
           rel="noopener noreferrer"
           data-testid="button-license-bottom-right"

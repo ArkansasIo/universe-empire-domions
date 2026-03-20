@@ -1,6 +1,6 @@
 # Commander System
 
-The RPG layer of Stellar Dominion. You are not just an abstract entity; you are the Commander.
+The RPG layer of universe-empire-domions. You are not just an abstract entity; you are the Commander.
 
 ## 🧬 Races
 Your biological origin affects your empire's traits.

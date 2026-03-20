@@ -1,5 +1,5 @@
-# Fly.io Configuration for Stellar Dominion
-app = "stellar-dominion-1-5"
+# Fly.io Configuration for universe-empire-domions
+app = "universe-empire-domions-1-5"
 primary_region = "sea"
 
 [build]

@@ -1,6 +1,6 @@
 # Economy & Resources
 
-The backbone of any stellar empire is its economy. Stellar Dominion uses a four-resource system.
+The backbone of any stellar empire is its economy. universe-empire-domions uses a four-resource system.
 
 ## 💎 Core Resources
 

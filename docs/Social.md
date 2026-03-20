@@ -1,6 +1,6 @@
 # Social & Politics
 
-Stellar Dominion is not just about ships; it's about civilization.
+universe-empire-domions is not just about ships; it's about civilization.
 
 ## 🤝 Alliance System
 Players can band together to form Alliances.

@@ -1,4 +1,4 @@
-# Stellar Dominion - Quick Start Guide
+# universe-empire-domions - Quick Start Guide
 
 **Game Version:** 1.0.0-release  
 **Status:** ✅ Production Ready
@@ -8,7 +8,7 @@
 ## 🚀 Getting Started in 5 Minutes
 
 ### 1. Access the Game
-- **URL:** [stellar-dominion.replit.dev](https://stellar-dominion.replit.dev)
+- **URL:** [universe-empire-domions.replit.dev](https://universe-empire-domions.replit.dev)
 - **Port:** 5000 (locFirebase Studio> ✘ Preview failed to startal development)
 - Open in any modern browser (Chrome, Firefox, Safari, Edge)
 
@@ -215,7 +215,7 @@ For detailed information, see:
 - **Discord:** (Coming soon)
 - **Forums:** (Coming soon)
 - **GitHub Issues:** Report bugs
-- **Email:** support@stellardominion.dev
+- **Email:** support@universe-empire-domions.dev
 
 ---
 
@@ -232,6 +232,6 @@ For detailed information, see:
 
 ---
 
-**Welcome to Stellar Dominion, Commander! 🚀**
+**Welcome to universe-empire-domions, Commander! 🚀**
 
 May your empire prosper across the stars.

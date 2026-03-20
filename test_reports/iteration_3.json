@@ -1,5 +1,5 @@
 {
-  "summary": "Completed comprehensive testing of Stellar Dominion v1.5 backend focusing on enhanced planet system, combat, and configuration endpoints. Backend shows excellent 95.5% success rate with all v1.5 features working correctly.",
+  "summary": "Completed comprehensive testing of universe-empire-domions v1.5 backend focusing on enhanced planet system, combat, and configuration endpoints. Backend shows excellent 95.5% success rate with all v1.5 features working correctly.",
   
   "backend_issues": {
     "critical_bugs": [],

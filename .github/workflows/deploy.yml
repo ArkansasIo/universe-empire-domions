@@ -1,4 +1,4 @@
-name: Deploy Stellar Dominion
+name: Deploy universe-empire-domions
 
 on:
   push:

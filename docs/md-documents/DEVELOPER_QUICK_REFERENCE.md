@@ -1,4 +1,4 @@
-# Stellar Dominion - Developer Quick Reference
+# universe-empire-domions - Developer Quick Reference
 
 **Version:** 3.0 | **Status:** Production Ready | **Last Updated:** March 9, 2026
 **New in v3.0:** Research Lab System, Game Assets System, 13+ API Endpoints ✨

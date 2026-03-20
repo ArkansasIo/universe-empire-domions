@@ -15,9 +15,9 @@ async function seedTestUsers() {
     console.log("🌱 Seeding test user accounts...");
 
     const testAccounts = [
-      { username: "player1", password: "password123", email: "player1@stellardominion.game" },
-      { username: "player2", password: "password123", email: "player2@stellardominion.game" },
-      { username: "player3", password: "password123", email: "player3@stellardominion.game" },
+      { username: "player1", password: "password123", email: "player1@universe-empire-domions.game" },
+      { username: "player2", password: "password123", email: "player2@universe-empire-domions.game" },
+      { username: "player3", password: "password123", email: "player3@universe-empire-domions.game" },
     ];
 
     for (const account of testAccounts) {

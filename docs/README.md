@@ -1,6 +1,6 @@
-# Stellar Dominion - Game Design Documentation
+# universe-empire-domions - Game Design Documentation
 
-**Stellar Dominion** is a 4X space strategy MMORPG browser game featuring real-time resource management, comprehensive fleet combat, and deep RPG elements.
+**universe-empire-domions** is a 4X space strategy MMORPG browser game featuring real-time resource management, comprehensive fleet combat, and deep RPG elements.
 
 ## 📚 Documentation Index
 
@@ -16,7 +16,7 @@
 
 ## 🚀 Project Overview
 
-Stellar Dominion combines the classic real-time strategy mechanics of OGame with the depth of Stellaris and modern RPG progression systems.
+universe-empire-domions combines the classic real-time strategy mechanics of OGame with the depth of Stellaris and modern RPG progression systems.
 
 ### Key Features
 *   **Real-Time Strategy**: Build, research, and fight in real-time.

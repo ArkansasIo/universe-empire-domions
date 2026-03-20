@@ -1,6 +1,6 @@
 # Overview
 
-Stellar Dominion is a comprehensive 4X space strategy MMORPG browser game with heavy focus on:
+universe-empire-domions is a comprehensive 4X space strategy MMORPG browser game with heavy focus on:
 - **Real-time Resource Management** - 3-resource economy (Metal, Crystal, Deuterium) with dynamic pricing
 - **Fleet Combat & Tactics** - Multi-layer damage system, combat formations, detailed battle logs
 - **RPG Progression** - Empire leveling (1-999), tier system (1-21), prestige mechanics

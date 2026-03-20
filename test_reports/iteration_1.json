@@ -1,5 +1,5 @@
 {
-  "summary": "Completed testing of Stellar Dominion 1.5 - a 4X space strategy game. Frontend loads successfully with full game interface. Demo login works but backend API proxy fails due to missing Node.js server. Game UI is fully functional with navigation, dashboard, and interactive elements.",
+  "summary": "Completed testing of universe-empire-domions 1.5 - a 4X space strategy game. Frontend loads successfully with full game interface. Demo login works but backend API proxy fails due to missing Node.js server. Game UI is fully functional with navigation, dashboard, and interactive elements.",
   
   "backend_issues": {
     "critical_bugs": [

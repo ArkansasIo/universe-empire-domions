@@ -1,4 +1,4 @@
-# Neon Database Setup for Stellar Dominion
+# Neon Database Setup for universe-empire-domions
 
 ## Quick Setup (5 minutes)
 
@@ -10,7 +10,7 @@
 ### Step 2: Create Database Project
 1. In Neon dashboard, click "Create Project"
 2. Choose region closest to you
-3. Name it "Stellar Dominion" (or any name)
+3. Name it "universe-empire-domions" (or any name)
 4. Click "Create Project"
 
 ### Step 3: Get Connection String

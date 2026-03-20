@@ -1,4 +1,4 @@
-# Stellar Dominion - API Routes Reference
+# universe-empire-domions - API Routes Reference
 
 **Version:** 0.9.0-beta  
 **Last Updated:** December 2, 2024
