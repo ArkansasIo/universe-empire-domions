@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { getPlanetDetails } from "@/lib/planetUtils";
 import { KARDASHEV_SCALE, getKardashevLevel, calculateProgressToNext, KardashevLevel } from "@/lib/kardashevScale";
+import { calculateResourceProduction } from "@/lib/resourceMath";
 import {
   Globe, Zap, Database, Box, Gem, FlaskConical, Rocket, Factory,
   Pickaxe, Shield, Swords, Users, Landmark, Crown, Trophy, Star,
@@ -143,11 +144,11 @@ export default function EmpireView() {
   const planetInfo = getPlanetDetails(planetSeed);
 
   // Homeworld production per hour (approximate)
-  const metalProd  = Math.floor(30  * buildings.metalMine               * Math.pow(1.1,  buildings.metalMine));
-  const crystalProd= Math.floor(20  * buildings.crystalMine             * Math.pow(1.1,  buildings.crystalMine));
-  const deutProd   = Math.floor(10  * buildings.deuteriumSynthesizer    * Math.pow(1.02, buildings.deuteriumSynthesizer));
-  const energyProd = Math.floor(20  * buildings.solarPlant              * Math.pow(1.1,  buildings.solarPlant))
-                   - Math.floor(10  * (buildings.metalMine + buildings.crystalMine + buildings.deuteriumSynthesizer));
+  const production = calculateResourceProduction(buildings);
+  const metalProd = production.metal;
+  const crystalProd = production.crystal;
+  const deutProd = production.deuterium;
+  const energyProd = production.energy;
 
   // Empire metrics
   const totalFleetPower     = Object.values(units).reduce((s, n) => s + n * 100, 0);

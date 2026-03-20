@@ -12,12 +12,16 @@
 import type { Express, Request, Response } from "express";
 import { isAuthenticated } from "./basicAuth";
 import { storage } from "./storage";
+import {
+  applyResourceDelta,
+  buildExplorationState,
+  createExpeditionRecord,
+  createStarterRelic,
+  normalizeResources,
+  resolveExpeditionRecord,
+} from "./services/missingFeatureService";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
-
-function uid(userId: string) {
-  return (req: Request) => (req.session as any)?.userId ?? userId;
-}
 
 function getUserId(req: Request): string {
   return (req.session as any)?.userId as string;
@@ -126,6 +130,16 @@ const SAMPLE_EVENTS = [
   { id: "evt-3", name: "Warp Anomaly", description: "A rift in space-time has been detected. Exploration rewards tripled.", eventClass: "epic", status: "upcoming", participants: 0, rewards: { xp: 500, crystal: 10000 }, startsAt: new Date(Date.now() + 1800000).toISOString() },
   { id: "evt-4", name: "Ancient Titan Resurgence", description: "Titan constructs have been reactivated deep in sector 9. All commanders get +25% XP.", eventClass: "legendary", status: "completed", participants: 892, rewards: {}, endsAt: new Date(Date.now() - 3600000).toISOString() },
 ];
+
+const eventParticipants = new Map<string, Set<string>>();
+
+async function requirePlayerState(userId: string) {
+  const playerState = await storage.getPlayerState(userId);
+  if (!playerState) {
+    throw new Error("Player state not found");
+  }
+  return playerState as any;
+}
 
 // ─── Raids ────────────────────────────────────────────────────────────────────
 
@@ -306,8 +320,8 @@ export function registerMissingRoutes(app: Express) {
       const playerState = await storage.getPlayerState(userId);
       const relicsOwned: any[] = (playerState as any)?.relicsInventory || [];
       if (relicsOwned.length === 0) {
-        // Seed a starting relic so the inventory is not empty
-        const starter = { id: `owned-${userId}-1`, relicId: "relic-3", name: "Stellar Shard", condition: 90, isEquipped: false, acquiredAt: new Date().toISOString() };
+        const starter = createStarterRelic(userId);
+        await storage.updatePlayerState(userId, { relicsInventory: [starter] } as any);
         return res.json([starter]);
       }
       res.json(relicsOwned);
@@ -316,10 +330,83 @@ export function registerMissingRoutes(app: Express) {
     }
   });
 
+  app.post("/api/relics/:relicId/equip", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const { relicId } = req.params;
+
+    try {
+      const playerState = await requirePlayerState(userId);
+      const relicsOwned: any[] = Array.isArray(playerState.relicsInventory) ? [...playerState.relicsInventory] : [];
+      const relic = relicsOwned.find((entry) => entry.id === relicId || entry.relicId === relicId);
+
+      if (!relic) {
+        return res.status(404).json({ error: "Relic not found in inventory" });
+      }
+
+      for (const entry of relicsOwned) {
+        entry.isEquipped = false;
+      }
+      relic.isEquipped = true;
+
+      await storage.updatePlayerState(userId, { relicsInventory: relicsOwned } as any);
+      res.json({ success: true, relic, relicsInventory: relicsOwned });
+    } catch {
+      res.status(500).json({ error: "Failed to equip relic" });
+    }
+  });
+
+  app.post("/api/relics/:relicId/unequip", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const { relicId } = req.params;
+
+    try {
+      const playerState = await requirePlayerState(userId);
+      const relicsOwned: any[] = Array.isArray(playerState.relicsInventory) ? [...playerState.relicsInventory] : [];
+      const relic = relicsOwned.find((entry) => entry.id === relicId || entry.relicId === relicId);
+
+      if (!relic) {
+        return res.status(404).json({ error: "Relic not found in inventory" });
+      }
+
+      relic.isEquipped = false;
+      await storage.updatePlayerState(userId, { relicsInventory: relicsOwned } as any);
+      res.json({ success: true, relic, relicsInventory: relicsOwned });
+    } catch {
+      res.status(500).json({ error: "Failed to unequip relic" });
+    }
+  });
+
   // ─── Universe Events ──────────────────────────────────────────────────────
 
-  app.get("/api/events", isAuthenticated, (_req: Request, res: Response) => {
-    res.json(SAMPLE_EVENTS);
+  app.get("/api/events", isAuthenticated, (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    res.json(
+      SAMPLE_EVENTS.map((event) => ({
+        ...event,
+        joined: eventParticipants.get(event.id)?.has(userId) ?? false,
+        participantLimit: event.eventClass === "legendary" ? 16 : event.eventClass === "epic" ? 12 : 8,
+      }))
+    );
+  });
+
+  app.post("/api/events/:eventId/join", isAuthenticated, (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const event = SAMPLE_EVENTS.find((entry) => entry.id === req.params.eventId);
+
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+
+    const participants = eventParticipants.get(event.id) ?? new Set<string>();
+    participants.add(userId);
+    eventParticipants.set(event.id, participants);
+
+    res.json({
+      success: true,
+      eventId: event.id,
+      joined: true,
+      participantCount: participants.size,
+    });
   });
 
   // ─── Expeditions ─────────────────────────────────────────────────────────
@@ -329,7 +416,10 @@ export function registerMissingRoutes(app: Express) {
     try {
       const playerState = await storage.getPlayerState(userId);
       const expeditions: any[] = (playerState as any)?.expeditions || [];
-      res.json({ expeditions, count: expeditions.length });
+      res.json({
+        expeditions: expeditions.sort((a, b) => String(b.startedAt || "").localeCompare(String(a.startedAt || ""))),
+        count: expeditions.length,
+      });
     } catch {
       res.json({ expeditions: [], count: 0 });
     }
@@ -374,33 +464,118 @@ export function registerMissingRoutes(app: Express) {
       return res.status(400).json({ error: "level must be an integer between 1 and 999" });
     }
     try {
-      const playerState = await storage.getPlayerState(userId);
-      const expeditions: any[] = (playerState as any)?.expeditions || [];
-      const newExp = {
+      const playerState = await requirePlayerState(userId);
+      const expeditions: any[] = Array.isArray(playerState.expeditions) ? [...playerState.expeditions] : [];
+      const newExp = createExpeditionRecord({
         id: `exp-${Date.now()}`,
         name,
         type,
-        subType: subType ?? null,
-        categoryId: categoryId ?? null,
-        subCategoryId: subCategoryId ?? null,
+        subType,
+        categoryId,
+        subCategoryId,
         tier: tierNum,
         level: levelNum,
-        rank: rank ?? null,
-        title: title ?? null,
+        rank,
+        title,
         targetCoordinates,
-        status: "preparing",
         fleetComposition,
         troopComposition,
-        discoveries: [],
-        casualties: {},
-        resources: {},
-        startedAt: new Date().toISOString(),
-      };
+      });
       expeditions.push(newExp);
       await storage.updatePlayerState(userId, { expeditions } as any);
       res.status(201).json(newExp);
     } catch (err) {
       res.status(500).json({ error: "Failed to create expedition" });
+    }
+  });
+
+  app.get("/api/expeditions/instance/:id", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    try {
+      const playerState = await requirePlayerState(userId);
+      const expeditions: any[] = Array.isArray(playerState.expeditions) ? playerState.expeditions : [];
+      const expedition = expeditions.find((entry) => entry.id === req.params.id);
+      if (!expedition) {
+        return res.status(404).json({ error: "Expedition not found" });
+      }
+      res.json(expedition);
+    } catch {
+      res.status(500).json({ error: "Failed to load expedition" });
+    }
+  });
+
+  app.post("/api/expeditions/:id/launch", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    try {
+      const playerState = await requirePlayerState(userId);
+      const expeditions: any[] = Array.isArray(playerState.expeditions) ? [...playerState.expeditions] : [];
+      const expedition = expeditions.find((entry) => entry.id === req.params.id);
+      if (!expedition) {
+        return res.status(404).json({ error: "Expedition not found" });
+      }
+      if (expedition.status !== "preparing") {
+        return res.status(400).json({ error: "Only preparing expeditions can launch" });
+      }
+
+      expedition.status = "in_progress";
+      expedition.launchedAt = new Date().toISOString();
+      await storage.updatePlayerState(userId, { expeditions } as any);
+      res.json({ success: true, expedition });
+    } catch {
+      res.status(500).json({ error: "Failed to launch expedition" });
+    }
+  });
+
+  app.post("/api/expeditions/:id/resolve", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    try {
+      const playerState = await requirePlayerState(userId);
+      const expeditions: any[] = Array.isArray(playerState.expeditions) ? [...playerState.expeditions] : [];
+      const expeditionIndex = expeditions.findIndex((entry) => entry.id === req.params.id);
+      if (expeditionIndex === -1) {
+        return res.status(404).json({ error: "Expedition not found" });
+      }
+
+      const expedition = expeditions[expeditionIndex];
+      if (!["preparing", "in_progress"].includes(String(expedition.status))) {
+        return res.status(400).json({ error: "Expedition is already resolved" });
+      }
+
+      const resolved = resolveExpeditionRecord(expedition);
+      expeditions[expeditionIndex] = resolved;
+
+      const currentResources = normalizeResources(playerState.resources);
+      const updatedResources = applyResourceDelta(currentResources, {
+        metal: resolved.resources?.metal ?? 0,
+        crystal: resolved.resources?.crystal ?? 0,
+        deuterium: resolved.resources?.deuterium ?? 0,
+        credits: resolved.rewards?.credits ?? 0,
+      });
+
+      const commander = (playerState.commander as any) || {};
+      const commanderStats = commander.stats || { xp: 0 };
+      const updatedCommander = {
+        ...commander,
+        stats: {
+          ...commanderStats,
+          xp: Number(commanderStats.xp || 0) + Number(resolved.rewards?.xp || 0),
+        },
+      };
+
+      await storage.updatePlayerState(userId, {
+        expeditions,
+        resources: updatedResources,
+        commander: updatedCommander,
+      } as any);
+
+      res.json({
+        success: true,
+        expedition: resolved,
+        resources: updatedResources,
+        commander: updatedCommander,
+      });
+    } catch {
+      res.status(500).json({ error: "Failed to resolve expedition" });
     }
   });
 
@@ -410,7 +585,7 @@ export function registerMissingRoutes(app: Express) {
     const userId = getUserId(req);
     try {
       const playerState = await storage.getPlayerState(userId);
-      const explorationState = (playerState as any)?.explorationState || { claimedQuestIds: [], harvestedDebrisIds: [] };
+      const explorationState = buildExplorationState((playerState as any)?.explorationState);
       res.json(explorationState);
     } catch {
       res.json({ claimedQuestIds: [], harvestedDebrisIds: [] });
@@ -440,13 +615,18 @@ export function registerMissingRoutes(app: Express) {
       };
 
       const current = playerState as any;
+      const currentResources = normalizeResources(current.resources);
       await storage.updatePlayerState(userId, {
-        metal:     (Number(current.metal)     || 0) + gained.metal,
-        crystal:   (Number(current.crystal)   || 0) + gained.crystal,
-        deuterium: (Number(current.deuterium) || 0) + gained.deuterium,
+        resources: applyResourceDelta(currentResources, gained),
       } as any);
 
-      res.json({ success: true, anomalyId, anomalyName, gained });
+      res.json({
+        success: true,
+        anomalyId,
+        anomalyName,
+        gained,
+        resources: applyResourceDelta(currentResources, gained),
+      });
     } catch (err) {
       res.status(500).json({ error: "Failed to process scan" });
     }
@@ -463,14 +643,25 @@ export function registerMissingRoutes(app: Express) {
     if (!gateId || !action) return res.status(400).json({ error: "gateId and action are required" });
 
     try {
-      const playerState = await storage.getPlayerState(userId);
-      const current = playerState as any;
-      if (energyCost > 0) {
-        const newEnergy = Math.max(0, (Number(current.energy) || 0) - energyCost);
-        await storage.updatePlayerState(userId, { energy: newEnergy } as any);
+      const playerState = await requirePlayerState(userId);
+      const currentResources = normalizeResources(playerState.resources);
+      if (energyCost > 0 && currentResources.deuterium < energyCost) {
+        return res.status(400).json({ error: "Insufficient deuterium" });
       }
 
-      res.json({ success: true, gateId, gateName, action, message: action === "jump" ? "Warp jump completed" : "Gate captured" });
+      const updatedResources = applyResourceDelta(currentResources, { deuterium: -energyCost });
+      if (energyCost > 0) {
+        await storage.updatePlayerState(userId, { resources: updatedResources } as any);
+      }
+
+      res.json({
+        success: true,
+        gateId,
+        gateName,
+        action,
+        resources: updatedResources,
+        message: action === "jump" ? "Warp jump completed" : "Gate captured",
+      });
     } catch {
       res.status(500).json({ error: "Failed to process warp action" });
     }
@@ -489,7 +680,7 @@ export function registerMissingRoutes(app: Express) {
       if (!playerState) return res.status(404).json({ error: "Player not found" });
 
       const current = playerState as any;
-      const explState = current.explorationState || { claimedQuestIds: [], harvestedDebrisIds: [] };
+      const explState = buildExplorationState(current.explorationState);
 
       if (explState.claimedQuestIds.includes(questId)) {
         return res.status(409).json({ error: "Quest already claimed" });
@@ -503,15 +694,25 @@ export function registerMissingRoutes(app: Express) {
       };
 
       explState.claimedQuestIds.push(questId);
+      const currentResources = normalizeResources(current.resources);
+      const updatedResources = applyResourceDelta(currentResources, gain);
+      const commander = current.commander || {};
+      const commanderStats = commander.stats || { xp: 0 };
+      const updatedCommander = {
+        ...commander,
+        stats: {
+          ...commanderStats,
+          xp: Number(commanderStats.xp || 0) + gain.xp,
+        },
+      };
 
       await storage.updatePlayerState(userId, {
-        metal:     (Number(current.metal)     || 0) + gain.metal,
-        crystal:   (Number(current.crystal)   || 0) + gain.crystal,
-        deuterium: (Number(current.deuterium) || 0) + gain.deuterium,
+        resources: updatedResources,
+        commander: updatedCommander,
         explorationState: explState,
       } as any);
 
-      res.json({ success: true, questId, gain });
+      res.json({ success: true, questId, gain, resources: updatedResources, commander: updatedCommander });
     } catch {
       res.status(500).json({ error: "Failed to claim quest reward" });
     }
@@ -532,7 +733,7 @@ export function registerMissingRoutes(app: Express) {
       if (!playerState) return res.status(404).json({ error: "Player not found" });
 
       const current = playerState as any;
-      const explState = current.explorationState || { claimedQuestIds: [], harvestedDebrisIds: [] };
+      const explState = buildExplorationState(current.explorationState);
 
       if (explState.harvestedDebrisIds.includes(debrisId)) {
         return res.status(409).json({ error: "Debris already harvested" });
@@ -546,15 +747,15 @@ export function registerMissingRoutes(app: Express) {
       };
 
       explState.harvestedDebrisIds.push(debrisId);
+      const currentResources = normalizeResources(current.resources);
+      const updatedResources = applyResourceDelta(currentResources, gain);
 
       await storage.updatePlayerState(userId, {
-        metal:     (Number(current.metal)     || 0) + gain.metal,
-        crystal:   (Number(current.crystal)   || 0) + gain.crystal,
-        deuterium: (Number(current.deuterium) || 0) + gain.deuterium,
+        resources: updatedResources,
         explorationState: explState,
       } as any);
 
-      res.json({ success: true, debrisId, debrisName, gain });
+      res.json({ success: true, debrisId, debrisName, gain, resources: updatedResources });
     } catch {
       res.status(500).json({ error: "Failed to harvest debris" });
     }
@@ -566,7 +767,7 @@ export function registerMissingRoutes(app: Express) {
     const userId = getUserId(req);
     const { id } = req.params;
     try {
-      const playerState = await storage.getPlayerState(userId);
+      const playerState = await requirePlayerState(userId);
       const travelState = (playerState as any)?.travelState || {};
       const activeMissions: any[] = travelState.activeMissions || [];
       const mission = activeMissions.find((m: any) => m.id === id);
@@ -574,6 +775,57 @@ export function registerMissingRoutes(app: Express) {
       res.json(mission);
     } catch {
       res.status(500).json({ error: "Failed to load mission" });
+    }
+  });
+
+  app.patch("/api/missions/:id", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const { id } = req.params;
+
+    try {
+      const playerState = await requirePlayerState(userId);
+      const travelState = (playerState as any)?.travelState || { activeRoute: null, discoveredWormholes: [], activeMissions: [] };
+      const activeMissions: any[] = Array.isArray(travelState.activeMissions) ? [...travelState.activeMissions] : [];
+      const missionIndex = activeMissions.findIndex((mission) => mission?.id === id);
+
+      if (missionIndex === -1) {
+        return res.status(404).json({ error: "Mission not found" });
+      }
+
+      const updates = req.body || {};
+      const allowedStatus = new Set(["outbound", "holding", "return", "completed", "cancelled"]);
+      const nextMission = { ...activeMissions[missionIndex] };
+
+      if (typeof updates.target === "string" && updates.target.trim()) {
+        nextMission.target = updates.target.trim();
+      }
+      if (typeof updates.destination === "string" && updates.destination.trim()) {
+        nextMission.destination = updates.destination.trim();
+      }
+      if (typeof updates.processed === "boolean") {
+        nextMission.processed = updates.processed;
+      }
+      if (typeof updates.status === "string" && allowedStatus.has(updates.status)) {
+        nextMission.status = updates.status;
+      }
+
+      for (const field of ["arrivalTime", "returnTime", "departureTime"] as const) {
+        if (updates[field] !== undefined) {
+          const nextValue = Number(updates[field]);
+          if (!Number.isFinite(nextValue) || nextValue <= 0) {
+            return res.status(400).json({ error: `Invalid ${field}` });
+          }
+          nextMission[field] = nextValue;
+        }
+      }
+
+      activeMissions[missionIndex] = nextMission;
+      travelState.activeMissions = activeMissions;
+
+      await storage.updatePlayerState(userId, { travelState } as any);
+      res.json({ success: true, mission: nextMission });
+    } catch {
+      res.status(500).json({ error: "Failed to update mission" });
     }
   });
 }

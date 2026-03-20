@@ -10,6 +10,7 @@ import { calculateConstructionCost, getMegaStructureTemplateById } from './megaS
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Megastructure, createMegastructure } from '@shared/config/megastructuresConfig';
 import { blink } from './blink';
+import { calculateResourceProduction } from './resourceMath';
 
 async function apiRequest(method: string, url: string, data?: any) {
   const headers: Record<string, string> = data ? { 'Content-Type': 'application/json' } : {};
@@ -54,6 +55,8 @@ const DEFAULT_RESOURCES: Resources = {
   water: 5000,
 };
 
+const MAX_RESOURCE_VALUE = 1_000_000_000_000_000;
+
 function parseFiniteNumber(value: unknown, fallback: number): number {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : fallback;
@@ -72,7 +75,10 @@ function parseFiniteNumber(value: unknown, fallback: number): number {
 
 function normalizeResourceValue(value: unknown, fallback: number, allowNegative: boolean = false): number {
   const numericValue = parseFiniteNumber(value, fallback);
-  return allowNegative ? numericValue : Math.max(0, numericValue);
+  const boundedValue = allowNegative
+    ? Math.max(-MAX_RESOURCE_VALUE, Math.min(MAX_RESOURCE_VALUE, numericValue))
+    : Math.max(0, Math.min(MAX_RESOURCE_VALUE, numericValue));
+  return boundedValue;
 }
 
 function normalizeResources(raw: any, fallback: Resources = DEFAULT_RESOURCES): Resources {
@@ -864,22 +870,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     const totalBonus = logisticsBonus * govBonus * configBonus;
 
-    const metalProd = 30 * buildings.metalMine * Math.pow(1.1, buildings.metalMine) * totalBonus;
-    const crystalProd = 20 * buildings.crystalMine * Math.pow(1.1, buildings.crystalMine) * totalBonus;
-    const deutProd = 10 * buildings.deuteriumSynthesizer * Math.pow(1.1, buildings.deuteriumSynthesizer) * totalBonus;
-    const energyProd = 20 * buildings.solarPlant * Math.pow(1.1, buildings.solarPlant);
-    
-    const metalCons = 10 * buildings.metalMine * Math.pow(1.1, buildings.metalMine);
-    const crystalCons = 10 * buildings.crystalMine * Math.pow(1.1, buildings.crystalMine);
-    const deutCons = 20 * buildings.deuteriumSynthesizer * Math.pow(1.1, buildings.deuteriumSynthesizer);
-    
-    const energyUsed = metalCons + crystalCons + deutCons;
+    const production = calculateResourceProduction(buildings, totalBonus);
 
     return {
-      metal: metalProd / 3600,
-      crystal: crystalProd / 3600,
-      deuterium: deutProd / 3600,
-      energy: energyProd - energyUsed
+      metal: production.metal / 3600,
+      crystal: production.crystal / 3600,
+      deuterium: production.deuterium / 3600,
+      energy: production.energy
     };
   };
 

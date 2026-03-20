@@ -8,6 +8,7 @@ import { Box, Gem, Database, Zap, ArrowUpCircle, Hammer, Clock, TrendingUp, Ware
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { MENU_ASSETS } from "@shared/config";
+import { calculateResourceProduction, calculateStorageCapacity } from "@/lib/resourceMath";
 
 const TEMP_THEME_IMAGE = "/theme-temp.png";
 
@@ -150,21 +151,30 @@ const BuildingCard = ({
   );
 };
 
+function toPercent(value: number, total: number): number {
+  if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, (value / total) * 100));
+}
+
 export default function Resources() {
   const { buildings, resources, updateBuilding, queue } = useGame();
 
   const buildQueue = queue.filter(q => q.type === "building");
 
-  const metalProduction = Math.floor(30 * buildings.metalMine * 1.1);
-  const crystalProduction = Math.floor(20 * buildings.crystalMine * 1.05);
-  const deuteriumProduction = Math.floor(10 * buildings.deuteriumSynthesizer * 1.02);
-  const energyProduction = Math.floor(20 * buildings.solarPlant);
-  const energyConsumption = Math.floor(10 * (buildings.metalMine + buildings.crystalMine + buildings.deuteriumSynthesizer));
+  const production = calculateResourceProduction(buildings);
+  const metalProduction = production.metal;
+  const crystalProduction = production.crystal;
+  const deuteriumProduction = production.deuterium;
+  const energyProduction = Math.max(0, production.energy);
+  const energyConsumption = Math.max(0, -production.energy);
 
   const storageCapacity = {
-    metal: Math.floor(10000 * Math.pow(1.5, buildings.metalMine)),
-    crystal: Math.floor(10000 * Math.pow(1.5, buildings.crystalMine)),
-    deuterium: Math.floor(10000 * Math.pow(1.5, buildings.deuteriumSynthesizer))
+    metal: calculateStorageCapacity(10000, buildings.metalMine),
+    crystal: calculateStorageCapacity(10000, buildings.crystalMine),
+    deuterium: calculateStorageCapacity(10000, buildings.deuteriumSynthesizer)
   };
 
   return (
@@ -198,7 +208,7 @@ export default function Resources() {
                   <span className="text-slate-500">Storage</span>
                   <span className="font-mono">{storageCapacity.metal.toLocaleString()}</span>
                 </div>
-                <Progress value={(resources.metal / storageCapacity.metal) * 100} className="h-1 bg-slate-200" />
+                <Progress value={toPercent(resources.metal, storageCapacity.metal)} className="h-1 bg-slate-200" />
               </div>
             </CardContent>
           </Card>
@@ -223,7 +233,7 @@ export default function Resources() {
                   <span className="text-blue-500">Storage</span>
                   <span className="font-mono">{storageCapacity.crystal.toLocaleString()}</span>
                 </div>
-                <Progress value={(resources.crystal / storageCapacity.crystal) * 100} className="h-1 bg-blue-200" />
+                <Progress value={toPercent(resources.crystal, storageCapacity.crystal)} className="h-1 bg-blue-200" />
               </div>
             </CardContent>
           </Card>
@@ -248,7 +258,7 @@ export default function Resources() {
                   <span className="text-green-500">Storage</span>
                   <span className="font-mono">{storageCapacity.deuterium.toLocaleString()}</span>
                 </div>
-                <Progress value={(resources.deuterium / storageCapacity.deuterium) * 100} className="h-1 bg-green-200" />
+                <Progress value={toPercent(resources.deuterium, storageCapacity.deuterium)} className="h-1 bg-green-200" />
               </div>
             </CardContent>
           </Card>

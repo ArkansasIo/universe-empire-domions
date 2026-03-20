@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Compass, FlaskConical, Lock, Shield, Sparkles, Wrench } from "lucide-react";
 import { useArtifactRelicSystems } from "@/lib/artifactRelicSystems";
 
@@ -23,7 +25,26 @@ function msToProgress(startedAt?: number, endsAt?: number) {
   return Math.max(0, Math.min(100, Math.floor((elapsed / total) * 100)));
 }
 
+type BackendRelicCatalog = {
+  id: string;
+  name: string;
+  description: string;
+  rarity: keyof typeof rarityClass;
+  effects?: string[];
+};
+
+type BackendRelicInventoryItem = {
+  id: string;
+  relicId?: string;
+  name: string;
+  condition?: number;
+  isEquipped?: boolean;
+  acquiredAt?: string;
+};
+
 export default function Relics() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const {
     state,
     summary,
@@ -34,6 +55,57 @@ export default function Relics() {
   } = useArtifactRelicSystems();
 
   const activeResearch = state.research.find((research) => research.status === "in_progress");
+
+  const { data: relicCatalog = [] } = useQuery<BackendRelicCatalog[]>({
+    queryKey: ["relic-catalog"],
+    queryFn: async () => {
+      const response = await fetch("/api/relics", { credentials: "include" });
+      if (!response.ok) {
+        throw new Error("Failed to load relic catalog");
+      }
+      return response.json();
+    },
+  });
+
+  const { data: relicInventory = [] } = useQuery<BackendRelicInventoryItem[]>({
+    queryKey: ["relic-inventory"],
+    queryFn: async () => {
+      const response = await fetch("/api/relics/inventory", { credentials: "include" });
+      if (!response.ok) {
+        throw new Error("Failed to load relic inventory");
+      }
+      return response.json();
+    },
+  });
+
+  const updateInventory = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["relic-inventory"] });
+  };
+
+  const equipRelicMutation = useMutation({
+    mutationFn: async ({ relicId, action }: { relicId: string; action: "equip" | "unequip" }) => {
+      const response = await fetch(`/api/relics/${relicId}/${action}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || `Failed to ${action} relic`);
+      }
+      return payload;
+    },
+    onSuccess: async (_payload, variables) => {
+      await updateInventory();
+      toast({
+        title: variables.action === "equip" ? "Relic equipped" : "Relic unequipped",
+        description: "Persistent relic inventory updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Relic action failed", description: error.message, variant: "destructive" });
+    },
+  });
 
   return (
     <GameLayout>
@@ -71,6 +143,88 @@ export default function Relics() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-slate-900 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-600" />
+              Persistent Relic Inventory
+            </CardTitle>
+            <CardDescription>Server-backed relic ownership and equip state.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {relicInventory.length === 0 ? (
+              <p className="text-sm text-slate-500">No inventory relics found.</p>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                {relicInventory.map((relic) => {
+                  const catalogEntry = relicCatalog.find((entry) => entry.id === relic.relicId);
+                  const displayName = catalogEntry?.name || relic.name;
+                  const displayDescription = catalogEntry?.description || "Recovered relic awaiting full analysis.";
+                  const displayEffects = catalogEntry?.effects || [];
+                  const displayRarity = catalogEntry?.rarity || "common";
+
+                  return (
+                    <div key={relic.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <div className="text-lg font-semibold text-slate-900">{displayName}</div>
+                          <p className="text-sm text-slate-600">{displayDescription}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="outline" className={rarityClass[displayRarity]}>
+                            {displayRarity}
+                          </Badge>
+                          {relic.isEquipped && <Badge className="bg-emerald-100 text-emerald-700">Equipped</Badge>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                        <div className="rounded border border-slate-200 bg-white px-3 py-2">
+                          <span className="text-slate-500">Condition:</span> <span className="font-semibold">{relic.condition ?? 100}%</span>
+                        </div>
+                        <div className="rounded border border-slate-200 bg-white px-3 py-2">
+                          <span className="text-slate-500">Acquired:</span> <span className="font-semibold">{relic.acquiredAt ? new Date(relic.acquiredAt).toLocaleDateString() : "Unknown"}</span>
+                        </div>
+                      </div>
+
+                      {displayEffects.length > 0 && (
+                        <div className="space-y-1 mb-3">
+                          {displayEffects.map((effect) => (
+                            <div key={`${relic.id}-${effect}`} className="text-xs bg-indigo-50 border border-indigo-100 text-indigo-700 rounded px-2 py-1">
+                              {effect}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        {relic.isEquipped ? (
+                          <Button
+                            variant="outline"
+                            onClick={() => equipRelicMutation.mutate({ relicId: relic.id, action: "unequip" })}
+                            disabled={equipRelicMutation.isPending}
+                            data-testid={`button-unequip-persistent-relic-${relic.id}`}
+                          >
+                            Unequip
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => equipRelicMutation.mutate({ relicId: relic.id, action: "equip" })}
+                            disabled={equipRelicMutation.isPending}
+                            data-testid={`button-equip-persistent-relic-${relic.id}`}
+                          >
+                            Equip
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           {state.relics.map((relic) => {

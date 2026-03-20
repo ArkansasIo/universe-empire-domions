@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import GameLayout from "@/components/layout/GameLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import type {
   ExpeditionTier,
 } from "@shared/types/expeditions";
 import { useArtifactRelicSystems } from "@/lib/artifactRelicSystems";
+import { useToast } from "@/hooks/use-toast";
 
 interface Expedition {
   id: string;
@@ -35,7 +36,9 @@ interface Expedition {
   discoveries: any[];
   casualties: Record<string, number>;
   resources: Record<string, number>;
+  rewards?: Record<string, number>;
   startedAt: string;
+  launchedAt?: string | null;
   completedAt?: string;
 }
 
@@ -65,15 +68,23 @@ export default function Expeditions() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [tiersOpen, setTiersOpen] = useState(false);
   const [selectedCatalogCategory, setSelectedCatalogCategory] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const {
     state: artifactRelicState,
     launchExpedition,
   } = useArtifactRelicSystems();
 
-  const { data: expeditionsData = {}, refetch } = useQuery({
+  const { data: expeditionsData = {} } = useQuery({
     queryKey: ["expeditions"],
-    queryFn: () => fetch("/api/expeditions").then(r => r.json()).catch(() => ({})),
+    queryFn: async () => {
+      const response = await fetch("/api/expeditions", { credentials: "include" });
+      if (!response.ok) {
+        throw new Error("Failed to load expeditions");
+      }
+      return response.json();
+    },
   });
 
   const { data: catalogData } = useQuery<ExpeditionCatalogResponse>({
@@ -107,11 +118,18 @@ export default function Expeditions() {
     mutationFn: (data: any) =>
       fetch("/api/expeditions", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      }).then(r => r.json()),
-    onSuccess: () => {
-      refetch();
+      }).then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to create expedition");
+        }
+        return payload;
+      }),
+    onSuccess: async (created: Expedition) => {
+      await queryClient.invalidateQueries({ queryKey: ["expeditions"] });
       setNewExpName("");
       setTargetCoords("");
       setNewExpType("exploration");
@@ -120,6 +138,60 @@ export default function Expeditions() {
       setNewExpSubCategory("");
       setNewExpTier("1");
       setNewExpLevel("1");
+      setSelectedExpedition(created.id);
+      toast({ title: "Expedition created", description: `${created.name} is ready for launch.` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Expedition creation failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const launchExpeditionMutation = useMutation({
+    mutationFn: async (expeditionId: string) => {
+      const response = await fetch(`/api/expeditions/${expeditionId}/launch`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to launch expedition");
+      }
+      return payload as { expedition: Expedition };
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["expeditions"] });
+      setSelectedExpedition(result.expedition.id);
+      toast({ title: "Expedition launched", description: `${result.expedition.name} is now in progress.` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Launch failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resolveExpeditionMutation = useMutation({
+    mutationFn: async (expeditionId: string) => {
+      const response = await fetch(`/api/expeditions/${expeditionId}/resolve`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to resolve expedition");
+      }
+      return payload as { expedition: Expedition };
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["expeditions"] });
+      setSelectedExpedition(result.expedition.id);
+      toast({
+        title: "Expedition resolved",
+        description: `${result.expedition.name} returned ${result.expedition.status === "failed" ? "with losses" : "successfully"}.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Resolution failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -525,14 +597,49 @@ export default function Expeditions() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs border-primary/30 text-primary hover:bg-primary/10"
-                        data-testid={`button-view-expedition-${expedition.id}`}
-                      >
-                        View
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        {expedition.status === "preparing" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs border-primary/30 text-primary hover:bg-primary/10"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              launchExpeditionMutation.mutate(expedition.id);
+                            }}
+                            disabled={launchExpeditionMutation.isPending}
+                            data-testid={`button-launch-expedition-${expedition.id}`}
+                          >
+                            Launch
+                          </Button>
+                        )}
+                        {expedition.status === "in_progress" && (
+                          <Button
+                            size="sm"
+                            className="text-xs"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              resolveExpeditionMutation.mutate(expedition.id);
+                            }}
+                            disabled={resolveExpeditionMutation.isPending}
+                            data-testid={`button-resolve-expedition-${expedition.id}`}
+                          >
+                            Resolve
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs border-primary/30 text-primary hover:bg-primary/10"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedExpedition(expedition.id);
+                          }}
+                          data-testid={`button-view-expedition-${expedition.id}`}
+                        >
+                          View
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -592,11 +699,15 @@ export default function Expeditions() {
                 <div className="bg-slate-50 p-4 rounded border border-slate-200">
                   <p className="text-xs font-bold text-slate-500 uppercase mb-1">Casualties</p>
                   <div className="space-y-1">
-                    {Object.entries(selectedExp.casualties).map(([unit, count]: [string, any]) => (
-                      <p key={unit} className="text-sm text-red-600">
-                        <span className="capitalize font-semibold">{unit}:</span> {count}
-                      </p>
-                    ))}
+                    {Object.entries(selectedExp.casualties).length === 0 ? (
+                      <p className="text-sm text-slate-500">No casualties recorded.</p>
+                    ) : (
+                      Object.entries(selectedExp.casualties).map(([unit, count]: [string, any]) => (
+                        <p key={unit} className="text-sm text-red-600">
+                          <span className="capitalize font-semibold">{unit}:</span> {count}
+                        </p>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -604,11 +715,15 @@ export default function Expeditions() {
                 <div className="bg-slate-50 p-4 rounded border border-slate-200">
                   <p className="text-xs font-bold text-slate-500 uppercase mb-1">Resources Recovered</p>
                   <div className="space-y-1">
-                    {Object.entries(selectedExp.resources).map(([resource, count]: [string, any]) => (
-                      <p key={resource} className="text-sm text-emerald-700">
-                        <span className="capitalize font-semibold">{resource}:</span> {count}
-                      </p>
-                    ))}
+                    {Object.entries(selectedExp.resources).length === 0 ? (
+                      <p className="text-sm text-slate-500">No recovered resources recorded yet.</p>
+                    ) : (
+                      Object.entries(selectedExp.resources).map(([resource, count]: [string, any]) => (
+                        <p key={resource} className="text-sm text-emerald-700">
+                          <span className="capitalize font-semibold">{resource}:</span> {count}
+                        </p>
+                      ))
+                    )}
                   </div>
                 </div>
                 <div className="bg-slate-50 p-4 rounded border border-slate-200">
@@ -626,9 +741,56 @@ export default function Expeditions() {
                   </div>
                 </div>
               </div>
-              <Button variant="outline" onClick={() => setSelectedExpedition(null)}>
-                Close Details
-              </Button>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-1">Reward Ledger</p>
+                  <div className="space-y-1">
+                    {Object.entries(selectedExp.rewards || {}).length === 0 ? (
+                      <p className="text-sm text-slate-500">Rewards will populate after resolution.</p>
+                    ) : (
+                      Object.entries(selectedExp.rewards || {}).map(([reward, count]) => (
+                        <p key={reward} className="text-sm text-amber-700">
+                          <span className="capitalize font-semibold">{reward}:</span> {count}
+                        </p>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-1">Timeline</p>
+                  <div className="space-y-1 text-sm text-slate-700">
+                    <p>Prepared: {selectedExp.startedAt ? new Date(selectedExp.startedAt).toLocaleString() : "N/A"}</p>
+                    <p>Launched: {selectedExp.launchedAt ? new Date(selectedExp.launchedAt).toLocaleString() : "Not launched"}</p>
+                    <p>Completed: {selectedExp.completedAt ? new Date(selectedExp.completedAt).toLocaleString() : "Not resolved"}</p>
+                  </div>
+                </div>
+                <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-1">Command Actions</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedExp.status === "preparing" && (
+                      <Button
+                        onClick={() => launchExpeditionMutation.mutate(selectedExp.id)}
+                        disabled={launchExpeditionMutation.isPending}
+                        data-testid={`button-launch-detail-expedition-${selectedExp.id}`}
+                      >
+                        {launchExpeditionMutation.isPending ? "Launching..." : "Launch"}
+                      </Button>
+                    )}
+                    {selectedExp.status === "in_progress" && (
+                      <Button
+                        onClick={() => resolveExpeditionMutation.mutate(selectedExp.id)}
+                        disabled={resolveExpeditionMutation.isPending}
+                        data-testid={`button-resolve-detail-expedition-${selectedExp.id}`}
+                      >
+                        {resolveExpeditionMutation.isPending ? "Resolving..." : "Resolve"}
+                      </Button>
+                    )}
+                    <Button variant="outline" onClick={() => setSelectedExpedition(null)}>
+                      Close Details
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
