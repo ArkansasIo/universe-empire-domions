@@ -1,26 +1,35 @@
-# universe-empire-domions - Game Design Documentation
+# Documentation Index
 
-**universe-empire-domions** is a 4X space strategy MMORPG browser game featuring real-time resource management, comprehensive fleet combat, and deep RPG elements.
+This folder contains the current documentation set for `Universe Empire Dominions`.
 
-## 📚 Documentation Index
+The canonical project-wide documents now live in [docs/md-documents](/d:/New%20folder/StellarDominion-2/docs/md-documents). Top-level docs in this folder are mostly focused subsystem notes, implementation summaries, or historical work logs.
 
-*   [**Architecture & Technical Overview**](./Architecture.md) - System design, state management, and tech stack.
-*   [**Economy & Resources**](./Economy.md) - Mining, energy, and resource production formulas.
-*   [**Combat System**](./Combat.md) - Fleet battles, espionage, sabotage, and battle reports.
-*   [**Shipyard & Units**](./Ships.md) - Complete ship roster, including Titans and special units.
-*   [**Technology & Research**](./Technology.md) - The three-tier tech tree (Physics, Society, Engineering).
-*   [**Galactic Market**](./Market.md) - Trade network, vendors, and the black market.
-*   [**Social & Politics**](./Social.md) - Alliances, government types, and political stability.
-*   [**Interstellar Travel**](./Interstellar.md) - Stargates, jump networks, and navigation.
-*   [**Commander System**](./Commander.md) - RPG progression, races, and classes.
+## Read First
 
-## 🚀 Project Overview
+- [GAME_DESIGN.md](/d:/New%20folder/StellarDominion-2/docs/md-documents/GAME_DESIGN.md)
+- [ARCHITECTURE.md](/d:/New%20folder/StellarDominion-2/docs/md-documents/ARCHITECTURE.md)
+- [SYSTEMS_OVERVIEW.md](/d:/New%20folder/StellarDominion-2/docs/md-documents/SYSTEMS_OVERVIEW.md)
+- [DEVELOPER_GUIDE.md](/d:/New%20folder/StellarDominion-2/docs/md-documents/DEVELOPER_GUIDE.md)
+- [UML.md](/d:/New%20folder/StellarDominion-2/docs/md-documents/UML.md)
 
-universe-empire-domions combines the classic real-time strategy mechanics of OGame with the depth of Stellaris and modern RPG progression systems.
+## Current Product Highlights Covered By These Docs
 
-### Key Features
-*   **Real-Time Strategy**: Build, research, and fight in real-time.
-*   **RPG Progression**: Level up your Commander, choose a Race (Terran, Lithoid, etc.), and specialized Class (Admiral, Industrialist, Scientist).
-*   **Massive Scale**: From small fighters to moon-sized Death Stars and Titan-class super-capital ships.
-*   **Deep Economy**: Manage Metal, Crystal, Deuterium, and Energy. Trade on the Galactic Market.
-*   **Living Universe**: Automated cron jobs handle mining, random events, and NPC interactions.
+- title screen with `Nine Realms` and `Server Health` side panels
+- shared in-game left sidebar plus linked submenu cards
+- responsive and touch-aware layout controls in settings
+- imported OGameX asset gallery integrated into the game shell
+- TypeScript migration path for imported source logic
+- live page families for empire, research, military, exploration, diplomacy, economy, and system routes
+
+## Supporting Notes In This Folder
+
+- research implementation and test summaries
+- subsystem briefs for combat, economy, ships, technology, and universe content
+- merge and deployment checklists
+- changelogs and migration notes
+
+## Source Boundaries
+
+Project-owned documentation is in this folder and in [docs/md-documents](/d:/New%20folder/StellarDominion-2/docs/md-documents).
+
+Imported upstream reference documentation under [ogamex-source](/d:/New%20folder/StellarDominion-2/ogamex-source) is intentionally kept separate so provenance remains clear.

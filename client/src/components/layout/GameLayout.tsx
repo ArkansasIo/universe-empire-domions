@@ -3,7 +3,7 @@ import { useGame } from "@/lib/gameContext";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { PLANET_ASSETS } from "@shared/config";
+import { OGAMEX_FEATURED_ASSETS, PLANET_ASSETS } from "@shared/config";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -283,7 +283,8 @@ const menuSections: MenuSection[] = [
         title: "Tech Trees",
         description: "Navigate structured technology paths and reference systems.",
         items: [
-          { href: "/technology-tree", icon: GraduationCap, label: "Technology Tree", description: "Browse upgrade dependencies and long-term tech routes.", activePaths: ["/tech-tree"] },
+          { href: "/technology-tree", icon: GraduationCap, label: "Technology Tree", description: "Browse upgrade dependencies and long-term tech routes." },
+          { href: "/tech-tree", icon: FlaskConical, label: "Tech Tree Legacy", description: "Open the alternate tech tree route and keep the legacy page linked into navigation." },
           { href: "/ogame-compendium", icon: Database, label: "OGame Compendium", description: "Reference structured technology, economy, and combat data." },
         ],
       },
@@ -425,8 +426,12 @@ const menuSections: MenuSection[] = [
 
 const systemItems: NavItem[] = [
   { href: "/diagnostics", icon: AlertTriangle, label: "Diagnostics", description: "Inspect client, server, and gameplay diagnostic tools." },
-  { href: "/assets-gallery", icon: Image, label: "Assets Gallery", description: "Browse game assets and visual reference content." },
+  { href: "/assets-gallery", icon: Image, label: "Assets Gallery", description: "Browse game assets, including the new OGameX asset pack." },
   { href: "/settings", icon: Settings, label: "Settings", description: "Update configuration, preferences, and account options." },
+  { href: "/forums", icon: ScrollText, label: "Forums", description: "Open community discussions and support channels." },
+  { href: "/about", icon: BookOpen, label: "About", description: "Read project background and game overview information." },
+  { href: "/terms", icon: FileText, label: "Terms", description: "Review the game terms of service and usage rules." },
+  { href: "/privacy", icon: Shield, label: "Privacy", description: "Review privacy details and data handling policies." },
 ];
 
 const adminItems: NavItem[] = [
@@ -540,30 +545,38 @@ function GameSidebar({
   touchMode: boolean;
 }) {
   const sidebarPlanetImage = PLANET_ASSETS.TERRESTRIAL.EARTH_LIKE.path;
+  const sidebarBackdropImage = OGAMEX_FEATURED_ASSETS.BACKGROUND.path;
   const fallbackPlanetImage = "/theme-temp.png";
 
   return (
     <>
       <div className="p-4 sm:p-6">
-        <div className="bg-slate-100 border border-slate-200 p-4 rounded text-center">
-          <div className="w-16 h-16 mx-auto bg-white rounded-full border-2 border-primary mb-3 shadow-sm overflow-hidden">
-            <img
-              src={sidebarPlanetImage}
-              alt={planetName || "Planet"}
-              className="w-full h-full object-cover"
-              onError={(event) => {
-                event.currentTarget.onerror = null;
-                event.currentTarget.src = fallbackPlanetImage;
-              }}
-            />
+        <div className="relative overflow-hidden rounded border border-slate-200 text-center">
+          <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: `url(${sidebarBackdropImage})` }} />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/10 via-white/80 to-white/95" />
+          <div className="relative p-4">
+            <div className="w-16 h-16 mx-auto bg-white rounded-full border-2 border-primary mb-3 shadow-sm overflow-hidden">
+              <img
+                src={sidebarPlanetImage}
+                alt={planetName || "Planet"}
+                className="w-full h-full object-cover"
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = fallbackPlanetImage;
+                }}
+              />
+            </div>
+            <h3 className="font-orbitron font-bold text-slate-900">{planetName}</h3>
+            <p className="text-xs text-muted-foreground">[{coordinates}]</p>
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-500">
+              <span>OGameX Assets</span>
+              <span className="text-primary">Linked</span>
+            </div>
           </div>
-          <h3 className="font-orbitron font-bold text-slate-900">{planetName}</h3>
-          <p className="text-xs text-muted-foreground">[{coordinates}]</p>
         </div>
       </div>
 
-      <nav className="flex-1 py-2 overflow-y-auto scrollbar-hide">
-        <SidebarItem href="/" icon={LayoutDashboard} label="Overview" active={location === "/"} onSelect={onNavigate} touchMode={touchMode} />
+      <nav className="flex-1 py-2 overflow-y-auto scrollbar-hide">        <SidebarItem href="/" icon={LayoutDashboard} label="Overview" active={location === "/"} onSelect={onNavigate} touchMode={touchMode} />
 
         {menuSections.map((section) => (
           <CollapsibleMenu
@@ -637,6 +650,13 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
   const buildId = import.meta.env.VITE_BUILD_ID || "dev";
   const buildTime = import.meta.env.VITE_BUILD_TIME || "local";
   const activePageContext = getActivePageContext(location, isAdmin);
+  const contextBackdropImage = activePageContext?.section === "Research"
+    ? OGAMEX_FEATURED_ASSETS.RESEARCH.path
+    : activePageContext?.section === "Military"
+      ? OGAMEX_FEATURED_ASSETS.SHIPS.path
+      : activePageContext?.section === "System"
+        ? OGAMEX_FEATURED_ASSETS.DEFENSE.path
+        : OGAMEX_FEATURED_ASSETS.BACKGROUND.path;
 
   const { data: turnData, isLoading: turnsLoading } = useQuery({
     queryKey: ['/api/turns'],
@@ -853,7 +873,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
            <div className={cn(contentWidthClass, "mx-auto")}>
              {activePageContext && (
                <section className="mb-6 rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden">
-                 <div className={cn("border-b border-slate-200 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 text-white", isMobile ? "px-4 py-4" : "px-6 py-5")}>
+                 <div className={cn("border-b border-slate-200 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 bg-cover bg-center text-white", isMobile ? "px-4 py-4" : "px-6 py-5")} style={{ backgroundImage: `linear-gradient(rgba(2, 6, 23, 0.92), rgba(15, 23, 42, 0.88)), url(${contextBackdropImage})` }}>
                    <div className="flex flex-wrap items-start justify-between gap-4">
                      <div className="space-y-2">
                        <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.24em] text-cyan-200/80">
@@ -947,3 +967,11 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
     </div>
   );
 }
+
+
+
+
+
+
+
+

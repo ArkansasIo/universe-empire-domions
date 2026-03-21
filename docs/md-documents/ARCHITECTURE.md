@@ -1,539 +1,163 @@
-# universe-empire-domions - Architecture Document
+# Architecture
 
-**Version:** 0.8.2-beta  
-**Last Updated:** December 2, 2024
+## High-Level Shape
 
----
+The application is a TypeScript full-stack browser game with:
 
-## System Architecture Overview
+- React on the client
+- Express on the server
+- shared config and domain modules in `shared/`
+- Drizzle-backed persistence and settings/state access on the server
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     CLIENT LAYER (React)                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
-│  │ Pages (30+)  │  │ Components   │  │ Custom Hooks         │   │
-│  │ - Fleet      │  │ - UI Library │  │ - usePlayerState()   │   │
-│  │ - Research   │  │ - Charts     │  │ - useResearchTree()  │   │
-│  │ - Expeditions│  │ - Forms      │  │ - useExpeditions()   │   │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
-│                            ↓                                      │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │              React Query (Server State)                  │    │
-│  │  Caching • Synchronization • Background Updates         │    │
-│  └──────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓ HTTP/REST
-┌─────────────────────────────────────────────────────────────────┐
-│                    API LAYER (Express.js)                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
-│  │ Routes       │  │ Middleware   │  │ Controllers          │   │
-│  │ - Auth       │  │ - Auth       │  │ - getPlayerState()   │   │
-│  │ - Research   │  │ - Logging    │  │ - createExpedition() │   │
-│  │ - Fleet      │  │ - CORS       │  │ - resolveBattle()    │   │
-│  │ - Expeditions│  │ - Validation │  │ - researchTech()     │   │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
-│                            ↓                                      │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │         Storage Layer (Database Operations)             │    │
-│  │  All database queries go through storage interface      │    │
-│  └──────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓ SQL
-┌─────────────────────────────────────────────────────────────────┐
-│                   DATA LAYER (PostgreSQL)                       │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │ Tables: users, playerStates, expeditions, research...  │    │
-│  │ Indexes: Fast queries on userId, expeditionId, etc.    │    │
-│  │ Relationships: Foreign keys maintain referential        │    │
-│  │              integrity                                  │    │
-│  └─────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
+The codebase is organized around one live app plus two imported-source support areas:
+
+- `shared/ogamex`: curated handwritten TypeScript ports used by live code
+- `generated/ogamex-ts`: bulk-generated migration scaffolds
+- `ogamex-source`: vendored upstream reference source and asset origin
+
+## Runtime Layers
+
+```text
+Browser UI
+  -> React pages, components, hooks, shared GameLayout
+  -> TanStack Query for server state fetches and mutations
+  -> Wouter route navigation
+
+Express API
+  -> auth/session middleware
+  -> route groups for state, settings, health, gameplay systems
+  -> storage abstraction for persistence
+
+Shared Domain
+  -> configs, asset registries, shared types, imported-source bridge logic
+
+Persistence
+  -> PostgreSQL-compatible database access through Drizzle/storage
 ```
 
----
+## Frontend Architecture
 
-## Data Flow Diagrams
+### Page Layer
 
-### Request → Response Flow
-```
-User Action
-    ↓
-React Event Handler
-    ↓
-useMutation() Call
-    ↓
-POST /api/endpoint
-    ↓
-Express Route Handler
-    ↓
-Validation (Zod)
-    ↓
-Storage Method Call
-    ↓
-Database Query (Drizzle ORM)
-    ↓
-PostgreSQL
-    ↓
-Drizzle Result
-    ↓
-Storage Method Returns
-    ↓
-Route Handler Response
-    ↓
-React Query Cache Update
-    ↓
-Component Re-render
-    ↓
-User Sees Result
-```
+Primary page modules live in [client/src/pages](/d:/New%20folder/StellarDominion-2/client/src/pages).
 
-### Expedition System Flow
-```
-Player Launches Expedition
-    ↓ (name, type, targetCoords, fleetComp, troopComp)
-    ↓
-POST /api/expeditions
-    ↓
-storage.createExpedition()
-    ↓
-INSERT INTO expeditions
-    ↓
-Create expedition_teams rows
-    ↓
-Expedition created with status="preparing"
-    ↓
-Player adds team members
-    ↓
-POST /api/expeditions/:id/team
-    ↓
-storage.addTeamMember()
-    ↓
-INSERT INTO expedition_teams
-    ↓
-Team member added
-    ↓
-(Server-side: Every 5 turns, process expedition)
-    ↓
-Generate encounters
-    ↓
-POST encounter resolution
-    ↓
-Award resources/casualties
-    ↓
-Expedition status → "completed"
-```
+The current route set is grouped into:
 
-### Research Progression Flow
-```
-Player Clicks "Research Tech"
-    ↓
-POST /api/research/start {techId}
-    ↓
-Storage: upsertPlayerResearch()
-    ↓
-INSERT/UPDATE player_research_progress
-    ↓
-status = "in_progress"
-    ↓
-(Game Loop: Every 10 turns)
-    ↓
-Calculate research points from labs
-    ↓
-Add to progress % for active research
-    ↓
-If progress >= 100%
-    ├─ Mark as "completed"
-    ├─ Update playerState.research
-    ├─ Apply bonuses (production, damage, etc.)
-    ├─ Unlock new techs
-    └─ Trigger dependent techs
-    ↓
-React Query invalidates queries
-    ↓
-UI refreshes with new tech status
-```
+- empire
+- research
+- military
+- exploration
+- diplomacy
+- economy
+- system/support
 
----
+### Shared Layout
 
-## Component Hierarchy
+The most important frontend architecture decision is the shared shell in [GameLayout.tsx](/d:/New%20folder/StellarDominion-2/client/src/components/layout/GameLayout.tsx).
 
-```
-App
-├── LoadingSplash
-│   └── Game initialization
-├── Router (Wouter)
-│   ├── /auth → Auth
-│   ├── / → Overview
-│   ├── /resources → Resources
-│   ├── /facilities → Facilities
-│   │   └── Building management
-│   ├── /tech-tree → TechTree (old)
-│   ├── /technology-tree → TechnologyTree
-│   │   ├── ResearchAreaCard
-│   │   ├── SubcategoryCard
-│   │   │   └── TechCard
-│   │   │       └── PrerequisiteDisplay
-│   │   └── ProgressBar
-│   ├── /expeditions → Expeditions
-│   │   ├── ExpeditionCard
-│   │   │   ├── FleetComposition
-│   │   │   └── TroopComposition
-│   │   ├── TeamRoster
-│   │   ├── EncounterLog
-│   │   └── LaunchInterface
-│   ├── /fleet → Fleet
-│   │   ├── ShipCard
-│   │   └── ShipyardInterface
-│   ├── /galaxy → Galaxy
-│   └── ... (30+ pages)
-│
-└── Providers
-    ├── GameProvider (Context)
-    ├── QueryClientProvider (React Query)
-    ├── TooltipProvider (Radix)
-    └── Toaster (Sonner)
-```
+Responsibilities of `GameLayout`:
 
----
+- draw the top resource bar
+- draw the left navigation tree
+- calculate the active section/group/page context
+- expose submenu sibling cards
+- adapt to mobile and touch interaction
+- apply display preferences from player options
+- show shared build/version footer metadata
 
-## State Management Strategy
+The title/auth page is intentionally outside this shell and lives in [Auth.tsx](/d:/New%20folder/StellarDominion-2/client/src/pages/Auth.tsx).
 
-### Global State (GameProvider)
-```typescript
-// #tag: state-management, context
-interface GameState {
-  user: User | null;
-  playerState: PlayerState | null;
-  isLoading: boolean;
-  error: string | null;
-}
+### Display Preference Pipeline
 
-interface GameContextType {
-  state: GameState;
-  updatePlayerState: (updates: Partial<PlayerState>) => Promise<void>;
-  // ... other methods
-}
-```
+Mobile and touch support is implemented as a full layout pipeline:
 
-### Server State (React Query)
-```typescript
-// #tag: state-management, caching
-useQuery({
-  queryKey: ["player-state"],      // Cache key
-  queryFn: () => fetch("/api/player/state").then(r => r.json()),
-  staleTime: 30000,                 // 30 seconds
-  refetchInterval: 60000            // Refetch every minute
-});
-```
+1. defaults defined in [server/routes-settings.ts](/d:/New%20folder/StellarDominion-2/server/routes-settings.ts)
+2. UI controls exposed in [Settings.tsx](/d:/New%20folder/StellarDominion-2/client/src/pages/Settings.tsx)
+3. layout consumption in [GameLayout.tsx](/d:/New%20folder/StellarDominion-2/client/src/components/layout/GameLayout.tsx)
+4. dataset/class flags applied to the document root for styling and interaction changes
 
-### Local State (useState)
-```typescript
-// #tag: state-management, local
-const [selectedTech, setSelectedTech] = useState<Technology | null>(null);
-const [expeditionFilter, setExpeditionFilter] = useState<ExpeditionType>("all");
-```
+This gives the app a central place to manage:
 
----
+- device profile
+- browser width
+- touch mode
+- compact UI
+- reduced motion
+- sticky mobile bars
 
-## Database Relationships
+## Backend Architecture
 
-```
-users
-├── playerStates (1:1)
-├── missions (1:N)
-├── expeditions (1:N)
-│   ├── expeditionTeams (1:N)
-│   │   └── units (N:1)
-│   └── expeditionEncounters (1:N)
-├── playerResearchProgress (1:N)
-│   └── researchTechnologies (N:1)
-├── battles (1:N as attacker or defender)
-│   └── battleLogs (1:N)
-├── marketOrders (1:N)
-└── allianceMembers (1:N)
-    └── alliances (N:1)
-```
+### Express Route Groups
 
----
+The server is centered around route modules and storage-backed handlers.
 
-## API Architecture
+Important route domains include:
 
-### Endpoint Organization
+- authentication and account flows
+- player state and setup
+- settings and per-player options
+- turn/status/health endpoints
+- gameplay data endpoints used by page-level queries
 
-**Pattern:** `/api/{resource}/{action}`
+### Storage Boundary
 
-```
-/api/auth/*              - Authentication
-/api/player/*            - Player state
-/api/resources/*         - Resource management
-/api/research/*          - Technology research
-/api/expeditions/*       - Space expeditions
-/api/fleet/*             - Fleet management
-/api/battles/*           - Combat system
-/api/missions/*          - Fleet missions
-/api/alliances/*         - Alliance diplomacy
-/api/market/*            - Trading market
-```
+The backend uses a storage abstraction so page routes do not directly embed all persistence logic.
 
-### Request/Response Pattern
+This makes it easier to:
 
-**Request:**
-```typescript
-{
-  method: "POST",
-  url: "/api/expeditions",
-  headers: { "Content-Type": "application/json" },
-  body: {
-    name: "Deep Space Exploration",
-    type: "exploration",
-    targetCoordinates: "[5:3:2]",
-    fleetComposition: { corvettes: 5 },
-    troopComposition: { soldiers: 100 }
-  }
-}
-```
+- keep route handlers thin
+- normalize settings/state updates
+- evolve persistence without rewriting page handlers
+- mix handwritten game logic with imported-source ports carefully
 
-**Response (Success):**
-```typescript
-{
-  status: 200,
-  body: {
-    id: "uuid",
-    leaderId: "uuid",
-    name: "Deep Space Exploration",
-    type: "exploration",
-    status: "preparing",
-    startedAt: "2024-12-02T20:40:00Z",
-    discoveries: [],
-    casualties: {}
-  }
-}
-```
+## Imported Source Boundary
 
-**Response (Error):**
-```typescript
-{
-  status: 500,
-  body: {
-    message: "Failed to create expedition"
-  }
-}
-```
+The imported upstream source is not the live runtime.
 
----
+Architecture rule:
 
-## Performance Considerations
+- `ogamex-source/` is vendored reference
+- `generated/ogamex-ts/` is machine-assisted migration output
+- `shared/ogamex/` is the curated bridge where runtime-safe TypeScript ports live
 
-### Caching Strategy
+This boundary matters because the project should not imply that the entire upstream tree is already production-ready TypeScript.
 
-```
-┌─────────────────────────────────────┐
-│    Browser Cache (LocalStorage)     │
-│  - Static assets (fonts, icons)     │
-│  - User preferences                 │
-│  - Cache duration: 1 week           │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│   React Query Cache (Memory)        │
-│  - API responses                    │
-│  - Stale time: 30 seconds           │
-│  - Cache time: 5 minutes            │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│  Server Cache (Redis - future)      │
-│  - Research costs & bonuses         │
-│  - Static game data                 │
-│  - Cache duration: 1 day            │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│   Database Indexes                  │
-│  - userId (players list)            │
-│  - expeditionId (team queries)      │
-│  - playerId (research progress)     │
-└─────────────────────────────────────┘
-```
+## Asset Architecture
 
-### Scalability Points
+Imported and native assets are registered through shared config rather than scattered ad hoc usage.
 
-| Component | Bottleneck | Solution |
-|-----------|-----------|----------|
-| **Database** | Large player base | Sharding, read replicas |
-| **API Server** | Request throughput | Load balancing, caching |
-| **Frontend** | Large lists | Virtual scrolling, pagination |
-| **Real-time** | Turn processing | Job queue (Bull/BullMQ) |
+Key references:
 
----
+- [shared/config/ogamexAssetsConfig.ts](/d:/New%20folder/StellarDominion-2/shared/config/ogamexAssetsConfig.ts)
+- [GameAssetsGallery.tsx](/d:/New%20folder/StellarDominion-2/client/src/pages/GameAssetsGallery.tsx)
 
-## Security Architecture
+This supports:
 
-### Authentication Flow
-```
-User Login
-    ↓
-Passport Local Strategy
-    ↓
-Hash comparison (bcrypt)
-    ↓
-Session creation
-    ↓
-Set httpOnly cookie
-    ↓
-Redirect to /
-    ↓
-Middleware: isAuthenticated checks req.user
-```
+- consistent asset provenance
+- shared art usage across pages
+- gallery/documentation visibility
+- future replacement or expansion without hunting raw paths across the app
 
-### Authorization Pattern
-```typescript
-// #tag: security, authorization
-app.get("/api/expeditions", isAuthenticated, async (req, res) => {
-  const userId = getUserId(req);  // From authenticated session
-  const expeditions = await storage.getExpeditions(userId);
-  res.json(expeditions);
-});
-```
+## Architectural Priorities
 
-### Data Isolation
-- Each player can only see their own resources
-- Missions/expeditions scoped by userId
-- Battle results verified server-side
-- Market orders immutable after execution
+1. One consistent in-game layout across main pages and sub pages
+2. Clear separation between live game code and imported reference code
+3. Shared config-driven assets and menus
+4. Per-player settings that affect the shell globally
+5. Incremental migration instead of risky one-shot rewrites
 
----
+## Current Technical Risks
 
-## Deployment Architecture
+- many gameplay pages exist, but simulation depth varies by subsystem
+- imported-source scaffolds still need manual curation before production use
+- documentation can drift quickly unless the canonical docs remain centralized
 
-### Development Environment
-```
-Vite Dev Server (port 5000)
-    ↓ Hot Module Reload
-Webpack Watch
-    ↓
-tsx Watcher (server)
-    ↓
-Auto-restart on changes
-```
+## Current Source Of Truth
 
-### Production Environment
-```
-┌──────────────────────┐
-│   Nginx/Load         │
-│   Balancer           │
-└──────────────────────┘
-         ↓
-┌──────────────────────┐
-│  Node.js Process     │
-│  (Cluster)           │
-└──────────────────────┘
-         ↓
-┌──────────────────────┐
-│  PostgreSQL Pool     │
-│  (Connection Pool)   │
-└──────────────────────┘
-         ↓
-┌──────────────────────┐
-│  Redis Cache         │
-│  (Optional)          │
-└──────────────────────┘
-```
+For architecture questions, treat these as the primary references:
 
----
-
-## Error Handling Strategy
-
-### Error Types
-
-| Type | Handling | User Message |
-|------|----------|--------------|
-| **Validation** | 400 Bad Request | "Invalid input: {field}" |
-| **Auth** | 401 Unauthorized | "Please log in" |
-| **Permission** | 403 Forbidden | "Access denied" |
-| **Not Found** | 404 Not Found | "Resource not found" |
-| **Server** | 500 Server Error | "Something went wrong" |
-
-### Error Flow
-```typescript
-// Client-side
-const { mutate, isPending, error } = useMutation({
-  mutationFn: async (data) => {
-    const res = await fetch("/api/expeditions", { 
-      method: "POST", 
-      body: JSON.stringify(data) 
-    });
-    if (!res.ok) {
-      throw new Error(res.statusText);
-    }
-    return res.json();
-  },
-  onError: (error) => {
-    toast.error(error.message);  // Show to user
-  }
-});
-
-// Server-side
-try {
-  const expedition = await storage.createExpedition(...);
-  res.json(expedition);
-} catch (error: any) {
-  logger.error("Expedition creation failed", error);
-  res.status(500).json({ message: "Failed to create expedition" });
-}
-```
-
----
-
-## Future Architecture Improvements
-
-### Short Term (Next Sprint)
-- [ ] Implement response caching middleware
-- [ ] Add database connection pooling
-- [ ] Implement request rate limiting
-- [ ] Add input validation with Zod
-
-### Medium Term (Next Quarter)
-- [ ] Add Redis cache layer
-- [ ] Implement job queue for turn processing
-- [ ] Add WebSocket for real-time updates
-- [ ] Implement GraphQL API alternative
-
-### Long Term (Future)
-- [ ] Microservices architecture
-- [ ] Event sourcing for game events
-- [ ] CQRS pattern for reporting
-- [ ] Blockchain integration (NFT ships/items)
-
----
-
-## Technology Decisions
-
-### Why React?
-- Large ecosystem
-- Component reusability
-- Strong TypeScript support
-- Large community
-
-### Why Express.js?
-- Minimal, unopinionated
-- Fast development
-- Excellent middleware ecosystem
-- Proven in production
-
-### Why PostgreSQL?
-- ACID compliance
-- JSON support (JSONB)
-- Full-text search
-- Excellent TypeScript ORM (Drizzle)
-
-### Why Drizzle ORM?
-- Type-safe queries
-- SQL-like syntax
-- Schema migrations
-- Zero runtime overhead
-
----
-
-**Last Updated:** December 2, 2024  
-**Developed by:** Stephen ([@ArkansasIo](https://github.com/ArkansasIo) | [@Apocalypsecoder0](https://github.com/Apocalypsecoder0))
+- [client/src/components/layout/GameLayout.tsx](/d:/New%20folder/StellarDominion-2/client/src/components/layout/GameLayout.tsx)
+- [client/src/pages/Auth.tsx](/d:/New%20folder/StellarDominion-2/client/src/pages/Auth.tsx)
+- [client/src/pages/Settings.tsx](/d:/New%20folder/StellarDominion-2/client/src/pages/Settings.tsx)
+- [server/routes-settings.ts](/d:/New%20folder/StellarDominion-2/server/routes-settings.ts)
+- [shared/config/ogamexAssetsConfig.ts](/d:/New%20folder/StellarDominion-2/shared/config/ogamexAssetsConfig.ts)

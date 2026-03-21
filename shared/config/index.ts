@@ -571,6 +571,15 @@ export {
   generatePlaceholderAssetManifest,
 } from './gameAssetsConfig';
 
+export {
+  OGAMEX_ASSET_CATEGORIES,
+  OGAMEX_ASSET_COLLECTIONS,
+  OGAMEX_FEATURED_ASSETS,
+  getOgamexAssetsByCategory,
+  type OgamexAssetCategory,
+  type OgamexAssetReference,
+} from './ogamexAssetsConfig';
+
 // OGame Catalog Exports
 export {
   OGAME_CATALOG_CATEGORIES,
@@ -618,6 +627,7 @@ export * as TechnologyTreeConfig from './technologyTreeConfig';
 export * as TechnologyTreeExpandedConfig from './technologyTreeExpandedConfig';
 export * as TechnologyTreeCustomConfig from './technologyTreeCustomConfig';
 export * as GameAssetsConfig from './gameAssetsConfig';
+export * as OgamexAssetsConfig from './ogamexAssetsConfig';
 export * as ResearchQueueConfig from './researchQueueConfig';
 export * as TurnSystemConfig from './turnSystemConfig';
 export * as ResearchXPConfig from './researchXPConfig';
@@ -897,3 +907,4 @@ export {
   type FramingCategoryMeta,
 } from './framingBuildingStructuresConfig';
 export * as FramingBuildingStructuresConfig from './framingBuildingStructuresConfig';
+

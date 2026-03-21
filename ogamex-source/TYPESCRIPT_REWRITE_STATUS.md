@@ -1,57 +1,46 @@
-# OGameX TypeScript Rewrite Status
+# Imported Source TypeScript Rewrite Status
 
-This folder is a vendored source reference from OGameX. It has not been fully rewritten to TypeScript.
+This folder is vendored upstream reference source. It is not the live TypeScript game application.
 
 ## Scope Reality
 
-- Total files in `ogamex-source`: about `3005`
+- total files in `ogamex-source`: about `3005`
 - PHP files under `ogamex-source/app`: about `288`
-- Framework stack: Laravel + PHP + Blade + Composer + Rust FFI helpers
+- upstream stack: Laravel, PHP, Blade, Composer, plus helper libraries
 
-A full rewrite of every file into TypeScript is a major platform migration, not a single-file refactor.
+Rewriting the whole imported source tree into application-ready TypeScript is a platform migration, not a single conversion step.
 
-## TypeScript Port Started
+## Current Rewrite Track
 
-The first rewrite foundation now lives in [`shared/ogamex`](../shared/ogamex):
+The current project uses a staged migration model:
 
-- `universeConstants.ts`
-- `enums.ts`
-- `coordinateDistance.ts`
-- `services/characterClassService.ts`
-- `index.ts`
+1. vendored reference stays in `ogamex-source`
+2. bulk scaffolds are generated into `generated/ogamex-ts`
+3. runtime-safe TypeScript ports are curated in `shared/ogamex`
 
-Bulk migration automation now also exists in [`script/ogamex_mass_rewrite.py`](../script/ogamex_mass_rewrite.py).
+## Current Curated TypeScript Bridge
 
-These files port the first low-risk shared domain pieces from:
+The first stable bridge modules live in [shared/ogamex](/d:/New%20folder/StellarDominion-2/shared/ogamex), including:
 
-- `app/GameConstants/UniverseConstants.php`
-- `app/Enums/FleetMissionStatus.php`
-- `app/Enums/FleetSpeedType.php`
-- `app/Enums/HighscoreTypeEnum.php`
-- `app/Enums/CharacterClass.php`
-- `app/Services/CoordinateDistanceCalculator.php`
-- `app/Services/CharacterClassService.php`
+- universe constants
+- enum ports
+- coordinate distance logic
+- character class service helpers
+- shared exports for incremental adoption
 
-## Current State
+## Current Practical Outcome
 
-- Bulk-generated TypeScript scaffolds were written to [`generated/ogamex-ts`](../generated/ogamex-ts)
-- The live server mission math now reuses `shared/ogamex` instead of duplicating travel-distance logic
-- `CharacterClassService` now has a typed adapter-based TypeScript port that can be wired into app services incrementally
-
-## Recommended Rewrite Order
-
-1. Core constants, enums, coordinates, and distance math
-2. Shared account and character-class domain services
-3. Game object catalogs: buildings, research, ships, defenses
-4. Queue/build/research domain logic
-5. Fleet missions and battle calculation services
-6. Player, planet, alliance, and message services
-7. Blade/Laravel UI replacement with React pages and API handlers
-8. Admin, scheduler, and background job conversion
+- imported domain logic can be reused without copying PHP logic ad hoc into the live app
+- migration scaffolds exist for deeper batches
+- imported assets and reference models can support the current game without pretending the full upstream app is already converted
 
 ## Bulk Script
 
-Run the Python bulk script to generate TypeScript ports and scaffolds in bulk:
+The migration helper script lives at:
+
+- [script/ogamex_mass_rewrite.py](/d:/New%20folder/StellarDominion-2/script/ogamex_mass_rewrite.py)
+
+Example usage:
 
 ```bash
 python script/ogamex_mass_rewrite.py --write
@@ -59,14 +48,16 @@ python script/ogamex_mass_rewrite.py --write --only Enums GameConstants
 python script/ogamex_mass_rewrite.py --write --dest generated/ogamex-ts
 ```
 
-What it does:
+## Recommended Rewrite Order
 
-- scans the OGameX PHP tree
-- classifies files by migration category
-- ports enums and constants directly when safe
-- emits TypeScript scaffolds for complex PHP classes
-- writes a JSON manifest and Markdown report so the migration can continue in batches
+1. constants, enums, coordinates, and low-risk math
+2. shared domain services
+3. catalogs for buildings, research, ships, and defenses
+4. queues and progression rules
+5. fleet mission and combat services
+6. player, alliance, and message services
+7. UI replacement through the live React app
 
-## Important Note
+## Important Rule
 
-If you want the entire `ogamex-source` tree rewritten into TypeScript, the safest path is to migrate it in slices into the existing React + Node codebase instead of trying to mechanically convert every Laravel file one-to-one.
+Treat this folder as reference material and provenance. Treat `shared/ogamex` as the place where imported logic becomes part of the live game.

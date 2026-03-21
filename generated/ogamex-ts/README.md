@@ -1,25 +1,35 @@
-# Generated OGameX TypeScript Output
+# Generated Imported-Source TypeScript Output
 
-This folder contains bulk-generated TypeScript files produced by:
+This folder contains bulk-generated TypeScript output created from the vendored upstream reference source by:
 
-- [`script/ogamex_mass_rewrite.py`](../../script/ogamex_mass_rewrite.py)
+- [script/ogamex_mass_rewrite.py](/d:/New%20folder/StellarDominion-2/script/ogamex_mass_rewrite.py)
 
-## What Is In Here
+## What This Folder Is For
 
-- concrete ports for low-risk enums and constants
-- scaffold classes/interfaces for complex PHP files
-- a manifest file for batch migration tracking
-- a markdown report summarizing rewrite coverage
+- migration scaffolding
+- symbol inventory
+- dependency tracing
+- rewrite batch tracking
 
-## Important
+## What This Folder Is Not
 
-Most files in this folder are migration scaffolds, not final hand-reviewed ports.
+- not the primary live game runtime
+- not fully hand-reviewed
+- not a one-to-one claim that the imported source is production-ready TypeScript
 
-Use these files as:
+## Current Migration Pattern
 
-- rewrite starters
-- symbol inventories
-- dependency maps
-- migration checkpoints
+Use these files to discover structure and accelerate manual ports, then move runtime-safe logic into:
 
-Prefer the curated handwritten modules in [`shared/ogamex`](../../shared/ogamex) for production-ready shared logic when both versions exist.
+- [shared/ogamex](/d:/New%20folder/StellarDominion-2/shared/ogamex)
+
+## Contents
+
+- generated enum and constant ports where safe
+- scaffold classes/interfaces for complex source files
+- manifest files for batch tracking
+- rewrite reports for migration coverage
+
+## Working Rule
+
+If both a generated scaffold and a curated handwritten module exist, prefer the handwritten module for actual application behavior.
