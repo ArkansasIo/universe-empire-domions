@@ -18,7 +18,8 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:seed:ogame": "tsx script/seed-ogame-catalog.ts",
-    "admin": "tsx server/adminCli.ts"
+    "admin": "tsx server/adminCli.ts",
+    "admin:manage": "tsx script/manage-admin.ts"
   },
   "dependencies": {
     "@blinkdotnew/sdk": "^2.3.9",
