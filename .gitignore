@@ -109,3 +109,5 @@ ssl/
 # Environment files
 *.env
 *.env.*
+script/__pycache__/
+ogamex-source/.git-vendored-backup/
