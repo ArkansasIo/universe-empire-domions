@@ -628,7 +628,7 @@ export default function Settings() {
         <Tabs defaultValue="account" className="w-full">
            <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start overflow-x-auto">
               <TabsTrigger value="account" className="font-orbitron"><UserIcon className="w-4 h-4 mr-2" /> Account</TabsTrigger>
-              <TabsTrigger value="admin-access" className={cn("font-orbitron", isActualAdmin ? "text-red-600" : "")}><Shield className="w-4 h-4 mr-2" /> Admin Access</TabsTrigger>
+              {isActualAdmin && <TabsTrigger value="admin-access" className={cn("font-orbitron", "text-red-600")}><Shield className="w-4 h-4 mr-2" /> Admin Access</TabsTrigger>}
               <TabsTrigger value="notifications" className="font-orbitron"><Bell className="w-4 h-4 mr-2" /> Notifications</TabsTrigger>
               <TabsTrigger value="display" className="font-orbitron"><Monitor className="w-4 h-4 mr-2" /> Display</TabsTrigger>
               <TabsTrigger value="sound" className="font-orbitron"><Volume2 className="w-4 h-4 mr-2" /> Sound</TabsTrigger>
@@ -1169,6 +1169,7 @@ export default function Settings() {
               </Card>
            </TabsContent>
 
+           {isActualAdmin && (
            <TabsContent value="admin-access" className="mt-6">
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                  <Card className="bg-white border-slate-200 xl:col-span-2">
@@ -1408,6 +1409,7 @@ export default function Settings() {
                  </div>
               )}
            </TabsContent>
+           )}
 
            {/* GAME RULES TAB (Admin Only) */}
            {isAdmin && (
