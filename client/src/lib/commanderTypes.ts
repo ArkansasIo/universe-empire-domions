@@ -1,6 +1,19 @@
 export type ItemRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 export type ItemType = "weapon" | "armor" | "module" | "blueprint" | "material";
 export type CommanderEquipmentType = "weapon" | "armor" | "module";
+export type CommanderEquipmentSlotId =
+  | "primaryWeapon"
+  | "secondaryWeapon"
+  | "armorCore"
+  | "shieldMatrix"
+  | "commandModule"
+  | "navModule"
+  | "tacticalSuite"
+  | "logisticsRig"
+  | "scienceCore"
+  | "engineeringTools"
+  | "relicHarness"
+  | "droneBay";
 
 export type RaceId = "terran" | "aquarian" | "mechborn" | "lithoid" | "zypherian" | "vortexborn" | "silicate" | "ethereal";
 export type ClassId = "admiral" | "industrialist" | "scientist" | "diplomat" | "explorer" | "merchant";
@@ -59,16 +72,49 @@ export interface Item {
 
 export interface CommanderState {
   name: string;
+  empireName: string;
   race: RaceId;
   class: ClassId;
   subClass: SubClassId | null;
   stats: CommanderStats;
-  equipment: {
-    weapon: Item | null;
-    armor: Item | null;
-    module: Item | null;
-  };
+  equipment: Record<CommanderEquipmentSlotId, Item | null>;
   inventory: Item[];
+}
+
+export interface CommanderEquipmentSlotDefinition {
+  id: CommanderEquipmentSlotId;
+  label: string;
+  type: CommanderEquipmentType;
+  shortLabel: string;
+  description: string;
+}
+
+export const COMMANDER_EQUIPMENT_SLOT_DEFINITIONS: CommanderEquipmentSlotDefinition[] = [
+  { id: "primaryWeapon", label: "Primary Weapon", shortLabel: "P1", type: "weapon", description: "Main offensive weapon system for personal command actions." },
+  { id: "secondaryWeapon", label: "Secondary Weapon", shortLabel: "P2", type: "weapon", description: "Backup weapon system and sidearm-grade tactical loadout." },
+  { id: "armorCore", label: "Armor Core", shortLabel: "A1", type: "armor", description: "Primary body armor plating and survival frame." },
+  { id: "shieldMatrix", label: "Shield Matrix", shortLabel: "A2", type: "armor", description: "Defensive barrier and energy shielding architecture." },
+  { id: "commandModule", label: "Command Module", shortLabel: "M1", type: "module", description: "Strategic command uplink and fleet synchronization package." },
+  { id: "navModule", label: "Navigation Module", shortLabel: "M2", type: "module", description: "Long-range navigation, routing, and jump coordination systems." },
+  { id: "tacticalSuite", label: "Tactical Suite", shortLabel: "M3", type: "module", description: "Threat analysis, combat feeds, and tactical overlays." },
+  { id: "logisticsRig", label: "Logistics Rig", shortLabel: "M4", type: "module", description: "Supply chain, transport, and sustainment optimization rig." },
+  { id: "scienceCore", label: "Science Core", shortLabel: "M5", type: "module", description: "Research accelerators and lab command integrations." },
+  { id: "engineeringTools", label: "Engineering Tools", shortLabel: "M6", type: "module", description: "Construction coordination, repair drones, and industrial assist kit." },
+  { id: "relicHarness", label: "Relic Harness", shortLabel: "M7", type: "module", description: "Ancient artifact relay frame for rare command relics." },
+  { id: "droneBay", label: "Drone Bay", shortLabel: "M8", type: "module", description: "Support drone slot for scouting, repair, or battlefield utility." },
+];
+
+export const COMMANDER_EQUIPMENT_SLOTS: Record<CommanderEquipmentSlotId, CommanderEquipmentSlotDefinition> =
+  COMMANDER_EQUIPMENT_SLOT_DEFINITIONS.reduce((accumulator, slot) => {
+    accumulator[slot.id] = slot;
+    return accumulator;
+  }, {} as Record<CommanderEquipmentSlotId, CommanderEquipmentSlotDefinition>);
+
+export function createDefaultCommanderEquipment(): Record<CommanderEquipmentSlotId, Item | null> {
+  return COMMANDER_EQUIPMENT_SLOT_DEFINITIONS.reduce((accumulator, slot) => {
+    accumulator[slot.id] = null;
+    return accumulator;
+  }, {} as Record<CommanderEquipmentSlotId, Item | null>);
 }
 
 export interface CommanderEquipmentTemplate {

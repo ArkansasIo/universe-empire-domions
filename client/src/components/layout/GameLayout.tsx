@@ -608,6 +608,7 @@ const TurnDisplay = ({ currentTurns, totalTurns, isLoading }: { currentTurns: nu
 
 function GameSidebar({
   location,
+  empireName,
   planetName,
   coordinates,
   isAdmin,
@@ -616,6 +617,7 @@ function GameSidebar({
   touchMode,
 }: {
   location: string;
+  empireName: string;
   planetName: string;
   coordinates: string;
   isAdmin: boolean;
@@ -644,6 +646,9 @@ function GameSidebar({
                   event.currentTarget.src = fallbackPlanetImage;
                 }}
               />
+            </div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+              {empireName || "Stellar Dominion"}
             </div>
             <h3 className="font-orbitron text-sm font-bold text-slate-900">{planetName}</h3>
             <p className="text-xs text-muted-foreground">[{coordinates}]</p>
@@ -724,6 +729,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
   const [location] = useLocation();
   const {
     resources,
+    empireName,
     planetName,
     coordinates,
     isAdmin,
@@ -969,8 +975,9 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
                     <SheetDescription>Browse all in-game menus and submenus on mobile devices.</SheetDescription>
                   </SheetHeader>
                   <div className="h-full bg-white flex flex-col">
-                    <GameSidebar
+                   <GameSidebar
                       location={location}
+                      empireName={empireName}
                       planetName={planetName}
                       coordinates={coordinates}
                       isAdmin={isAdmin}
@@ -989,6 +996,9 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
              <h1 className={cn("font-orbitron font-bold tracking-wider text-slate-900", isMobile ? "text-base" : "text-lg xl:text-xl")}>Universe-<span className="text-primary text-xs font-normal xl:text-sm">Empires-Dominions</span></h1>
              <p className="font-rajdhani text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:text-xs">
                Server: Nexus-Alpha // User: {username || "Commander"}
+             </p>
+             <p className="font-rajdhani text-[10px] uppercase tracking-[0.18em] text-slate-500 sm:text-xs">
+               Empire: {empireName || "Stellar Dominion"} // Homeworld: {planetName || "Prime World"}
              </p>
            </div>
           </div>
@@ -1087,6 +1097,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
         <aside className="hidden w-[17rem] border-r border-slate-200 bg-white md:flex md:w-[18rem] md:flex-col md:overflow-y-auto md:scrollbar-hide xl:w-[19rem]">
           <GameSidebar
             location={location}
+            empireName={empireName}
             planetName={planetName}
             coordinates={coordinates}
             isAdmin={isAdmin}

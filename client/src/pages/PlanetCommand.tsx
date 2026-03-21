@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import GameLayout from "@/components/layout/GameLayout";
+import HabitatSystemsPanel from "@/components/game/HabitatSystemsPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import {
   getSystemOverview,
   TOTAL_COLONY_PAGES,
 } from "@/lib/colonySystems";
+import { createHabitatConditionProfile } from "@/lib/environmentSystems";
 
 type MainMenu = "planet" | "moon" | "station";
 type PlanetSubMenu = "infrastructure" | "governance";
@@ -342,6 +344,73 @@ export default function PlanetCommand() {
 
   const selectedCommandColony = effectiveCommandItems.find((item) => item.id === selectedCommandColonyId) || null;
   const commandSystemBodies = selectedCommandColony ? getSystemOverview(selectedCommandColony) : [];
+  const storyAct = selectedCommandColony ? Math.max(1, Math.min(12, Math.ceil(selectedCommandColony.solarOverview.system / 84))) : 1;
+  const planetEnvironmentProfile = useMemo(
+    () =>
+      planet
+        ? createHabitatConditionProfile({
+            kind: "planet",
+            name: planet.name,
+            coordinates: planet.coordinates,
+            temperature: planet.temperature,
+            waterPercentage: 28,
+            habitability: planet.habitability,
+            population: planet.population,
+            level: Math.max(planet.buildings?.roboticsFactory || 0, 1),
+            integrity: Math.round((planet.habitability + Math.min(planet.defenses || 0, 300) / 3) / 2),
+            stability: selectedCommandColony?.planetStatus.stability || 70,
+            storyAct,
+          })
+        : null,
+    [planet, selectedCommandColony, storyAct],
+  );
+  const moonbaseEnvironmentProfile = useMemo(
+    () =>
+      createHabitatConditionProfile({
+        kind: "moonbase",
+        name: subPlanes?.moon.name || `${selectedPlanet?.name || "Luna"} Moon Base`,
+        coordinates: selectedPlanet?.coordinates,
+        temperature: (planet?.temperature || 240) - 70,
+        waterPercentage: 2,
+        habitability: Math.max(18, (planet?.habitability || 55) - 32 + (subPlanes?.moon.level || 0) * 4),
+        population: Math.round((planet?.population || 0) * 0.12),
+        level: Math.max(subPlanes?.moon.level || 1, 1),
+        integrity: subPlanes?.moon.stability || 62,
+        stability: subPlanes?.moon.stability || 62,
+        storyAct,
+      }),
+    [planet, selectedPlanet, storyAct, subPlanes],
+  );
+  const starbaseEnvironmentProfile = useMemo(
+    () =>
+      createHabitatConditionProfile({
+        kind: "starbase",
+        name: `${subPlanes?.station.name || selectedPlanet?.name || "Orbital"} Starbase Core`,
+        coordinates: selectedPlanet?.coordinates,
+        habitability: 64 + Math.min(subPlanes?.commandSummary.productionBonus || 0, 18),
+        population: Math.round((planet?.population || 0) * 0.08),
+        level: Math.max(subPlanes?.station.level || 1, 1),
+        integrity: subPlanes?.commandSummary.defenseRating || 72,
+        stability: subPlanes?.commandSummary.logisticsRating || 68,
+        storyAct,
+      }),
+    [planet, selectedPlanet, storyAct, subPlanes],
+  );
+  const stationEnvironmentProfile = useMemo(
+    () =>
+      createHabitatConditionProfile({
+        kind: "space-station",
+        name: subPlanes?.station.name || `${selectedPlanet?.name || "Orbital"} Station`,
+        coordinates: selectedPlanet?.coordinates,
+        habitability: 60 + Math.min(subPlanes?.station.level || 0, 20),
+        population: Math.round((planet?.population || 0) * 0.2),
+        level: Math.max(subPlanes?.station.level || 1, 1),
+        integrity: subPlanes?.station.integrity || 70,
+        stability: subPlanes?.commandSummary.logisticsRating || 65,
+        storyAct,
+      }),
+    [planet, selectedPlanet, storyAct, subPlanes],
+  );
 
   const applyCommandManagement = () => {
     if (managementScope === "individual") {
@@ -748,6 +817,16 @@ export default function PlanetCommand() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {planetEnvironmentProfile && (
+                  <HabitatSystemsPanel
+                    profile={planetEnvironmentProfile}
+                    title="Planet Environment, Disease, and Recovery Sub-Menu"
+                    description="Governance now includes biosphere pressure, outbreak control, healing tracks, and story-linked planetary crises."
+                    compact
+                    managementHref="/story-mode"
+                  />
+                )}
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -812,6 +891,14 @@ export default function PlanetCommand() {
                     </div>
                   </CardContent>
                 </Card>
+
+                <HabitatSystemsPanel
+                  profile={moonbaseEnvironmentProfile}
+                  title="Moon Base Hazard Intelligence"
+                  description="Lunar seal stress, disease spread, recovery doctrine, and event-driven surveillance penalties."
+                  compact
+                  managementHref="/stations"
+                />
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -878,6 +965,23 @@ export default function PlanetCommand() {
                     </div>
                   </CardContent>
                 </Card>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <HabitatSystemsPanel
+                    profile={starbaseEnvironmentProfile}
+                    title="Starbase Condition and Crisis Control"
+                    description="Starbase command health, troop disease pressure, repair doctrine, and campaign-linked emergency events."
+                    compact
+                    managementHref="/stations"
+                  />
+                  <HabitatSystemsPanel
+                    profile={stationEnvironmentProfile}
+                    title="Space Station Environmental Operations"
+                    description="Orbital habitat disease pressure, vent integrity, dockyard healing paths, and story escalation systems."
+                    compact
+                    managementHref="/stations"
+                  />
+                </div>
               </TabsContent>
             </Tabs>
           </TabsContent>

@@ -1,4 +1,5 @@
 import GameLayout from "@/components/layout/GameLayout";
+import HabitatSystemsPanel from "@/components/game/HabitatSystemsPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,8 @@ import {
   ShoppingCart, Sword, Anchor, Eye, HandshakeIcon, Wind,
   Search, Heart, Cpu,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createHabitatConditionProfile } from "@/lib/environmentSystems";
 
 type StationsTab = "moon" | "station" | "infrastructure";
 
@@ -459,6 +461,49 @@ export default function Stations() {
     activeBuildingPool.length > 0
       ? (activeBuildingPool.reduce((sum, building) => sum + building.costFactor, 0) / activeBuildingPool.length).toFixed(2)
       : "0.00";
+  const orbitalStoryAct = Math.max(1, Math.min(12, Math.ceil(totalInfrastructureBuilt / 6) || 1));
+  const moonbaseProfile = useMemo(
+    () =>
+      createHabitatConditionProfile({
+        kind: "moonbase",
+        name: "Lunar Base Network",
+        habitability: 42 + Math.min(buildingLevels.lunarBase || 0, 18),
+        population: totalFacilityLevels * 1500,
+        level: Math.max(buildingLevels.lunarBase || 1, 1),
+        integrity: 52 + Math.min(totalFacilityLevels, 40),
+        stability: 48 + Math.min((buildingLevels.sensorPhalanx || 0) * 6 + (buildingLevels.jumpGate || 0) * 5, 42),
+        storyAct: orbitalStoryAct,
+      }),
+    [buildingLevels, orbitalStoryAct, totalFacilityLevels],
+  );
+  const stationProfile = useMemo(
+    () =>
+      createHabitatConditionProfile({
+        kind: "space-station",
+        name: "Orbital Dock Grid",
+        habitability: 56 + Math.min((buildingLevels.spaceStation || 0) * 7, 28),
+        population: totalFacilityLevels * 2200,
+        level: Math.max(buildingLevels.spaceStation || 1, 1),
+        integrity: 58 + Math.min(totalFacilityLevels, 34),
+        stability: 52 + Math.min((buildingLevels.fleetAcademy || 0) * 5 + (buildingLevels.allianceDepot || 0) * 4, 40),
+        storyAct: orbitalStoryAct,
+      }),
+    [buildingLevels, orbitalStoryAct, totalFacilityLevels],
+  );
+  const starbaseProfile = useMemo(
+    () =>
+      createHabitatConditionProfile({
+        kind: "starbase",
+        name: "Starbase Command Hub",
+        habitability: 60 + Math.min(totalInfrastructureBuilt, 16),
+        population: totalInfrastructureBuilt * 3000,
+        level: Math.max(buildingLevels.starbaseHub || 1, 1),
+        integrity: 60 + Math.min(totalInfrastructureBuilt * 2 + (buildingLevels.starbaseHub || 0) * 5, 38),
+        stability: 54 + Math.min(totalInfrastructureBuilt + totalFacilityLevels, 36),
+        storyAct: orbitalStoryAct,
+      }),
+    [buildingLevels, orbitalStoryAct, totalFacilityLevels, totalInfrastructureBuilt],
+  );
 
   const getBuildingRequirementLabel = (building: StationBuilding) => {
     if (building.type === "moon" && building.id !== "lunarBase" && (buildingLevels.lunarBase ?? 0) === 0) {
@@ -607,6 +652,30 @@ export default function Stations() {
               <div className="text-2xl font-bold text-rose-700">{totalInfrastructureBuilt}</div>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <HabitatSystemsPanel
+            profile={moonbaseProfile}
+            title="Moon Base Environment and Disease Systems"
+            description="Seal stability, regolith contamination, lunar disease pressure, and emergency recovery paths for moon facilities."
+            compact
+            managementHref="/planet-command"
+          />
+          <HabitatSystemsPanel
+            profile={stationProfile}
+            title="Space Station Habitat Systems"
+            description="Orbital vent health, civilian disease control, dockyard recovery, and event pressure across station facilities."
+            compact
+            managementHref="/planet-command"
+          />
+          <HabitatSystemsPanel
+            profile={starbaseProfile}
+            title="Starbase Crisis and Recovery Systems"
+            description="Starbase hull stress, barracks disease spread, emergency repairs, and story-linked frontier events."
+            compact
+            managementHref="/planet-command"
+          />
         </div>
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as StationsTab)} className="w-full">

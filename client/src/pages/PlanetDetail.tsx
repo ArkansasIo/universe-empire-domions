@@ -1,6 +1,7 @@
 import { useRoute } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import GameLayout from "@/components/layout/GameLayout";
+import HabitatSystemsPanel from "@/components/game/HabitatSystemsPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +13,10 @@ import {
   Building2, Users, Shield, ArrowLeft, Flag, Rocket, Factory
 } from "lucide-react";
 import { Link } from "wouter";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createHabitatConditionProfile } from "@/lib/environmentSystems";
 
-type PlanetDetailTab = "overview" | "resources" | "buildings" | "defense";
+type PlanetDetailTab = "overview" | "resources" | "buildings" | "defense" | "environment" | "events";
 
 interface PlanetData {
   id: string;
@@ -71,7 +73,7 @@ export default function PlanetDetail() {
     const syncFromUrl = () => {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get("tab");
-      if (tabParam === "overview" || tabParam === "resources" || tabParam === "buildings" || tabParam === "defense") {
+      if (tabParam === "overview" || tabParam === "resources" || tabParam === "buildings" || tabParam === "defense" || tabParam === "environment" || tabParam === "events") {
         setActiveTab(tabParam);
       }
     };
@@ -252,6 +254,24 @@ export default function PlanetDetail() {
     P: "bg-purple-100 text-purple-900",
   };
 
+  const planetConditionProfile = useMemo(
+    () =>
+      createHabitatConditionProfile({
+        kind: "planet",
+        name: planet.name,
+        coordinates: planet.coordinates,
+        temperature: planet.temperature,
+        waterPercentage: planet.waterPercentage,
+        habitability: planet.habitability,
+        population: planet.population,
+        level: Math.max(planet.buildings?.roboticsFactory || 0, 1),
+        integrity: clampIntegrity((planet.defenses || 0) / 10 + planet.habitability),
+        stability: clampIntegrity((planet.habitability + (planet.defenses || 0) / 8) / 1.2),
+        storyAct: Math.max(1, Math.min(12, Math.round((planet.habitability + (planet.waterPercentage || 0)) / 16))),
+      }),
+    [planet],
+  );
+
   return (
     <GameLayout>
       <div className="space-y-6 animate-in fade-in duration-500">
@@ -332,11 +352,13 @@ export default function PlanetDetail() {
         </div>
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as PlanetDetailTab)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
             <TabsTrigger value="buildings" disabled={!planet.colonized}>Buildings</TabsTrigger>
             <TabsTrigger value="defense" disabled={!planet.colonized}>Defense</TabsTrigger>
+            <TabsTrigger value="environment">Environment</TabsTrigger>
+            <TabsTrigger value="events">Events</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -577,8 +599,33 @@ export default function PlanetDetail() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="environment" className="space-y-4">
+            <HabitatSystemsPanel
+              profile={planetConditionProfile}
+              title={`${planet.name} Environment and Disease Command`}
+              description="Planetary biome pressure, disease outbreaks, healing paths, buffs, debuffs, and structural recovery mechanics."
+              showEvents={false}
+              managementHref="/planet-command"
+            />
+          </TabsContent>
+
+          <TabsContent value="events" className="space-y-4">
+            <HabitatSystemsPanel
+              profile={planetConditionProfile}
+              title={`${planet.name} Crisis Event Systems`}
+              description="Planet-scale event chains and story-linked emergency mechanics affecting resources, defenses, and colonist safety."
+              compact
+              showStory
+              managementHref="/planet-command"
+            />
+          </TabsContent>
         </Tabs>
       </div>
     </GameLayout>
   );
+}
+
+function clampIntegrity(value: number) {
+  return Math.max(1, Math.min(100, Math.round(value)));
 }

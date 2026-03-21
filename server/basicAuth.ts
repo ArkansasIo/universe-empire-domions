@@ -257,6 +257,61 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const identifier = String(req.body?.identifier || req.body?.username || "").trim();
+      const password = String(req.body?.password || "");
+
+      if (!identifier || !password) {
+        return res.status(400).json({ message: "Username/email and password required" });
+      }
+
+      let user = await storage.getUserByUsername(identifier);
+      if (!user && identifier.includes("@")) {
+        const [byEmail] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, identifier))
+          .limit(1);
+        user = byEmail;
+      }
+
+      if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const adminStatus = await resolveAdminStatus(user.id);
+      if (!adminStatus.isAdmin) {
+        return res.status(403).json({ message: "Admin access required for this account" });
+      }
+
+      delete (req.session as any).impersonatorId;
+      (req.session as any).userId = user.id;
+
+      req.session.save((err) => {
+        if (err) {
+          logger.error("AUTH", "Admin session save error", {}, err);
+          return res.status(500).json({ message: "Admin login failed" });
+        }
+
+        res.json({
+          message: "Admin login successful",
+          user: {
+            id: user!.id,
+            username: user!.username || "",
+            email: user!.email,
+            firstName: user!.firstName,
+            isAdmin: true,
+            adminRole: adminStatus.adminRole,
+          },
+        });
+      });
+    } catch (error) {
+      logger.error("AUTH", "Admin login error", {}, error);
+      res.status(500).json({ message: "Admin login failed" });
+    }
+  });
+
   app.post("/api/auth/reset-password", async (req, res) => {
     try {
       const { username, email } = req.body;

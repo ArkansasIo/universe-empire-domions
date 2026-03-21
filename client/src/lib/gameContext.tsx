@@ -1,6 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { CommanderState, Item, RaceId, ClassId, SubClassId, RACES, CLASSES, SUBCLASSES } from './commanderTypes';
+import {
+  CommanderState,
+  Item,
+  RaceId,
+  ClassId,
+  SubClassId,
+  RACES,
+  CLASSES,
+  SUBCLASSES,
+  createDefaultCommanderEquipment,
+  COMMANDER_EQUIPMENT_SLOT_DEFINITIONS,
+  type CommanderEquipmentSlotId,
+} from './commanderTypes';
 import { GovernmentState, GOVERNMENTS, GovernmentId, POLICIES } from './governmentData';
 import { Alliance, AllianceMember, MOCK_ALLIANCES } from './allianceData';
 import { Artifact, ARTIFACTS } from './artifactData';
@@ -91,6 +103,28 @@ function normalizeResources(raw: any, fallback: Resources = DEFAULT_RESOURCES): 
     food: normalizeResourceValue(raw?.food, fallback.food),
     water: normalizeResourceValue(raw?.water, fallback.water),
   };
+}
+
+function normalizeCommanderEquipment(raw: any) {
+  const defaults = createDefaultCommanderEquipment();
+  if (!raw || typeof raw !== "object") {
+    return defaults;
+  }
+
+  const legacy = raw as Record<string, Item | null | undefined>;
+  const normalized = { ...defaults };
+
+  for (const slot of COMMANDER_EQUIPMENT_SLOT_DEFINITIONS) {
+    if (slot.id in legacy) {
+      normalized[slot.id] = legacy[slot.id] || null;
+    }
+  }
+
+  if ("weapon" in legacy && !normalized.primaryWeapon) normalized.primaryWeapon = legacy.weapon || null;
+  if ("armor" in legacy && !normalized.armorCore) normalized.armorCore = legacy.armor || null;
+  if ("module" in legacy && !normalized.commandModule) normalized.commandModule = legacy.module || null;
+
+  return normalized;
 }
 
 interface Buildings {
@@ -216,6 +250,7 @@ interface GameState {
   units: Units;
   megastructures: Megastructure[];
   commander: CommanderState;
+  empireName: string;
   government: GovernmentState;
   planetName: string;
   events: GameEvent[];
@@ -250,14 +285,16 @@ interface GameState {
   constructMegastructure: (templateId: string, name: string, time: number) => void;
   addEvent: (title: string, description: string, type: GameEvent["type"]) => void;
   equipItem: (item: Item) => void;
-  unequipItem: (slot: "weapon" | "armor" | "module") => void;
+  unequipItem: (slot: CommanderEquipmentSlotId) => void;
   craftItem: (item: Item, cost: {metal: number, crystal: number, deuterium?: number}) => void;
   temperItem: (itemId: string) => void;
   setCommanderName: (name: string) => void;
+  setEmpireName: (name: string) => void;
+  setHomeWorldName: (name: string) => void;
   setCommanderIdentity: (race: RaceId, cls: ClassId, subClass: SubClassId | null) => void;
   upgradeCommanderSkill: (skill: "warfare" | "logistics" | "science" | "engineering") => boolean;
   setGovernmentType: (type: GovernmentId) => void;
-  completeSetup: (commander: CommanderState, government: GovernmentState) => Promise<void>;
+  completeSetup: (commander: CommanderState, government: GovernmentState, options?: { homeWorldName?: string }) => Promise<void>;
   togglePolicy: (policyId: string) => void;
   setTaxRate: (rate: number) => void;
   dispatchFleet: (mission: Omit<Mission, "id" | "status" | "returnTime">) => void;
@@ -390,11 +427,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const [commander, setCommander] = useState<CommanderState>({
     name: "Commander",
+    empireName: "Stellar Dominion",
     race: "terran",
     class: "admiral",
     subClass: null,
     stats: { level: 1, xp: 0, warfare: 1, logistics: 1, science: 1, engineering: 1 },
-    equipment: { weapon: null, armor: null, module: null },
+    equipment: createDefaultCommanderEquipment(),
     inventory: [
       { id: "bp_plasmaRifle", name: "Plasma Rifle Blueprint", description: "Blueprint for a standard plasma rifle.", type: "blueprint", rarity: "common", level: 1 },
       { id: "raw_metal", name: "Refined Metal", description: "High quality crafting material.", type: "material", rarity: "common", level: 1 }
@@ -785,7 +823,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setResearch((state as any).research || {});
     setUnits((state as any).units || {});
     setMegastructures((state as any).megastructures || []);
-    if ((state as any).commander) setCommander((state as any).commander);
+    if ((state as any).commander) {
+      const nextCommander = (state as any).commander;
+      setCommander({
+        ...nextCommander,
+        empireName: nextCommander.empireName || nextCommander.name || "Stellar Dominion",
+        equipment: normalizeCommanderEquipment(nextCommander.equipment),
+        inventory: Array.isArray(nextCommander.inventory) ? nextCommander.inventory : [],
+      });
+    }
     if ((state as any).government) setGovernment((state as any).government);
     if ((state as any).artifacts) setArtifacts((state as any).artifacts);
     if ((state as any).cronJobs) setCronJobs((state as any).cronJobs);
@@ -1126,7 +1172,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (item.type === "blueprint" || item.type === "material") return;
     
     setCommander(prev => {
-      const slot = item.type as "weapon" | "armor" | "module";
+      const compatibleSlots = COMMANDER_EQUIPMENT_SLOT_DEFINITIONS.filter((slot) => slot.type === item.type);
+      const openSlot = compatibleSlots.find((slot) => !prev.equipment[slot.id]);
+      const fallbackSlot = compatibleSlots[0];
+      if (!fallbackSlot) return prev;
+
+      const slot = (openSlot || fallbackSlot).id;
       const currentEquip = prev.equipment[slot];
       const newInventory = prev.inventory.filter(i => i.id !== item.id);
       if (currentEquip) newInventory.push(currentEquip);
@@ -1139,7 +1190,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const unequipItem = (slot: "weapon" | "armor" | "module") => {
+  const unequipItem = (slot: CommanderEquipmentSlotId) => {
     setCommander(prev => {
       const item = prev.equipment[slot];
       if (!item) return prev;
@@ -1175,11 +1226,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setCommander(prev => ({
            ...prev,
            inventory: prev.inventory.map(i => i.id === itemId ? { ...i, tempering: (i.tempering || 0) + 1 } : i),
-           equipment: {
-              weapon: prev.equipment.weapon?.id === itemId ? { ...prev.equipment.weapon, tempering: (prev.equipment.weapon.tempering || 0) + 1 } : prev.equipment.weapon,
-              armor: prev.equipment.armor?.id === itemId ? { ...prev.equipment.armor, tempering: (prev.equipment.armor.tempering || 0) + 1 } : prev.equipment.armor,
-              module: prev.equipment.module?.id === itemId ? { ...prev.equipment.module, tempering: (prev.equipment.module.tempering || 0) + 1 } : prev.equipment.module,
-           }
+           equipment: Object.fromEntries(
+             Object.entries(prev.equipment).map(([slotId, item]) => [
+               slotId,
+               item?.id === itemId ? { ...item, tempering: (item.tempering || 0) + 1 } : item,
+             ]),
+           ) as CommanderState["equipment"],
         }));
         addEvent("Tempering Success", "Item improved successfully.", "success");
      }
@@ -1194,6 +1246,28 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     setCommander(prev => ({ ...prev, name: normalized }));
     addEvent("Commander Renamed", `High command now recognizes ${normalized}.`, "info");
+  };
+
+  const setEmpireName = (name: string) => {
+    const normalized = (name || "").trim().slice(0, 64);
+    if (!normalized) {
+      toast({ title: "Invalid empire name", description: "Empire name cannot be empty.", variant: "destructive" });
+      return;
+    }
+
+    setCommander((prev) => ({ ...prev, empireName: normalized }));
+    addEvent("Empire Renamed", `${normalized} is now the active imperial designation.`, "info");
+  };
+
+  const setHomeWorldName = (name: string) => {
+    const normalized = (name || "").trim().slice(0, 64);
+    if (!normalized) {
+      toast({ title: "Invalid home world name", description: "Home world name cannot be empty.", variant: "destructive" });
+      return;
+    }
+
+    setPlanetName(normalized);
+    addEvent("Home World Renamed", `${normalized} is now your registered capital world.`, "info");
   };
 
   const setCommanderIdentity = (race: RaceId, cls: ClassId, subClass: SubClassId | null) => {
@@ -1250,15 +1324,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
      addEvent("Revolution", `Government reformed into ${GOVERNMENTS[type].name}.`, "warning");
   };
 
-  const completeSetup = async (newCommander: CommanderState, newGovernment: GovernmentState) => {
+  const completeSetup = async (newCommander: CommanderState, newGovernment: GovernmentState, options?: { homeWorldName?: string }) => {
     try {
+      const nextHomeWorldName = (options?.homeWorldName || planetName || "Earth").trim().slice(0, 64) || "Earth";
       await saveGameStateMutation.mutateAsync({ 
         commander: newCommander, 
         government: newGovernment,
+        planetName: nextHomeWorldName,
         setupComplete: true 
       });
       setCommander(newCommander);
       setGovernment(newGovernment);
+      setPlanetName(nextHomeWorldName);
       setNeedsSetup(false);
     } catch (error) {
       console.error("Failed to complete setup:", error);
@@ -1486,6 +1563,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
        units,
        megastructures,
        commander,
+       empireName: commander?.empireName || "Stellar Dominion",
        government,
        planetName,
        coordinates, 
@@ -1517,6 +1595,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       craftItem,
       temperItem,
       setCommanderName,
+      setEmpireName,
+      setHomeWorldName,
       setCommanderIdentity,
       upgradeCommanderSkill,
        setGovernmentType,

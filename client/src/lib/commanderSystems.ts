@@ -1,4 +1,9 @@
-import { CommanderState, Item } from "./commanderTypes";
+import {
+  CommanderState,
+  Item,
+  COMMANDER_EQUIPMENT_SLOT_DEFINITIONS,
+  type CommanderEquipmentSlotId,
+} from "./commanderTypes";
 
 export type CommanderAttributeKey =
   | "combat"
@@ -11,11 +16,7 @@ export type CommanderAttributeKey =
   | "adaptability";
 
 export interface CommanderLoadoutSummary {
-  slots: {
-    weapon: Item | null;
-    armor: Item | null;
-    module: Item | null;
-  };
+  slots: Record<CommanderEquipmentSlotId, Item | null>;
   inventoryByType: {
     weapon: number;
     armor: number;
@@ -45,6 +46,7 @@ export interface CommanderLoadoutSummary {
     inventoryLoad: number;
     upgradeReadiness: number;
     specializationDepth: number;
+    activeSlots: number;
   };
 }
 
@@ -75,10 +77,17 @@ function calculateEquipmentScore(item: Item | null) {
 }
 
 export function buildCommanderLoadoutSummary(commander: CommanderState): CommanderLoadoutSummary {
-  const weaponBonus = toBonusValue(commander.equipment.weapon, "warfare");
-  const armorBonus = toBonusValue(commander.equipment.armor, "engineering") + toBonusValue(commander.equipment.armor, "logistics");
-  const moduleScience = toBonusValue(commander.equipment.module, "science");
-  const moduleLogistics = toBonusValue(commander.equipment.module, "logistics");
+  const equippedItems = COMMANDER_EQUIPMENT_SLOT_DEFINITIONS
+    .map((slot) => commander.equipment[slot.id])
+    .filter(Boolean) as Item[];
+
+  const totalBonus = (key: "warfare" | "logistics" | "science" | "engineering") =>
+    equippedItems.reduce((sum, item) => sum + toBonusValue(item, key), 0);
+
+  const weaponBonus = totalBonus("warfare");
+  const armorBonus = totalBonus("engineering") + totalBonus("logistics");
+  const moduleScience = totalBonus("science");
+  const moduleLogistics = totalBonus("logistics");
 
   const coreStats = {
     level: commander.stats.level || 1,
@@ -86,13 +95,10 @@ export function buildCommanderLoadoutSummary(commander: CommanderState): Command
     warfare: (commander.stats.warfare || 1) + weaponBonus,
     logistics: (commander.stats.logistics || 1) + moduleLogistics,
     science: (commander.stats.science || 1) + moduleScience,
-    engineering: (commander.stats.engineering || 1) + toBonusValue(commander.equipment.armor, "engineering"),
+    engineering: (commander.stats.engineering || 1) + totalBonus("engineering"),
   };
 
-  const equipmentScore =
-    calculateEquipmentScore(commander.equipment.weapon) +
-    calculateEquipmentScore(commander.equipment.armor) +
-    calculateEquipmentScore(commander.equipment.module);
+  const equipmentScore = equippedItems.reduce((sum, item) => sum + calculateEquipmentScore(item), 0);
 
   const inventoryByType = commander.inventory.reduce(
     (accumulator, item) => {
@@ -127,14 +133,11 @@ export function buildCommanderLoadoutSummary(commander: CommanderState): Command
     inventoryLoad: commander.inventory.length,
     upgradeReadiness: clamp(Math.round((equipmentScore + coreStats.level * 12 + coreStats.engineering * 9) / 10), 0, 999),
     specializationDepth: clamp(Math.round((coreStats.warfare + coreStats.logistics + coreStats.science + coreStats.engineering) / 2), 0, 999),
+    activeSlots: equippedItems.length,
   };
 
   return {
-    slots: {
-      weapon: commander.equipment.weapon,
-      armor: commander.equipment.armor,
-      module: commander.equipment.module,
-    },
+    slots: commander.equipment,
     inventoryByType,
     coreStats,
     subStats,

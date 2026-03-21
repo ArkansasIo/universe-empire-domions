@@ -3,6 +3,7 @@ import { useGame } from "@/lib/gameContext";
 import { TECH_BRANCH_ASSETS } from "@shared/config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ import {
    ClassId,
    SubClassId,
    CommanderEquipmentType,
+   COMMANDER_EQUIPMENT_SLOT_DEFINITIONS,
 } from "@/lib/commanderTypes";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
@@ -235,7 +237,20 @@ interface CommanderProfileApiResponse {
 
 export default function Commander() {
    const { toast } = useToast();
-   const { commander, equipItem, unequipItem, craftItem, temperItem, setCommanderName, setCommanderIdentity, upgradeCommanderSkill } = useGame();
+   const {
+      commander,
+      empireName,
+      planetName,
+      equipItem,
+      unequipItem,
+      craftItem,
+      temperItem,
+      setCommanderName,
+      setEmpireName,
+      setHomeWorldName,
+      setCommanderIdentity,
+      upgradeCommanderSkill,
+   } = useGame();
    const [selectedRace, setSelectedRace] = useState<RaceId>(commander?.race || "terran");
    const [selectedClass, setSelectedClass] = useState<ClassId>(commander?.class || "admiral");
   const [selectedSubClass, setSelectedSubClass] = useState<SubClassId | "none">(commander?.subClass || "none");
@@ -244,6 +259,8 @@ export default function Commander() {
    const [selectedLeaderClass, setSelectedLeaderClass] = useState<string>("all");
    const [selectedTalentTier, setSelectedTalentTier] = useState<number>(1);
    const [commanderNameDraft, setCommanderNameDraft] = useState<string>(commander?.name || "Commander");
+   const [empireNameDraft, setEmpireNameDraft] = useState<string>(commander?.empireName || "Stellar Dominion");
+   const [homeWorldNameDraft, setHomeWorldNameDraft] = useState<string>(planetName || "New Colony");
    const [profileDraft, setProfileDraft] = useState<CommanderProfilePayload>({
       callsign: "",
       fleetTitle: "",
@@ -254,6 +271,14 @@ export default function Commander() {
    useEffect(() => {
       setCommanderNameDraft(commander?.name || "Commander");
    }, [commander?.name]);
+
+   useEffect(() => {
+      setEmpireNameDraft(commander?.empireName || "Stellar Dominion");
+   }, [commander?.empireName]);
+
+   useEffect(() => {
+      setHomeWorldNameDraft(planetName || "New Colony");
+   }, [planetName]);
 
    useEffect(() => {
       if (!commander) return;
@@ -587,12 +612,12 @@ export default function Commander() {
                          </div>
                          <h3 className="text-xl font-orbitron text-slate-900">{commander.name || "Commander"}</h3>
                          <div className="mt-3 flex gap-2">
-                            <input
+                            <Input
                                value={commanderNameDraft}
                                onChange={(event) => setCommanderNameDraft(event.target.value)}
                                placeholder="Commander name"
                                maxLength={48}
-                               className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                               className="h-9 w-full"
                             />
                             <Button
                                size="sm"
@@ -604,6 +629,54 @@ export default function Commander() {
                             >
                                Rename
                             </Button>
+                         </div>
+                         <div className="mt-3 grid grid-cols-1 gap-2">
+                            <div className="flex gap-2">
+                              <Input
+                                value={empireNameDraft}
+                                onChange={(event) => setEmpireNameDraft(event.target.value)}
+                                placeholder="Empire name"
+                                maxLength={64}
+                                className="h-9 w-full"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEmpireName(empireNameDraft);
+                                  toast({ title: "Empire updated", description: "Imperial banner name synchronized." });
+                                }}
+                              >
+                                Save Empire
+                              </Button>
+                            </div>
+                            <div className="flex gap-2">
+                              <Input
+                                value={homeWorldNameDraft}
+                                onChange={(event) => setHomeWorldNameDraft(event.target.value)}
+                                placeholder="Home world name"
+                                maxLength={64}
+                                className="h-9 w-full"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setHomeWorldName(homeWorldNameDraft);
+                                  toast({ title: "Home world updated", description: "Capital world registry synchronized." });
+                                }}
+                              >
+                                Save World
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                                Empire: <span className="font-semibold text-slate-900">{empireName || "Stellar Dominion"}</span>
+                              </div>
+                              <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                                Home World: <span className="font-semibold text-slate-900">{planetName || "New Colony"}</span>
+                              </div>
+                            </div>
                          </div>
                          <div className="flex justify-center gap-2 mt-1">
                             <Badge variant="outline" className="border-primary text-primary">{CLASSES[commander?.class || "admiral"]?.name || "Unknown"}</Badge>
@@ -706,42 +779,28 @@ export default function Commander() {
                 </Card>
 
                 <div className="col-span-2 space-y-6">
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Card className={cn("border-2 border-dashed flex flex-col items-center justify-center p-6 transition-all", commander?.equipment?.weapon ? "bg-white border-solid border-slate-200" : "bg-slate-50 border-slate-300")}>
-                         <span className="text-xs uppercase font-bold text-slate-400 mb-2">Main Weapon</span>
-                         {commander?.equipment?.weapon ? (
-                            <div className="w-full">
-                               <ItemCard item={commander?.equipment?.weapon} />
-                               <Button variant="ghost" size="sm" className="w-full mt-2 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => unequipItem("weapon")} data-testid="button-unequip-weapon">Unequip</Button>
-                            </div>
-                         ) : (
-                            <Sword className="w-12 h-12 text-slate-300" />
-                         )}
-                      </Card>
-
-                      <Card className={cn("border-2 border-dashed flex flex-col items-center justify-center p-6 transition-all", commander?.equipment?.armor ? "bg-white border-solid border-slate-200" : "bg-slate-50 border-slate-300")}>
-                         <span className="text-xs uppercase font-bold text-slate-400 mb-2">Body Armor</span>
-                         {commander?.equipment?.armor ? (
-                            <div className="w-full">
-                               <ItemCard item={commander?.equipment?.armor} />
-                               <Button variant="ghost" size="sm" className="w-full mt-2 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => unequipItem("armor")} data-testid="button-unequip-armor">Unequip</Button>
-                            </div>
-                         ) : (
-                            <Shield className="w-12 h-12 text-slate-300" />
-                         )}
-                      </Card>
-
-                      <Card className={cn("border-2 border-dashed flex flex-col items-center justify-center p-6 transition-all", commander?.equipment?.module ? "bg-white border-solid border-slate-200" : "bg-slate-50 border-slate-300")}>
-                         <span className="text-xs uppercase font-bold text-slate-400 mb-2">Tech Module</span>
-                         {commander?.equipment?.module ? (
-                            <div className="w-full">
-                               <ItemCard item={commander?.equipment?.module} />
-                               <Button variant="ghost" size="sm" className="w-full mt-2 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => unequipItem("module")} data-testid="button-unequip-module">Unequip</Button>
-                            </div>
-                         ) : (
-                            <Cpu className="w-12 h-12 text-slate-300" />
-                         )}
-                      </Card>
+                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                      {COMMANDER_EQUIPMENT_SLOT_DEFINITIONS.map((slot) => {
+                        const item = commander?.equipment?.[slot.id];
+                        const SlotIcon = slot.type === "weapon" ? Sword : slot.type === "armor" ? Shield : Cpu;
+                        return (
+                          <Card key={slot.id} className={cn("border-2 border-dashed flex flex-col items-center justify-center p-4 transition-all", item ? "bg-white border-solid border-slate-200" : "bg-slate-50 border-slate-300")}>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 mb-1">{slot.shortLabel}</span>
+                            <span className="text-xs uppercase font-bold text-slate-500 mb-2 text-center">{slot.label}</span>
+                            {item ? (
+                              <div className="w-full">
+                                <ItemCard item={item} />
+                                <Button variant="ghost" size="sm" className="w-full mt-2 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => unequipItem(slot.id)} data-testid={`button-unequip-${slot.id}`}>Unequip</Button>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-2 text-center">
+                                <SlotIcon className="w-10 h-10 text-slate-300" />
+                                <p className="text-[11px] text-slate-500">{slot.description}</p>
+                              </div>
+                            )}
+                          </Card>
+                        );
+                      })}
                    </div>
                 </div>
              </div>
@@ -755,19 +814,13 @@ export default function Commander() {
                       <CardDescription>Full loadout matrix with slot states, inventory pools, and tactical readiness outputs.</CardDescription>
                    </CardHeader>
                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                         <div className="rounded border border-slate-200 bg-slate-50 p-3">
-                            <div className="text-xs uppercase text-slate-500">Weapon Slot</div>
-                            <div className="font-semibold text-slate-900 mt-1">{loadoutSummary.slots.weapon?.name || "Unassigned"}</div>
-                         </div>
-                         <div className="rounded border border-slate-200 bg-slate-50 p-3">
-                            <div className="text-xs uppercase text-slate-500">Armor Slot</div>
-                            <div className="font-semibold text-slate-900 mt-1">{loadoutSummary.slots.armor?.name || "Unassigned"}</div>
-                         </div>
-                         <div className="rounded border border-slate-200 bg-slate-50 p-3">
-                            <div className="text-xs uppercase text-slate-500">Module Slot</div>
-                            <div className="font-semibold text-slate-900 mt-1">{loadoutSummary.slots.module?.name || "Unassigned"}</div>
-                         </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                         {COMMANDER_EQUIPMENT_SLOT_DEFINITIONS.map((slot) => (
+                           <div key={slot.id} className="rounded border border-slate-200 bg-slate-50 p-3">
+                             <div className="text-xs uppercase text-slate-500">{slot.label}</div>
+                             <div className="font-semibold text-slate-900 mt-1">{loadoutSummary.slots[slot.id]?.name || "Unassigned"}</div>
+                           </div>
+                         ))}
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -776,6 +829,9 @@ export default function Commander() {
                          <div className="rounded border border-slate-200 bg-white p-3"><div className="text-xs text-slate-500 uppercase">Modules</div><div className="text-xl font-bold text-slate-900">{loadoutSummary.inventoryByType.module}</div></div>
                          <div className="rounded border border-slate-200 bg-white p-3"><div className="text-xs text-slate-500 uppercase">Blueprints</div><div className="text-xl font-bold text-slate-900">{loadoutSummary.inventoryByType.blueprint}</div></div>
                          <div className="rounded border border-slate-200 bg-white p-3"><div className="text-xs text-slate-500 uppercase">Materials</div><div className="text-xl font-bold text-slate-900">{loadoutSummary.inventoryByType.material}</div></div>
+                      </div>
+                      <div className="rounded border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-900">
+                        Active Loadout Slots: <span className="font-semibold">{loadoutSummary.subAttributes.activeSlots}</span> / {COMMANDER_EQUIPMENT_SLOT_DEFINITIONS.length}
                       </div>
                    </CardContent>
                 </Card>
@@ -882,9 +938,10 @@ export default function Commander() {
                          </div>
                          <div className="rounded border border-slate-200 bg-slate-50 p-3">
                             <div className="font-semibold text-slate-900 mb-1">Loadout</div>
-                            <div>Weapon: {loadoutSummary.slots.weapon?.name || "None"}</div>
-                            <div>Armor: {loadoutSummary.slots.armor?.name || "None"}</div>
-                            <div>Module: {loadoutSummary.slots.module?.name || "None"}</div>
+                            <div>Primary Weapon: {loadoutSummary.slots.primaryWeapon?.name || "None"}</div>
+                            <div>Armor Core: {loadoutSummary.slots.armorCore?.name || "None"}</div>
+                            <div>Command Module: {loadoutSummary.slots.commandModule?.name || "None"}</div>
+                            <div>Active Slots: {loadoutSummary.subAttributes.activeSlots} / {COMMANDER_EQUIPMENT_SLOT_DEFINITIONS.length}</div>
                             <div>Equipment Score: {loadoutSummary.subAttributes.equipmentScore}</div>
                          </div>
                          <div className="rounded border border-slate-200 bg-slate-50 p-3">

@@ -26,7 +26,8 @@ const Messages = lazy(() => import("@/pages/Messages"));
 const Alliance = lazy(() => import("@/pages/Alliance"));
 const Artifacts = lazy(() => import("@/pages/Artifacts"));
 const Interstellar = lazy(() => import("@/pages/Interstellar"));
-const Admin = lazy(() => import("@/pages/Admin"));
+const Admin = lazy(() => import("@/pages/AdminControl"));
+const AdminLogin = lazy(() => import("@/pages/AdminLogin"));
 const Auth = lazy(() => import("@/pages/Auth"));
 const Market = lazy(() => import("@/pages/Market"));
 const About = lazy(() => import("@/pages/About"));
@@ -167,6 +168,7 @@ function RouterContent() {
   if (!isLoggedIn) {
     return (
       <Switch>
+        <Route path="/admin-login" component={AdminLogin} />
         <Route path="/about" component={About} />
         <Route path="/forums" component={Forums} />
         <Route path="/terms" component={Terms} />
@@ -179,6 +181,7 @@ function RouterContent() {
   if (needsSetup) {
     return (
       <Switch>
+        <Route path="/admin-login" component={AdminLogin} />
         <Route path="/about" component={About} />
         <Route path="/forums" component={Forums} />
         <Route path="/terms" component={Terms} />
@@ -190,6 +193,7 @@ function RouterContent() {
 
   return (
     <Switch>
+      <Route path="/admin-login" component={AdminLogin} />
       <Route path="/" component={Overview} />
       <Route path="/about" component={About} />
       <Route path="/forums" component={Forums} />

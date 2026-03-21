@@ -1,5 +1,6 @@
 import GameLayout from "@/components/layout/GameLayout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +16,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Gavel, Landmark, ShieldCheck, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
-type GovernmentSubMenu = "cabinet" | "field" | "policies";
+type GovernmentSubMenu = "cabinet" | "field" | "policies" | "tree";
 
 type Leader = {
    id: string;
@@ -44,6 +45,50 @@ type AppointmentsResponse = {
          civilMandate: string;
       };
    };
+  };
+
+type GovernmentProgressionStatusResponse = {
+  success: boolean;
+  status: {
+    level: number;
+    tier: number;
+    xp: number;
+    xpToNext: number;
+    unlockedNodes: string[];
+    nodeRanks: Record<string, number>;
+    pillarPoints: Record<string, number>;
+  };
+};
+
+type GovernmentTreeResponse = {
+  success: boolean;
+  tree: {
+    maxLevel: number;
+    maxTier: number;
+    nodes: Array<{
+      id: string;
+      name: string;
+      description: string;
+      pillar: "stability" | "law" | "economic";
+      tier: number;
+      requiredLevel: number;
+      maxRank: number;
+      costResources: { metal: number; crystal: number; deuterium: number };
+    }>;
+  };
+};
+
+type AvailableNodesResponse = {
+  success: boolean;
+  availableNodes: Array<{
+    id: string;
+    name: string;
+    description: string;
+    pillar: "stability" | "law" | "economic";
+    tier: number;
+    maxRank: number;
+  }>;
+  count: number;
 };
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -67,7 +112,7 @@ export default function Government() {
       const syncFromUrl = () => {
          const params = new URLSearchParams(window.location.search);
          const tabParam = params.get("tab") || params.get("sub");
-         if (tabParam === "cabinet" || tabParam === "field" || tabParam === "policies") {
+         if (tabParam === "cabinet" || tabParam === "field" || tabParam === "policies" || tabParam === "tree") {
             setActiveSubMenu(tabParam);
          }
       };
@@ -100,6 +145,37 @@ export default function Government() {
       queryFn: () => fetchJson<AppointmentsResponse>("/api/government-leaders/appointments/me"),
    });
 
+   const progressionStatusQuery = useQuery<GovernmentProgressionStatusResponse>({
+      queryKey: ["government-progression-status"],
+      queryFn: () => fetchJson<GovernmentProgressionStatusResponse>("/api/government-progression/status"),
+   });
+
+   const progressionTreeQuery = useQuery<GovernmentTreeResponse>({
+      queryKey: ["government-progression-tree"],
+      queryFn: () => fetchJson<GovernmentTreeResponse>("/api/government-progression/tree"),
+   });
+
+   const availableNodesQuery = useQuery<AvailableNodesResponse>({
+      queryKey: ["government-progression-available"],
+      queryFn: () => fetchJson<AvailableNodesResponse>("/api/government-progression/available-nodes"),
+   });
+
+   const unlockNodeMutation = useMutation({
+      mutationFn: (nodeId: string) =>
+         fetchJson("/api/government-progression/unlock", {
+            method: "POST",
+            body: JSON.stringify({ nodeId }),
+         }),
+      onSuccess: () => {
+         toast({ title: "Node unlocked", description: "Government tree progress advanced." });
+         queryClient.invalidateQueries({ queryKey: ["government-progression-status"] });
+         queryClient.invalidateQueries({ queryKey: ["government-progression-available"] });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Unlock failed", description: error.message, variant: "destructive" });
+      },
+   });
+
    const updateAppointmentsMutation = useMutation({
       mutationFn: (payload: AppointmentsResponse["appointments"]) =>
          fetchJson<AppointmentsResponse>("/api/government-leaders/appointments/me", {
@@ -123,6 +199,9 @@ export default function Government() {
    const appointments = appointmentsQuery.data?.appointments;
    const leaders = leadersQuery.data?.leaders || [];
    const leaderTypes = leadersQuery.data?.leaderTypes || [];
+   const governmentProgress = progressionStatusQuery.data?.status;
+   const availableNodes = availableNodesQuery.data?.availableNodes || [];
+   const treeNodes = progressionTreeQuery.data?.tree?.nodes || [];
 
    return (
       <GameLayout>
@@ -185,6 +264,31 @@ export default function Government() {
                         </div>
                         <Slider value={[government.taxRate || 0]} max={100} step={1} onValueChange={(value) => setTaxRate(value[0])} className="w-full" />
                      </div>
+
+                     <Separator />
+
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rounded border border-slate-200 bg-slate-50 p-4 space-y-2">
+                           <div className="text-xs uppercase font-bold text-slate-500">Government Details</div>
+                           <div className="text-sm text-slate-700">Ruler Title: <span className="font-semibold text-slate-900">{activeGov.rulerTitle}</span></div>
+                           <div className="text-sm text-slate-700">Government Type: <span className="font-semibold text-slate-900">{activeGov.name}</span></div>
+                           <div className="text-sm text-slate-700">Command Style: <span className="font-semibold text-slate-900">{appointments?.doctrine?.fieldPosture || "defensive"}</span></div>
+                           <div className="text-sm text-slate-700">Civil Focus: <span className="font-semibold text-slate-900">{appointments?.doctrine?.civilMandate || "growth"}</span></div>
+                        </div>
+                        <div className="rounded border border-slate-200 bg-slate-50 p-4 space-y-2">
+                           <div className="text-xs uppercase font-bold text-slate-500">Bonuses & Penalties</div>
+                           <div className="space-y-1">
+                              {activeGov.bonuses.map((bonus) => (
+                                 <div key={bonus} className="text-xs text-emerald-700">+ {bonus}</div>
+                              ))}
+                           </div>
+                           <div className="space-y-1 pt-2 border-t border-slate-200">
+                              {activeGov.penalties.map((penalty) => (
+                                 <div key={penalty} className="text-xs text-red-600">- {penalty}</div>
+                              ))}
+                           </div>
+                        </div>
+                     </div>
                   </CardContent>
                </Card>
 
@@ -215,10 +319,11 @@ export default function Government() {
             </div>
 
             <Tabs value={activeSubMenu} onValueChange={(value) => setActiveSubMenu(value as GovernmentSubMenu)}>
-               <TabsList className="grid w-full grid-cols-3 lg:w-[520px]">
+               <TabsList className="grid w-full grid-cols-4 lg:w-[680px]">
                   <TabsTrigger value="cabinet">Cabinet</TabsTrigger>
                   <TabsTrigger value="field">Field Doctrine</TabsTrigger>
                   <TabsTrigger value="policies">Policies</TabsTrigger>
+                  <TabsTrigger value="tree">Gov Tree</TabsTrigger>
                </TabsList>
 
                <TabsContent value="cabinet" className="mt-4">
@@ -335,6 +440,84 @@ export default function Government() {
                         </div>
                      </CardContent>
                   </Card>
+               </TabsContent>
+
+               <TabsContent value="tree" className="mt-4">
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                     <Card className="bg-white border-slate-200 xl:col-span-1">
+                        <CardHeader>
+                           <CardTitle className="flex items-center gap-2 text-slate-900"><Landmark className="w-5 h-5" /> Government Tree Status</CardTitle>
+                           <CardDescription>Track level, tier, pillar points, and unlock readiness.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                           <div className="grid grid-cols-2 gap-3">
+                              <div className="rounded border border-slate-200 bg-slate-50 p-3"><div className="text-xs text-slate-500 uppercase">Level</div><div className="text-2xl font-bold text-slate-900">{governmentProgress?.level || 0}</div></div>
+                              <div className="rounded border border-slate-200 bg-slate-50 p-3"><div className="text-xs text-slate-500 uppercase">Tier</div><div className="text-2xl font-bold text-slate-900">{governmentProgress?.tier || 0}</div></div>
+                           </div>
+                           <div>
+                              <div className="flex justify-between text-sm font-bold text-slate-700 mb-1"><span>Government XP</span><span>{governmentProgress?.xp || 0} / {governmentProgress?.xpToNext || 0}</span></div>
+                              <Progress value={governmentProgress?.xpToNext ? ((governmentProgress.xp / governmentProgress.xpToNext) * 100) : 0} className="h-2" />
+                           </div>
+                           <div className="space-y-2">
+                              <div className="text-xs uppercase font-bold text-slate-500">Pillar Points</div>
+                              <div className="rounded border border-slate-200 bg-slate-50 p-2 text-sm">Stability: <span className="font-semibold">{governmentProgress?.pillarPoints?.stability || 0}</span></div>
+                              <div className="rounded border border-slate-200 bg-slate-50 p-2 text-sm">Law: <span className="font-semibold">{governmentProgress?.pillarPoints?.law || 0}</span></div>
+                              <div className="rounded border border-slate-200 bg-slate-50 p-2 text-sm">Economic: <span className="font-semibold">{governmentProgress?.pillarPoints?.economic || 0}</span></div>
+                           </div>
+                           <div className="rounded border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900">
+                              Unlocked Nodes: <span className="font-semibold">{governmentProgress?.unlockedNodes?.length || 0}</span> / {treeNodes.length}
+                           </div>
+                        </CardContent>
+                     </Card>
+
+                     <Card className="bg-white border-slate-200 xl:col-span-2">
+                        <CardHeader>
+                           <CardTitle className="flex items-center gap-2 text-slate-900"><Building2 className="w-5 h-5" /> Government Tree Nodes</CardTitle>
+                           <CardDescription>Use the government tree submenu to unlock pillar nodes for stability, law, and economic doctrine.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {availableNodes.map((node) => (
+                                 <div key={node.id} className="rounded border border-slate-200 bg-slate-50 p-4 space-y-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                       <div>
+                                          <div className="font-semibold text-slate-900">{node.name}</div>
+                                          <div className="text-xs text-slate-500 uppercase">{node.pillar} · Tier {node.tier}</div>
+                                       </div>
+                                       <Badge variant="outline">Rank {node.maxRank}</Badge>
+                                    </div>
+                                    <div className="text-sm text-slate-600">{node.description}</div>
+                                    <Button size="sm" onClick={() => unlockNodeMutation.mutate(node.id)} disabled={unlockNodeMutation.isPending}>
+                                       Unlock Node
+                                    </Button>
+                                 </div>
+                              ))}
+                           </div>
+
+                           <Separator />
+
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {treeNodes.slice(0, 8).map((node) => {
+                                 const isUnlocked = Boolean(governmentProgress?.unlockedNodes?.includes(node.id));
+                                 return (
+                                    <div key={node.id} className={cn("rounded border p-4 space-y-2", isUnlocked ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white")}>
+                                       <div className="flex items-center justify-between gap-2">
+                                          <div className="font-semibold text-slate-900">{node.name}</div>
+                                          <Badge variant="outline">{node.pillar}</Badge>
+                                       </div>
+                                       <div className="text-xs text-slate-500">Tier {node.tier} · Requires Level {node.requiredLevel}</div>
+                                       <div className="text-sm text-slate-600">{node.description}</div>
+                                       <div className="text-xs text-slate-500">
+                                          Cost: {node.costResources.metal} metal · {node.costResources.crystal} crystal · {node.costResources.deuterium} deuterium
+                                       </div>
+                                       <div className="text-xs font-semibold">{isUnlocked ? "Unlocked" : "Locked"}</div>
+                                    </div>
+                                 );
+                              })}
+                           </div>
+                        </CardContent>
+                     </Card>
+                  </div>
                </TabsContent>
             </Tabs>
          </div>

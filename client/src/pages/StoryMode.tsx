@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import GameLayout from "@/components/layout/GameLayout";
+import HabitatSystemsPanel from "@/components/game/HabitatSystemsPanel";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, CheckCircle2, Compass, Zap } from "lucide-react";
 import { Link } from "wouter";
+import { createHabitatConditionProfile } from "@/lib/environmentSystems";
 
 interface StoryCampaignData {
   currentAct: number;
@@ -120,6 +122,40 @@ export default function StoryMode() {
   const selectedActCompletionRate = selectedActTotal > 0 ? Math.round((selectedActCompleted / selectedActTotal) * 100) : 0;
   const totalMainCompleted = allMissions.filter((mission) => mission.missionType === "main" && mission.isCompleted).length;
   const totalSideCompleted = allMissions.filter((mission) => mission.missionType === "side" && mission.isCompleted).length;
+  const storyThreatProfiles = [
+    createHabitatConditionProfile({
+      kind: "planet",
+      name: `Act ${selectedAct} Colony Front`,
+      habitability: 72 - selectedAct * 3,
+      waterPercentage: 34 - selectedAct,
+      temperature: 282 + selectedAct * 5,
+      population: 120000 + selectedAct * 18000,
+      level: selectedAct,
+      integrity: 82 - selectedAct * 3,
+      stability: 80 - selectedAct * 4,
+      storyAct: selectedAct,
+    }),
+    createHabitatConditionProfile({
+      kind: "moonbase",
+      name: `Act ${selectedAct} Lunar Relay`,
+      habitability: 44 + selectedAct,
+      population: 24000 + selectedAct * 5000,
+      level: selectedAct,
+      integrity: 74 - selectedAct * 2,
+      stability: 68 - selectedAct * 2,
+      storyAct: selectedAct,
+    }),
+    createHabitatConditionProfile({
+      kind: "starbase",
+      name: `Act ${selectedAct} Siege Anchor`,
+      habitability: 64 + selectedAct,
+      population: 18000 + selectedAct * 7000,
+      level: selectedAct + 1,
+      integrity: 78 - selectedAct * 2,
+      stability: 70 - selectedAct * 3,
+      storyAct: selectedAct,
+    }),
+  ];
 
   return (
     <GameLayout>
@@ -162,6 +198,27 @@ export default function StoryMode() {
               <div className="bg-slate-50 border border-slate-200 rounded p-2">Completed: <span className="font-semibold">{campaign?.missionCounts?.completed || 0}</span></div>
               <div className="bg-slate-50 border border-slate-200 rounded p-2">XP Earned: <span className="font-semibold">{campaign?.totalXpEarned || 0}</span></div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-slate-900">Story Hazard Integration</CardTitle>
+            <CardDescription>
+              Campaign acts now tie directly into world disease, environment, and repair mechanics across colony fronts, moon relays, and siege anchors.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            {storyThreatProfiles.map((profile) => (
+              <HabitatSystemsPanel
+                key={`${profile.habitat}-${profile.name}`}
+                profile={profile}
+                compact
+                title={`${profile.name} Threat Model`}
+                description="Selected act pressure translated into gameplay hazards, debuffs, healing paths, and emergency event chains."
+                managementHref={profile.habitat === "planet" ? "/planet-command" : "/stations"}
+              />
+            ))}
           </CardContent>
         </Card>
 

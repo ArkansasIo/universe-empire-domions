@@ -29,8 +29,73 @@ type AdminOperation = {
   notes?: string;
 };
 
+type OGameXServerSettings = {
+  universeName: string;
+  economySpeed: number;
+  researchSpeed: number;
+  fleetSpeedWar: number;
+  fleetSpeedHolding: number;
+  fleetSpeedPeaceful: number;
+  planetFieldsBonus: number;
+  basicIncomeMetal: number;
+  basicIncomeCrystal: number;
+  basicIncomeDeuterium: number;
+  basicIncomeEnergy: number;
+  registrationPlanetAmount: number;
+  darkMatterBonus: number;
+  darkMatterRegenEnabled: boolean;
+  darkMatterRegenAmount: number;
+  darkMatterRegenPeriod: number;
+  planetRelocationCost: number;
+  planetRelocationDuration: number;
+  allianceCooldownDays: number;
+  battleEngine: "rust" | "php";
+  allianceCombatSystemOn: boolean;
+  debrisFieldFromShips: number;
+  debrisFieldFromDefense: number;
+  debrisFieldDeuteriumOn: boolean;
+  rapidFireEnabled: boolean;
+  defenseRepairRate: number;
+  expeditionLootRate: number;
+  expeditionDelayRate: number;
+  expeditionBlackHoleRate: number;
+  highscoreAdminVisible: boolean;
+  numberOfGalaxies: number;
+  systemsPerGalaxy: number;
+  positionsPerSystem: number;
+  maintenanceMode: boolean;
+  allowNewRegistrations: boolean;
+  peaceMode: boolean;
+  resourceRate: number;
+  gameSpeed: number;
+  fleetSpeed: number;
+};
+
+type RulesLegalContent = {
+  rulesContent: string;
+  legalContent: string;
+  privacyPolicyContent: string;
+  termsContent: string;
+  contactContent: string;
+};
+
+type AdminWorldObject = {
+  id: string;
+  type: "planet" | "moon" | "debris";
+  coordinates: string;
+  name: string;
+  ownerUserId?: string;
+  details?: Record<string, unknown>;
+  createdAt: number;
+  createdBy: string;
+};
+
 function getUserId(req: Request): string {
   return (req.session as any)?.userId || "";
+}
+
+function getImpersonatorId(req: Request): string {
+  return (req.session as any)?.impersonatorId || "";
 }
 
 async function isAdminUser(userId: string): Promise<boolean> {
@@ -55,6 +120,246 @@ async function getAdminRole(userId: string): Promise<string | null> {
     .limit(1);
 
   return adminRecord?.role || null;
+}
+
+async function getAdminActorId(req: Request): Promise<string | null> {
+  const currentUserId = getUserId(req);
+  if (await isAdminUser(currentUserId)) {
+    return currentUserId;
+  }
+
+  const impersonatorId = getImpersonatorId(req);
+  if (await isAdminUser(impersonatorId)) {
+    return impersonatorId;
+  }
+
+  return null;
+}
+
+async function requireAdminActorId(req: Request, res: Response): Promise<string | null> {
+  const actorId = await getAdminActorId(req);
+  if (!actorId) {
+    res.status(403).json({ message: "Admin access required" });
+    return null;
+  }
+
+  return actorId;
+}
+
+function parseNumberish(value: unknown, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().replace(/,/g, "");
+    if (!normalized) return fallback;
+    const suffix = normalized.slice(-1).toLowerCase();
+    const multipliers: Record<string, number> = { k: 1_000, m: 1_000_000, b: 1_000_000_000 };
+    const base = suffix in multipliers ? Number(normalized.slice(0, -1)) : Number(normalized);
+    if (Number.isFinite(base)) {
+      return suffix in multipliers ? base * multipliers[suffix] : base;
+    }
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function getServerSettingsKey(): string {
+  return "ogamex_admin_server_settings";
+}
+
+function getRulesContentKey(): string {
+  return "ogamex_admin_rules_legal";
+}
+
+function getWorldObjectsKey(): string {
+  return "ogamex_admin_world_objects";
+}
+
+function getDeveloperShortcutLogKey(): string {
+  return "ogamex_admin_shortcut_log";
+}
+
+function getDefaultServerSettings(): OGameXServerSettings {
+  return {
+    universeName: "Nexus Crown",
+    economySpeed: 4,
+    researchSpeed: 8,
+    fleetSpeedWar: 3,
+    fleetSpeedHolding: 2,
+    fleetSpeedPeaceful: 6,
+    planetFieldsBonus: 25,
+    basicIncomeMetal: 30,
+    basicIncomeCrystal: 15,
+    basicIncomeDeuterium: 8,
+    basicIncomeEnergy: 20,
+    registrationPlanetAmount: 1,
+    darkMatterBonus: 2500,
+    darkMatterRegenEnabled: true,
+    darkMatterRegenAmount: 100,
+    darkMatterRegenPeriod: 3600,
+    planetRelocationCost: 5000,
+    planetRelocationDuration: 3600,
+    allianceCooldownDays: 3,
+    battleEngine: "rust",
+    allianceCombatSystemOn: true,
+    debrisFieldFromShips: 30,
+    debrisFieldFromDefense: 0,
+    debrisFieldDeuteriumOn: false,
+    rapidFireEnabled: true,
+    defenseRepairRate: 70,
+    expeditionLootRate: 100,
+    expeditionDelayRate: 10,
+    expeditionBlackHoleRate: 2,
+    highscoreAdminVisible: false,
+    numberOfGalaxies: 9,
+    systemsPerGalaxy: 499,
+    positionsPerSystem: 16,
+    maintenanceMode: false,
+    allowNewRegistrations: true,
+    peaceMode: false,
+    resourceRate: 4,
+    gameSpeed: 4,
+    fleetSpeed: 4,
+  };
+}
+
+function getDefaultRulesLegalContent(): RulesLegalContent {
+  return {
+    rulesContent: "1. Respect other commanders.\n2. No cheating, automation, or exploit abuse.\n3. Keep diplomacy, chat, and alliance conduct within community standards.\n4. Admin decisions are logged and reviewable.\n5. Account trading and impersonation outside approved admin tools are prohibited.",
+    legalContent: "Universe Empire Dominions is operated as a live multiplayer strategy service. Gameplay changes, balancing updates, and maintenance actions may occur without advance notice when required for fairness, security, or uptime.",
+    privacyPolicyContent: "We store account credentials, empire progression, and gameplay telemetry needed to operate the game. Administrative actions are audited. Private player data is not shared outside gameplay, moderation, security, and operational needs.",
+    termsContent: "By accessing the game, you agree to follow the rules, maintain account security, and accept that in-game balances, events, and systems may change over time. Abuse of exploits or disruption of service can result in moderation or account removal.",
+    contactContent: "Support Command: deepblue.octopus.dev@gmail.com\nGitHub: https://github.com/ArkansasIo/universe-empire-domions\nEscalation Path: In-game support, moderation review, then admin operations audit.",
+  };
+}
+
+async function loadServerSettings(): Promise<OGameXServerSettings> {
+  const defaults = getDefaultServerSettings();
+  const setting = await storage.getSetting(getServerSettingsKey());
+  if (!setting || !setting.value || typeof setting.value !== "object") {
+    return defaults;
+  }
+
+  return {
+    ...defaults,
+    ...(setting.value as Partial<OGameXServerSettings>),
+  };
+}
+
+async function saveServerSettings(nextSettings: OGameXServerSettings): Promise<void> {
+  await storage.setSetting(
+    getServerSettingsKey(),
+    nextSettings,
+    "Imported OGameX-style server settings panel",
+    "admin",
+  );
+
+  await saveAdminSettings({
+    maintenanceMode: nextSettings.maintenanceMode,
+    peaceMode: nextSettings.peaceMode,
+    resourceRate: nextSettings.resourceRate,
+    gameSpeed: nextSettings.gameSpeed,
+    fleetSpeed: nextSettings.fleetSpeed,
+    allowNewRegistrations: nextSettings.allowNewRegistrations,
+    adminBroadcastEnabled: true,
+  });
+}
+
+async function loadRulesLegalContent(): Promise<RulesLegalContent> {
+  const defaults = getDefaultRulesLegalContent();
+  const setting = await storage.getSetting(getRulesContentKey());
+  if (!setting || !setting.value || typeof setting.value !== "object") {
+    return defaults;
+  }
+
+  return {
+    ...defaults,
+    ...(setting.value as Partial<RulesLegalContent>),
+  };
+}
+
+async function saveRulesLegalContent(nextContent: RulesLegalContent): Promise<void> {
+  await storage.setSetting(
+    getRulesContentKey(),
+    nextContent,
+    "Imported OGameX rules, legal, privacy, and contact editor",
+    "admin",
+  );
+}
+
+async function loadWorldObjects(): Promise<AdminWorldObject[]> {
+  const setting = await storage.getSetting(getWorldObjectsKey());
+  if (!setting || !Array.isArray(setting.value)) {
+    return [];
+  }
+
+  return (setting.value as AdminWorldObject[]).slice(-100);
+}
+
+async function saveWorldObjects(objects: AdminWorldObject[]): Promise<void> {
+  await storage.setSetting(
+    getWorldObjectsKey(),
+    objects.slice(-100),
+    "Admin-created planets, moons, and debris markers",
+    "admin",
+  );
+}
+
+async function loadDeveloperShortcutLog(): Promise<string[]> {
+  const setting = await storage.getSetting(getDeveloperShortcutLogKey());
+  if (!setting || !Array.isArray(setting.value)) {
+    return [];
+  }
+
+  return (setting.value as string[]).slice(-100);
+}
+
+async function appendDeveloperShortcutLog(entry: string): Promise<void> {
+  const log = await loadDeveloperShortcutLog();
+  await storage.setSetting(
+    getDeveloperShortcutLogKey(),
+    [...log, entry].slice(-100),
+    "Recent OGameX-style developer shortcut actions",
+    "admin",
+  );
+}
+
+async function resolveUserByIdentifier(identifier: string) {
+  const normalized = identifier.trim();
+  if (!normalized) return null;
+
+  const [byId] = await db
+    .select({ id: users.id, username: users.username, email: users.email })
+    .from(users)
+    .where(eq(users.id, normalized))
+    .limit(1);
+  if (byId) return byId;
+
+  const [byUsername] = await db
+    .select({ id: users.id, username: users.username, email: users.email })
+    .from(users)
+    .where(eq(users.username, normalized))
+    .limit(1);
+  if (byUsername) return byUsername;
+
+  const [byEmail] = await db
+    .select({ id: users.id, username: users.username, email: users.email })
+    .from(users)
+    .where(eq(users.email, normalized))
+    .limit(1);
+  return byEmail || null;
+}
+
+async function ensurePlayerStateExists(userId: string) {
+  const existingState = await storage.getPlayerState(userId);
+  if (existingState) {
+    return existingState;
+  }
+
+  return storage.updatePlayerState(userId, {});
 }
 
 function getAdminSettingsKey(): string {
@@ -205,11 +510,14 @@ async function updateOperation(
 export function registerAdminRoutes(app: Express) {
   app.get("/api/admin/me", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      const role = await getAdminRole(actorId);
+      const currentUserId = getUserId(req);
+      const actorId = await getAdminActorId(req);
+      const role = actorId ? await getAdminRole(actorId) : null;
       res.json({
         isAdmin: Boolean(role),
         role,
+        masqueradingAsUserId: actorId && currentUserId !== actorId ? currentUserId : null,
+        actingAdminUserId: actorId,
       });
     } catch (error) {
       console.error("Failed to load admin identity:", error);
@@ -219,10 +527,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/settings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const settings = await loadAdminSettings();
       res.json({ settings });
@@ -234,10 +540,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.patch("/api/admin/settings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const current = await loadAdminSettings();
       const next = {
@@ -261,10 +565,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/accounts", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const rows = await db
         .select({
@@ -299,10 +601,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/accounts", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const identifier = String(req.body?.identifier || "").trim();
       const role = String(req.body?.role || "moderator").trim();
@@ -377,10 +677,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.delete("/api/admin/accounts/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const { userId } = req.params;
       if (actorId === userId) {
@@ -414,10 +712,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/users", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const moderationMap = await loadModerationMap();
 
@@ -457,10 +753,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/users/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const { userId } = req.params;
       const moderationMap = await loadModerationMap();
@@ -506,10 +800,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/users/:userId/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const { userId } = req.params;
       const nextStatus = String(req.body?.status || "").toLowerCase() as ModerationStatus;
@@ -537,10 +829,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/console/execute", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const rawCommand = String(req.body?.command || "").trim();
       if (!rawCommand) {
@@ -637,10 +927,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/audit", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const logs = await loadAuditLog();
       res.json({ logs: logs.slice().reverse().slice(0, 100) });
@@ -652,10 +940,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/overview", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const moderationMap = await loadModerationMap();
       const usersRows = await db.select({ id: users.id }).from(users);
@@ -677,10 +963,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/operations", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const operations = await loadOperations();
       res.json({ operations: operations.slice().reverse().slice(0, 30) });
@@ -692,10 +976,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/operations/backup", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const operation = await appendOperation({
         type: "backup_snapshot",
@@ -735,10 +1017,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/operations/reset-universe", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const confirmText = String(req.body?.confirmText || "");
       if (confirmText !== "RESET") {
@@ -799,10 +1079,8 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/operations/restart", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = getUserId(req);
-      if (!(await isAdminUser(actorId))) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
 
       const operation = await appendOperation({
         type: "restart_server",
@@ -837,6 +1115,631 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Failed to queue server restart:", error);
       res.status(500).json({ message: "Failed to queue server restart" });
+    }
+  });
+
+  app.get("/api/admin/server-settings", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const settings = await loadServerSettings();
+      res.json({ settings });
+    } catch (error) {
+      console.error("Failed to load imported server settings:", error);
+      res.status(500).json({ message: "Failed to load server settings" });
+    }
+  });
+
+  app.patch("/api/admin/server-settings", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const current = await loadServerSettings();
+      const raw = (req.body && typeof req.body === "object") ? req.body as Record<string, unknown> : {};
+      const next: OGameXServerSettings = {
+        ...current,
+        universeName: String(raw.universeName ?? current.universeName),
+        economySpeed: parseNumberish(raw.economySpeed, current.economySpeed),
+        researchSpeed: parseNumberish(raw.researchSpeed, current.researchSpeed),
+        fleetSpeedWar: parseNumberish(raw.fleetSpeedWar, current.fleetSpeedWar),
+        fleetSpeedHolding: parseNumberish(raw.fleetSpeedHolding, current.fleetSpeedHolding),
+        fleetSpeedPeaceful: parseNumberish(raw.fleetSpeedPeaceful, current.fleetSpeedPeaceful),
+        planetFieldsBonus: parseNumberish(raw.planetFieldsBonus, current.planetFieldsBonus),
+        basicIncomeMetal: parseNumberish(raw.basicIncomeMetal, current.basicIncomeMetal),
+        basicIncomeCrystal: parseNumberish(raw.basicIncomeCrystal, current.basicIncomeCrystal),
+        basicIncomeDeuterium: parseNumberish(raw.basicIncomeDeuterium, current.basicIncomeDeuterium),
+        basicIncomeEnergy: parseNumberish(raw.basicIncomeEnergy, current.basicIncomeEnergy),
+        registrationPlanetAmount: parseNumberish(raw.registrationPlanetAmount, current.registrationPlanetAmount),
+        darkMatterBonus: parseNumberish(raw.darkMatterBonus, current.darkMatterBonus),
+        darkMatterRegenEnabled: typeof raw.darkMatterRegenEnabled === "boolean" ? raw.darkMatterRegenEnabled : current.darkMatterRegenEnabled,
+        darkMatterRegenAmount: parseNumberish(raw.darkMatterRegenAmount, current.darkMatterRegenAmount),
+        darkMatterRegenPeriod: parseNumberish(raw.darkMatterRegenPeriod, current.darkMatterRegenPeriod),
+        planetRelocationCost: parseNumberish(raw.planetRelocationCost, current.planetRelocationCost),
+        planetRelocationDuration: parseNumberish(raw.planetRelocationDuration, current.planetRelocationDuration),
+        allianceCooldownDays: parseNumberish(raw.allianceCooldownDays, current.allianceCooldownDays),
+        battleEngine: raw.battleEngine === "php" ? "php" : "rust",
+        allianceCombatSystemOn: typeof raw.allianceCombatSystemOn === "boolean" ? raw.allianceCombatSystemOn : current.allianceCombatSystemOn,
+        debrisFieldFromShips: parseNumberish(raw.debrisFieldFromShips, current.debrisFieldFromShips),
+        debrisFieldFromDefense: parseNumberish(raw.debrisFieldFromDefense, current.debrisFieldFromDefense),
+        debrisFieldDeuteriumOn: typeof raw.debrisFieldDeuteriumOn === "boolean" ? raw.debrisFieldDeuteriumOn : current.debrisFieldDeuteriumOn,
+        rapidFireEnabled: typeof raw.rapidFireEnabled === "boolean" ? raw.rapidFireEnabled : current.rapidFireEnabled,
+        defenseRepairRate: parseNumberish(raw.defenseRepairRate, current.defenseRepairRate),
+        expeditionLootRate: parseNumberish(raw.expeditionLootRate, current.expeditionLootRate),
+        expeditionDelayRate: parseNumberish(raw.expeditionDelayRate, current.expeditionDelayRate),
+        expeditionBlackHoleRate: parseNumberish(raw.expeditionBlackHoleRate, current.expeditionBlackHoleRate),
+        highscoreAdminVisible: typeof raw.highscoreAdminVisible === "boolean" ? raw.highscoreAdminVisible : current.highscoreAdminVisible,
+        numberOfGalaxies: parseNumberish(raw.numberOfGalaxies, current.numberOfGalaxies),
+        systemsPerGalaxy: parseNumberish(raw.systemsPerGalaxy, current.systemsPerGalaxy),
+        positionsPerSystem: parseNumberish(raw.positionsPerSystem, current.positionsPerSystem),
+        maintenanceMode: typeof raw.maintenanceMode === "boolean" ? raw.maintenanceMode : current.maintenanceMode,
+        allowNewRegistrations: typeof raw.allowNewRegistrations === "boolean" ? raw.allowNewRegistrations : current.allowNewRegistrations,
+        peaceMode: typeof raw.peaceMode === "boolean" ? raw.peaceMode : current.peaceMode,
+        resourceRate: parseNumberish(raw.resourceRate, current.resourceRate),
+        gameSpeed: parseNumberish(raw.gameSpeed, current.gameSpeed),
+        fleetSpeed: parseNumberish(raw.fleetSpeed, current.fleetSpeed),
+      };
+
+      await saveServerSettings(next);
+      await appendAudit({
+        actorId,
+        action: "update_ogamex_server_settings",
+        details: `universe=${next.universeName};economy=${next.economySpeed};research=${next.researchSpeed}`,
+      });
+
+      res.json({ success: true, settings: next });
+    } catch (error) {
+      console.error("Failed to update imported server settings:", error);
+      res.status(500).json({ message: "Failed to update server settings" });
+    }
+  });
+
+  app.get("/api/admin/rules-content", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const content = await loadRulesLegalContent();
+      res.json({ content });
+    } catch (error) {
+      console.error("Failed to load admin rules content:", error);
+      res.status(500).json({ message: "Failed to load rules content" });
+    }
+  });
+
+  app.patch("/api/admin/rules-content", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const current = await loadRulesLegalContent();
+      const raw = (req.body && typeof req.body === "object") ? req.body as Record<string, unknown> : {};
+      const next: RulesLegalContent = {
+        rulesContent: String(raw.rulesContent ?? current.rulesContent),
+        legalContent: String(raw.legalContent ?? current.legalContent),
+        privacyPolicyContent: String(raw.privacyPolicyContent ?? current.privacyPolicyContent),
+        termsContent: String(raw.termsContent ?? current.termsContent),
+        contactContent: String(raw.contactContent ?? current.contactContent),
+      };
+
+      await saveRulesLegalContent(next);
+      await appendAudit({
+        actorId,
+        action: "update_rules_legal_content",
+        details: "rules/legal/privacy/terms/contact updated",
+      });
+
+      res.json({ success: true, content: next });
+    } catch (error) {
+      console.error("Failed to update admin rules content:", error);
+      res.status(500).json({ message: "Failed to update rules content" });
+    }
+  });
+
+  app.get("/api/admin/developer-shortcuts", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const currentUserId = getUserId(req);
+      const worldObjects = await loadWorldObjects();
+      const recentActions = (await loadDeveloperShortcutLog()).slice().reverse().slice(0, 25);
+      const userRows = await db
+        .select({ id: users.id, username: users.username, email: users.email })
+        .from(users)
+        .orderBy(desc(users.updatedAt))
+        .limit(20);
+
+      res.json({
+        presets: [
+          { id: "set_mines", label: "Set all mines to level 30" },
+          { id: "set_storages", label: "Set all storages to level 15" },
+          { id: "set_shipyard", label: "Set all shipyard facilities to level 12" },
+          { id: "set_research", label: "Set common research to level 10" },
+        ],
+        buildingCatalog: [
+          "metalMine",
+          "crystalMine",
+          "deuteriumSynthesizer",
+          "solarPlant",
+          "roboticsFactory",
+          "shipyard",
+          "researchLab",
+        ],
+        researchCatalog: [
+          "energyTech",
+          "laserTech",
+          "ionTech",
+          "hyperspaceTech",
+          "plasmaTech",
+          "combustionDrive",
+          "impulseDrive",
+          "hyperspaceDrive",
+          "espionageTech",
+          "computerTech",
+          "astrophysics",
+          "weaponsTech",
+          "shieldingTech",
+          "armourTech",
+        ],
+        unitCatalog: [
+          "lightFighter",
+          "heavyFighter",
+          "cruiser",
+          "battlecruiser",
+          "battleship",
+          "destroyer",
+          "deathstar",
+          "smallCargo",
+          "largeCargo",
+          "colonyShip",
+          "espionageProbe",
+          "solarSatellite",
+        ],
+        currentUserId,
+        actingAdminUserId: actorId,
+        masqueradingAsUserId: currentUserId !== actorId ? currentUserId : null,
+        recentActions,
+        worldObjects: worldObjects.slice().reverse(),
+        userDirectory: userRows.map((row) => ({
+          id: row.id,
+          username: row.username || "unknown",
+          email: row.email || "",
+        })),
+      });
+    } catch (error) {
+      console.error("Failed to load developer shortcuts data:", error);
+      res.status(500).json({ message: "Failed to load developer shortcuts" });
+    }
+  });
+
+  app.post("/api/admin/developer-shortcuts/impersonate", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const identifier = String(req.body?.identifier || "").trim();
+      if (!identifier) {
+        return res.status(400).json({ message: "identifier is required" });
+      }
+
+      const target = await resolveUserByIdentifier(identifier);
+      if (!target) {
+        return res.status(404).json({ message: "Target user not found" });
+      }
+
+      (req.session as any).impersonatorId = actorId;
+      (req.session as any).userId = target.id;
+
+      req.session.save(async (error) => {
+        if (error) {
+          console.error("Failed to persist impersonation session:", error);
+          return res.status(500).json({ message: "Failed to impersonate user" });
+        }
+
+        await appendAudit({
+          actorId,
+          action: "impersonate_user",
+          targetUserId: target.id,
+          details: `identifier=${identifier}`,
+        });
+        await appendDeveloperShortcutLog(`Impersonated ${target.username || target.email || target.id}`);
+
+        res.json({
+          success: true,
+          target: {
+            id: target.id,
+            username: target.username || "unknown",
+            email: target.email || "",
+          },
+        });
+      });
+    } catch (error) {
+      console.error("Failed to impersonate user:", error);
+      res.status(500).json({ message: "Failed to impersonate user" });
+    }
+  });
+
+  app.post("/api/admin/developer-shortcuts/stop-impersonation", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = getImpersonatorId(req);
+      if (!actorId || !(await isAdminUser(actorId))) {
+        return res.status(400).json({ message: "No active impersonation session" });
+      }
+
+      (req.session as any).userId = actorId;
+      delete (req.session as any).impersonatorId;
+
+      req.session.save(async (error) => {
+        if (error) {
+          console.error("Failed to restore admin session:", error);
+          return res.status(500).json({ message: "Failed to restore admin session" });
+        }
+
+        await appendAudit({
+          actorId,
+          action: "stop_impersonation",
+          details: "admin session restored",
+        });
+        await appendDeveloperShortcutLog("Stopped impersonation and restored admin session");
+
+        res.json({ success: true, restoredAdminUserId: actorId });
+      });
+    } catch (error) {
+      console.error("Failed to stop impersonation:", error);
+      res.status(500).json({ message: "Failed to stop impersonation" });
+    }
+  });
+
+  app.post("/api/admin/developer-shortcuts/grant-resources", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const identifier = String(req.body?.identifier || "").trim();
+      if (!identifier) {
+        return res.status(400).json({ message: "identifier is required" });
+      }
+
+      const target = await resolveUserByIdentifier(identifier);
+      if (!target) {
+        return res.status(404).json({ message: "Target user not found" });
+      }
+
+      const state = await ensurePlayerStateExists(target.id);
+      const currentResources = ((state.resources as Record<string, unknown>) || {}) as Record<string, unknown>;
+      const requested = (req.body?.resources && typeof req.body.resources === "object")
+        ? req.body.resources as Record<string, unknown>
+        : {};
+
+      const nextResources = {
+        ...currentResources,
+        metal: parseNumberish(currentResources.metal, 0) + parseNumberish(requested.metal, 0),
+        crystal: parseNumberish(currentResources.crystal, 0) + parseNumberish(requested.crystal, 0),
+        deuterium: parseNumberish(currentResources.deuterium, 0) + parseNumberish(requested.deuterium, 0),
+        energy: parseNumberish(currentResources.energy, 0) + parseNumberish(requested.energy, 0),
+        credits: parseNumberish(currentResources.credits, 0) + parseNumberish(requested.credits, 0),
+        food: parseNumberish(currentResources.food, 0) + parseNumberish(requested.food, 0),
+        water: parseNumberish(currentResources.water, 0) + parseNumberish(requested.water, 0),
+        darkMatter: parseNumberish(currentResources.darkMatter, 0) + parseNumberish(requested.darkMatter, 0),
+      };
+
+      await storage.updatePlayerState(target.id, { resources: nextResources });
+      await appendAudit({
+        actorId,
+        action: "grant_resources",
+        targetUserId: target.id,
+        details: `resources=${JSON.stringify(requested)}`,
+      });
+      await appendDeveloperShortcutLog(`Granted resources to ${target.username || target.email || target.id}`);
+
+      res.json({ success: true, targetUserId: target.id, resources: nextResources });
+    } catch (error) {
+      console.error("Failed to grant resources:", error);
+      res.status(500).json({ message: "Failed to grant resources" });
+    }
+  });
+
+  app.post("/api/admin/developer-shortcuts/apply-preset", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const identifier = String(req.body?.identifier || "").trim();
+      const preset = String(req.body?.preset || "").trim();
+      if (!identifier || !preset) {
+        return res.status(400).json({ message: "identifier and preset are required" });
+      }
+
+      const target = await resolveUserByIdentifier(identifier);
+      if (!target) {
+        return res.status(404).json({ message: "Target user not found" });
+      }
+
+      const state = await ensurePlayerStateExists(target.id);
+      const currentBuildings = ((state.buildings as Record<string, unknown>) || {}) as Record<string, unknown>;
+      const currentOrbital = ((state.orbitalBuildings as Record<string, unknown>) || {}) as Record<string, unknown>;
+      const currentResearch = ((state.research as Record<string, unknown>) || {}) as Record<string, unknown>;
+
+      let updates: Record<string, unknown> = {};
+      if (preset === "set_mines") {
+        updates = {
+          buildings: {
+            ...currentBuildings,
+            metalMine: 30,
+            crystalMine: 30,
+            deuteriumSynthesizer: 30,
+            solarPlant: 30,
+          },
+        };
+      } else if (preset === "set_storages") {
+        updates = {
+          orbitalBuildings: {
+            ...currentOrbital,
+            metalStorage: 15,
+            crystalStorage: 15,
+            deuteriumTank: 15,
+          },
+        };
+      } else if (preset === "set_shipyard") {
+        updates = {
+          buildings: {
+            ...currentBuildings,
+            roboticsFactory: 12,
+            shipyard: 12,
+            researchLab: Math.max(parseNumberish(currentBuildings.researchLab, 0), 10),
+          },
+          orbitalBuildings: {
+            ...currentOrbital,
+            naniteFactory: 6,
+            constructorYard: 8,
+          },
+        };
+      } else if (preset === "set_research") {
+        updates = {
+          research: {
+            ...currentResearch,
+            energyTech: 10,
+            laserTech: 10,
+            ionTech: 10,
+            hyperspaceTech: 10,
+            espionageTech: 10,
+            computerTech: 10,
+            astrophysics: 10,
+            weaponsTech: 10,
+            shieldingTech: 10,
+            armourTech: 10,
+          },
+        };
+      } else {
+        return res.status(400).json({ message: "Unknown preset" });
+      }
+
+      await storage.updatePlayerState(target.id, updates);
+      await appendAudit({
+        actorId,
+        action: "apply_developer_preset",
+        targetUserId: target.id,
+        details: `preset=${preset}`,
+      });
+      await appendDeveloperShortcutLog(`Applied preset ${preset} to ${target.username || target.email || target.id}`);
+
+      res.json({ success: true, targetUserId: target.id, preset, updates });
+    } catch (error) {
+      console.error("Failed to apply developer preset:", error);
+      res.status(500).json({ message: "Failed to apply preset" });
+    }
+  });
+
+  app.post("/api/admin/developer-shortcuts/set-building-level", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const identifier = String(req.body?.identifier || "").trim();
+      const buildingKey = String(req.body?.buildingKey || "").trim();
+      const level = Math.max(0, Math.floor(parseNumberish(req.body?.level, 0)));
+      if (!identifier || !buildingKey) {
+        return res.status(400).json({ message: "identifier and buildingKey are required" });
+      }
+
+      const target = await resolveUserByIdentifier(identifier);
+      if (!target) {
+        return res.status(404).json({ message: "Target user not found" });
+      }
+
+      const state = await ensurePlayerStateExists(target.id);
+      const currentBuildings = ((state.buildings as Record<string, unknown>) || {}) as Record<string, unknown>;
+      const nextBuildings = { ...currentBuildings, [buildingKey]: level };
+      await storage.updatePlayerState(target.id, { buildings: nextBuildings });
+
+      await appendAudit({
+        actorId,
+        action: "set_building_level",
+        targetUserId: target.id,
+        details: `${buildingKey}=${level}`,
+      });
+      await appendDeveloperShortcutLog(`Set ${buildingKey} to ${level} for ${target.username || target.email || target.id}`);
+
+      res.json({ success: true, targetUserId: target.id, buildingKey, level, buildings: nextBuildings });
+    } catch (error) {
+      console.error("Failed to set building level:", error);
+      res.status(500).json({ message: "Failed to set building level" });
+    }
+  });
+
+  app.post("/api/admin/developer-shortcuts/set-research-level", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const identifier = String(req.body?.identifier || "").trim();
+      const researchKey = String(req.body?.researchKey || "").trim();
+      const level = Math.max(0, Math.floor(parseNumberish(req.body?.level, 0)));
+      if (!identifier || !researchKey) {
+        return res.status(400).json({ message: "identifier and researchKey are required" });
+      }
+
+      const target = await resolveUserByIdentifier(identifier);
+      if (!target) {
+        return res.status(404).json({ message: "Target user not found" });
+      }
+
+      const state = await ensurePlayerStateExists(target.id);
+      const currentResearch = ((state.research as Record<string, unknown>) || {}) as Record<string, unknown>;
+      const nextResearch = { ...currentResearch, [researchKey]: level };
+      await storage.updatePlayerState(target.id, { research: nextResearch });
+
+      await appendAudit({
+        actorId,
+        action: "set_research_level",
+        targetUserId: target.id,
+        details: `${researchKey}=${level}`,
+      });
+      await appendDeveloperShortcutLog(`Set research ${researchKey} to ${level} for ${target.username || target.email || target.id}`);
+
+      res.json({ success: true, targetUserId: target.id, researchKey, level, research: nextResearch });
+    } catch (error) {
+      console.error("Failed to set research level:", error);
+      res.status(500).json({ message: "Failed to set research level" });
+    }
+  });
+
+  app.post("/api/admin/developer-shortcuts/add-unit", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const identifier = String(req.body?.identifier || "").trim();
+      const unitId = String(req.body?.unitId || "").trim();
+      const amount = Math.max(1, Math.floor(parseNumberish(req.body?.amount, 1)));
+      if (!identifier || !unitId) {
+        return res.status(400).json({ message: "identifier and unitId are required" });
+      }
+
+      const target = await resolveUserByIdentifier(identifier);
+      if (!target) {
+        return res.status(404).json({ message: "Target user not found" });
+      }
+
+      const state = await ensurePlayerStateExists(target.id);
+      const currentUnits = ((state.units as Record<string, unknown>) || {}) as Record<string, unknown>;
+      const nextUnits = {
+        ...currentUnits,
+        [unitId]: parseNumberish(currentUnits[unitId], 0) + amount,
+      };
+      await storage.updatePlayerState(target.id, { units: nextUnits });
+
+      await appendAudit({
+        actorId,
+        action: "add_unit",
+        targetUserId: target.id,
+        details: `${unitId}=+${amount}`,
+      });
+      await appendDeveloperShortcutLog(`Added ${amount} ${unitId} to ${target.username || target.email || target.id}`);
+
+      res.json({ success: true, targetUserId: target.id, unitId, amount, units: nextUnits });
+    } catch (error) {
+      console.error("Failed to add unit:", error);
+      res.status(500).json({ message: "Failed to add unit" });
+    }
+  });
+
+  app.post("/api/admin/developer-shortcuts/reset-player", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const identifier = String(req.body?.identifier || "").trim();
+      const scope = String(req.body?.scope || "").trim();
+      if (!identifier || !scope) {
+        return res.status(400).json({ message: "identifier and scope are required" });
+      }
+
+      const target = await resolveUserByIdentifier(identifier);
+      if (!target) {
+        return res.status(404).json({ message: "Target user not found" });
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (scope === "resources") {
+        updates.resources = { metal: 0, crystal: 0, deuterium: 0, energy: 0, credits: 0, food: 0, water: 0, darkMatter: 0 };
+      } else if (scope === "units") {
+        updates.units = {};
+      } else if (scope === "buildings") {
+        updates.buildings = {};
+        updates.orbitalBuildings = {};
+      } else if (scope === "research") {
+        updates.research = {};
+      } else {
+        return res.status(400).json({ message: "Unknown reset scope" });
+      }
+
+      await storage.updatePlayerState(target.id, updates);
+      await appendAudit({
+        actorId,
+        action: "reset_player_scope",
+        targetUserId: target.id,
+        details: `scope=${scope}`,
+      });
+      await appendDeveloperShortcutLog(`Reset ${scope} for ${target.username || target.email || target.id}`);
+
+      res.json({ success: true, targetUserId: target.id, scope });
+    } catch (error) {
+      console.error("Failed to reset player scope:", error);
+      res.status(500).json({ message: "Failed to reset player scope" });
+    }
+  });
+
+  app.post("/api/admin/developer-shortcuts/world-object", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const actorId = await requireAdminActorId(req, res);
+      if (!actorId) return;
+
+      const action = String(req.body?.action || "").trim();
+      const type = String(req.body?.type || "").trim() as AdminWorldObject["type"];
+      const coordinates = String(req.body?.coordinates || "").trim();
+      const name = String(req.body?.name || `${type} ${coordinates}`).trim();
+      if (!action || !type || !coordinates) {
+        return res.status(400).json({ message: "action, type, and coordinates are required" });
+      }
+
+      const current = await loadWorldObjects();
+      let next = current.slice();
+
+      if (action === "create") {
+        next = [
+          ...next.filter((entry) => !(entry.type === type && entry.coordinates === coordinates)),
+          {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type,
+            coordinates,
+            name,
+            ownerUserId: String(req.body?.ownerUserId || "") || undefined,
+            details: (req.body?.details && typeof req.body.details === "object") ? req.body.details : {},
+            createdAt: Date.now(),
+            createdBy: actorId,
+          },
+        ];
+      } else if (action === "delete") {
+        next = next.filter((entry) => !(entry.type === type && entry.coordinates === coordinates));
+      } else {
+        return res.status(400).json({ message: "Unknown world object action" });
+      }
+
+      await saveWorldObjects(next);
+      await appendAudit({
+        actorId,
+        action: `world_object_${action}`,
+        details: `type=${type};coordinates=${coordinates}`,
+      });
+      await appendDeveloperShortcutLog(`${action} ${type} at ${coordinates}`);
+
+      res.json({ success: true, worldObjects: next.slice().reverse() });
+    } catch (error) {
+      console.error("Failed to update world objects:", error);
+      res.status(500).json({ message: "Failed to update world objects" });
     }
   });
 }

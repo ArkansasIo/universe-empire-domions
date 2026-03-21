@@ -18,6 +18,7 @@ export default function AccountSetup() {
     isLoading,
     commander,
     government,
+    planetName,
     logout,
     realmServers,
     selectedRealmId,
@@ -27,6 +28,8 @@ export default function AccountSetup() {
   const [selectedRace, setSelectedRace] = useState<RaceId>("terran");
   const [selectedGovernment, setSelectedGovernment] = useState<GovernmentId>("democracy");
   const [selectedRealm, setSelectedRealm] = useState("");
+  const [empireName, setEmpireName] = useState("Stellar Dominion");
+  const [homeWorldName, setHomeWorldName] = useState("New Colony");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -41,8 +44,10 @@ export default function AccountSetup() {
     if (isDataLoaded && !hasUserInteracted) {
       setSelectedRace(commander.race);
       setSelectedGovernment(government.type);
+      setEmpireName(commander.empireName || commander.name || "Stellar Dominion");
+      setHomeWorldName(planetName || "New Colony");
     }
-  }, [commander?.race, government?.type, hasUserInteracted, isDataLoaded]);
+  }, [commander?.race, commander?.empireName, government?.type, planetName, hasUserInteracted, isDataLoaded]);
 
   useEffect(() => {
     if (!hasUserInteracted && selectedRealmId) {
@@ -78,6 +83,7 @@ export default function AccountSetup() {
     const updatedCommander = {
       ...commander,
       race: selectedRace,
+      empireName: empireName.trim().slice(0, 64) || "Stellar Dominion",
     };
 
     const govBase = GOVERNMENTS[selectedGovernment].baseStats;
@@ -99,7 +105,9 @@ export default function AccountSetup() {
         await switchRealm(selectedRealm);
       }
 
-      await completeSetup(updatedCommander, updatedGovernment);
+      await completeSetup(updatedCommander, updatedGovernment, {
+        homeWorldName: homeWorldName.trim().slice(0, 64) || "New Colony",
+      });
       setLocation("/");
     } catch (err) {
       setError("Failed to save your selections. Please try again.");
@@ -143,6 +151,44 @@ export default function AccountSetup() {
         </CardHeader>
 
         <CardContent className="space-y-6 pt-6">
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <Rocket className="w-4 h-4 text-slate-700" />
+              Empire Identity
+            </Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="empire-name" className="text-xs uppercase tracking-wider text-slate-600">Empire Name</Label>
+                <input
+                  id="empire-name"
+                  value={empireName}
+                  onChange={(event) => {
+                    setHasUserInteracted(true);
+                    setEmpireName(event.target.value);
+                  }}
+                  className="w-full h-12 rounded-md border border-slate-300 px-3 text-slate-900"
+                  placeholder="Enter empire name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="homeworld-name" className="text-xs uppercase tracking-wider text-slate-600">Home World Name</Label>
+                <input
+                  id="homeworld-name"
+                  value={homeWorldName}
+                  onChange={(event) => {
+                    setHasUserInteracted(true);
+                    setHomeWorldName(event.target.value);
+                  }}
+                  className="w-full h-12 rounded-md border border-slate-300 px-3 text-slate-900"
+                  placeholder="Enter home world name"
+                />
+              </div>
+            </div>
+            <div className="bg-slate-50 border border-slate-300 rounded-lg p-3 text-xs text-slate-600">
+              Your empire name becomes the banner identity for diplomacy and rankings, while your home world name becomes your starting capital planet.
+            </div>
+          </div>
+
           <div className="space-y-3">
             <Label className="text-sm font-semibold text-slate-900 flex items-center gap-2">
               <Globe2 className="w-4 h-4 text-slate-700" />
