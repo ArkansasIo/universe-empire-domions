@@ -1,7 +1,7 @@
 tasks:
   startDatabase:
     name: Start Database
-    description: Start the PostgreSQL container via docker-compose.
+    description: Start the PostgreSQL and MongoDB containers.
     command: |
       docker compose up -d db
       until docker compose exec -T db pg_isready -U postgres > /dev/null 2>&1; do
@@ -9,6 +9,12 @@ tasks:
         sleep 2
       done
       echo "PostgreSQL is ready."
+      docker run -d --name mongodb --rm -p 27017:27017 mongo:7 || docker start mongodb 2>/dev/null || true
+      until docker exec mongodb mongosh --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; do
+        echo "Waiting for MongoDB..."
+        sleep 2
+      done
+      echo "MongoDB is ready."
     triggeredBy:
       - postDevcontainerStart
 
@@ -50,4 +56,4 @@ services:
     description: FastAPI backend server on port 8001.
     commands:
       start: cd backend && python server.py
-      ready: curl -sf http://localhost:8001
+      ready: curl -sf http://localhost:8001/docs
