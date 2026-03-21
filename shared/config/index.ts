@@ -841,6 +841,37 @@ export {
 } from './researchTechnologyLibraryConfig';
 export * as ResearchTechnologyLibraryConfig from './researchTechnologyLibraryConfig';
 export {
+  RESEARCH_PROGRAM_LIBRARY_240,
+  TECHNOLOGY_SYSTEM_LIBRARY_240,
+  RESEARCH_JOB_SYSTEMS,
+  TECHNOLOGY_JOB_SYSTEMS,
+  KNOWLEDGE_SUPPORT_UNITS,
+  ALL_KNOWLEDGE_JOBS,
+  ALL_KNOWLEDGE_LIBRARY_ENTRIES,
+  KNOWLEDGE_OPERATIONS_META,
+  getKnowledgeEntriesByDomain,
+  getKnowledgeEntriesByCategory,
+  getKnowledgeEntriesBySubCategory,
+  getKnowledgeJobsForEntry,
+  getKnowledgeUnitsForEntry,
+  getKnowledgeEffectSummary,
+  calculateKnowledgeOutput,
+  getJobCoverageForCategory,
+  getUnitCoverageForCategory,
+  type KnowledgeDomain,
+  type KnowledgeJobCategory,
+  type KnowledgeJobSubCategory,
+  type KnowledgeJobClass,
+  type KnowledgeUnitCategory,
+  type KnowledgeUnitClass,
+  type KnowledgeYieldProfile,
+  type KnowledgeMechanicBundle,
+  type KnowledgeCatalogEntry,
+  type KnowledgeJobRole,
+  type KnowledgeSupportUnit,
+} from './researchTechnologyOperationsConfig';
+export * as ResearchTechnologyOperationsConfig from './researchTechnologyOperationsConfig';
+export {
   CIVILIAN_STRUCTURES,
   CIVILIAN_STRUCTURES_META,
   CIVILIAN_TIER_CONFIG,

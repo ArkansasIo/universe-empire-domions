@@ -11,22 +11,60 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
   Rocket, MapPin, Crosshair, Truck, Search, Play, Clock, AlertCircle, User, Anchor, 
-  Zap, Skull, Disc, Target, Shield, Sword, TrendingUp, BarChart3, History, Info
+  Zap, Skull, Disc, Target, Shield, Sword, TrendingUp, BarChart3, History, Info, Users, GraduationCap
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { unitData } from "@/lib/unitData";
 import { SHIP_ASSETS } from "@shared/config";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
+import { useArmySubsystems, useMilitaryForce } from "@/hooks/useCivilizationArmy";
+import type { ArmySubsystem, ArmyUnit } from "@shared/types/civilization";
 
 const TEMP_THEME_IMAGE = "/theme-temp.png";
 
 type FleetTab = "dispatch" | "active" | "templates" | "combat";
 
+function getPersonnelSpecialty(subsystem: ArmySubsystem): "pilot" | "gunner" | "officer" | null {
+   const haystack = `${subsystem.name} ${subsystem.description} ${subsystem.flavorText || ""}`.toLowerCase();
+   if (
+      subsystem.role === "commander" ||
+      subsystem.role === "captain" ||
+      haystack.includes("officer") ||
+      haystack.includes("command") ||
+      haystack.includes("tactical")
+   ) {
+      return "officer";
+   }
+
+   if (
+      haystack.includes("pilot") ||
+      haystack.includes("flight") ||
+      haystack.includes("aviator") ||
+      haystack.includes("carrier")
+   ) {
+      return "pilot";
+   }
+
+   if (
+      haystack.includes("gunner") ||
+      haystack.includes("artillery") ||
+      haystack.includes("weapon") ||
+      haystack.includes("turret") ||
+      haystack.includes("assault")
+   ) {
+      return "gunner";
+   }
+
+   return null;
+}
+
 export default function Fleet() {
    const { units, activeMissions } = useGame();
    const { toast } = useToast();
+   const { data: armySubsystems } = useArmySubsystems();
+   const { data: militaryForce } = useMilitaryForce();
 
    const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
    const initialMission = searchParams.get("mission");
@@ -51,6 +89,7 @@ export default function Fleet() {
    };
   
   const [selectedUnits, setSelectedUnits] = useState<{[key: string]: number}>({});
+   const [crewAssignments, setCrewAssignments] = useState({ pilot: 0, gunner: 0, officer: 0 });
    const [targetGalaxy, setTargetGalaxy] = useState(searchParams.get("g") ?? "1");
    const [targetSystem, setTargetSystem] = useState(searchParams.get("s") ?? "102");
    const [targetPlanet, setTargetPlanet] = useState(searchParams.get("p") ?? "8");
@@ -201,6 +240,29 @@ export default function Fleet() {
 
   const getUnitData = (id: string) => unitData.find(ud => ud.id === id);
 
+  const subsystemById = useMemo(
+    () => new Map<string, ArmySubsystem>((armySubsystems || []).map((subsystem) => [subsystem.id, subsystem])),
+    [armySubsystems],
+  );
+
+  const militaryForceData = militaryForce?.force || militaryForce || { squadrons: [] as ArmyUnit[] };
+
+  const personnelPools = useMemo(() => {
+    return militaryForceData.squadrons.reduce(
+      (pools: { pilot: number; gunner: number; officer: number }, squadron: ArmyUnit) => {
+        const subsystem = subsystemById.get(squadron.subsystemId);
+        if (!subsystem) return pools;
+
+        const specialty = getPersonnelSpecialty(subsystem);
+        if (specialty) {
+          pools[specialty] += squadron.quantity;
+        }
+        return pools;
+      },
+      { pilot: 0, gunner: 0, officer: 0 },
+    );
+  }, [militaryForceData.squadrons, subsystemById]);
+
   const selectedFleetPower = Object.entries(selectedUnits).reduce((sum, [id, count]) => {
     const unit = getUnitData(id);
     if (!unit) return sum;
@@ -209,6 +271,33 @@ export default function Fleet() {
   }, 0);
 
   const selectedShipsCount = Object.values(selectedUnits).reduce((a, b) => a + b, 0);
+  const recommendedCrew = {
+    pilot: Math.min(personnelPools.pilot, Math.max(0, Math.ceil(selectedShipsCount * 0.6))),
+    gunner: Math.min(personnelPools.gunner, Math.max(0, Math.ceil(selectedShipsCount * 0.4))),
+    officer: Math.min(personnelPools.officer, Math.max(0, Math.ceil(selectedShipsCount * 0.12))),
+  };
+
+  useEffect(() => {
+    setCrewAssignments((current) => ({
+      pilot: Math.min(current.pilot, personnelPools.pilot),
+      gunner: Math.min(current.gunner, personnelPools.gunner),
+      officer: Math.min(current.officer, personnelPools.officer),
+    }));
+  }, [personnelPools]);
+
+  const assignedCrew = {
+    pilot: Math.min(crewAssignments.pilot, personnelPools.pilot),
+    gunner: Math.min(crewAssignments.gunner, personnelPools.gunner),
+    officer: Math.min(crewAssignments.officer, personnelPools.officer),
+  };
+
+  const personnelBonuses = {
+    speed: Math.min(24, assignedCrew.pilot * 2),
+    accuracy: Math.min(20, assignedCrew.gunner * 2),
+    attack: Math.min(30, assignedCrew.gunner * 2 + assignedCrew.officer),
+    shield: Math.min(18, assignedCrew.officer * 2),
+    morale: Math.min(25, assignedCrew.officer * 3),
+  };
 
   const slowestSpeed = Object.entries(selectedUnits).reduce((min, [id, count]) => {
     if (count === 0) return min;
@@ -413,6 +502,72 @@ export default function Fleet() {
                        </CardContent>
                     </Card>
                   )}
+
+                  <Card className="bg-white border-slate-200 shadow-sm">
+                     <CardHeader className="pb-2">
+                       <CardTitle className="text-lg font-orbitron flex items-center gap-2 text-slate-900">
+                         <Users className="w-5 h-5 text-violet-600" /> Personnel Assignment
+                       </CardTitle>
+                     </CardHeader>
+                     <CardContent className="space-y-4">
+                        <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                           Trained army specialists can now be attached to fleet task forces to improve speed, accuracy, morale, and shield discipline before launch.
+                        </div>
+                        <div className="space-y-3">
+                           {[
+                              { key: "pilot", label: "Pilots", available: personnelPools.pilot, recommended: recommendedCrew.pilot },
+                              { key: "gunner", label: "Gunners", available: personnelPools.gunner, recommended: recommendedCrew.gunner },
+                              { key: "officer", label: "Officers", available: personnelPools.officer, recommended: recommendedCrew.officer },
+                           ].map((entry) => (
+                              <div key={entry.key} className="rounded border border-slate-200 p-3">
+                                 <div className="flex items-center justify-between gap-2">
+                                    <div>
+                                       <div className="font-semibold text-slate-900">{entry.label}</div>
+                                       <div className="text-[11px] text-slate-500">
+                                          Available {entry.available.toLocaleString()} • Recommended {entry.recommended.toLocaleString()}
+                                       </div>
+                                    </div>
+                                    <Input
+                                       type="number"
+                                       min={0}
+                                       max={entry.available}
+                                       value={assignedCrew[entry.key as keyof typeof assignedCrew]}
+                                       onChange={(event) =>
+                                          setCrewAssignments((current) => ({
+                                             ...current,
+                                             [entry.key]: Math.max(0, Math.min(entry.available, Number(event.target.value) || 0)),
+                                          }))
+                                       }
+                                       className="w-24 bg-white border-slate-200 text-right"
+                                    />
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                           <div className="rounded border border-slate-200 bg-slate-50 p-2">ATK +{personnelBonuses.attack}%</div>
+                           <div className="rounded border border-slate-200 bg-slate-50 p-2">Shield +{personnelBonuses.shield}%</div>
+                           <div className="rounded border border-slate-200 bg-slate-50 p-2">Speed +{personnelBonuses.speed}%</div>
+                           <div className="rounded border border-slate-200 bg-slate-50 p-2">Accuracy +{personnelBonuses.accuracy}%</div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                           <Button
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => setCrewAssignments(recommendedCrew)}
+                           >
+                              <GraduationCap className="w-4 h-4 mr-2" /> Auto Assign
+                           </Button>
+                           <Button
+                              variant="ghost"
+                              className="flex-1"
+                              onClick={() => setCrewAssignments({ pilot: 0, gunner: 0, officer: 0 })}
+                           >
+                              Clear
+                           </Button>
+                        </div>
+                     </CardContent>
+                  </Card>
                   
                   <Card className="bg-white border-slate-200 shadow-sm">
                      <CardHeader className="pb-2">

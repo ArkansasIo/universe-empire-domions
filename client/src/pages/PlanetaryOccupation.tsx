@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import GameLayout from "@/components/layout/GameLayout";
 import { Badge } from "@/components/ui/badge";
@@ -252,7 +253,7 @@ export default function PlanetaryOccupation() {
             </p>
           </div>
 
-          <div className="w-full lg:w-[360px]">
+          <div className="flex w-full flex-col gap-3 lg:w-[420px]">
             <Select value={selectedPlanetId} onValueChange={setSelectedPlanetId}>
               <SelectTrigger data-testid="select-occupation-planet">
                 <SelectValue placeholder="Select occupied planet" />
@@ -265,6 +266,11 @@ export default function PlanetaryOccupation() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/training-center"><Button variant="outline" size="sm"><Users className="w-4 h-4 mr-2" /> Training Center</Button></Link>
+              <Link href={selectedPlanetId ? `/ground-combat?planet=${selectedPlanetId}` : "/ground-combat"}><Button variant="outline" size="sm"><Shield className="w-4 h-4 mr-2" /> Ground Combat</Button></Link>
+              <Link href="/fleet"><Button variant="outline" size="sm"><TowerControl className="w-4 h-4 mr-2" /> Fleet Support</Button></Link>
+            </div>
           </div>
         </div>
 

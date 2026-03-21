@@ -337,6 +337,7 @@ const menuSections: MenuSection[] = [
           { href: "/fleet", icon: Send, label: "Fleet Command", description: "Dispatch fleets, track missions, and manage formations." },
           { href: "/army", icon: Users, label: "Army", description: "Review land units, formations, and force composition." },
           { href: "/army-management", icon: Swords, label: "Army Management", description: "Train, equip, and reorganize planetary armies." },
+          { href: "/training-center", icon: GraduationCap, label: "Training Center", description: "Unlock training tracks, staff academies, and manage force capacity." },
         ],
       },
       {
@@ -345,6 +346,7 @@ const menuSections: MenuSection[] = [
         items: [
           { href: "/expeditions", icon: Compass, label: "Expeditions", description: "Launch deep-space missions for risk, reward, and discovery." },
           { href: "/combat", icon: ShieldAlert, label: "Combat Center", description: "Engage combat systems and active battle mechanics." },
+          { href: "/ground-combat", icon: Swords, label: "Ground Combat", description: "Assemble invasion troops, shock units, and special ops detachments." },
           { href: "/planet-occupation", icon: TowerControl, label: "Planet Occupation", description: "Control captured worlds through garrisons, suppression, extraction, and fortifications." },
           { href: "/battle-logs", icon: ScrollText, label: "Battle Logs", description: "Review previous engagements and combat outcomes." },
         ],
@@ -841,7 +843,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
           ? [
               { label: "Fleet Command", href: "/fleet", icon: Send, helper: "Dispatch fleets, raids, and logistics missions." },
               { label: "Combat Center", href: "/combat", icon: ShieldAlert, helper: "Run combat actions, strikes, and battle ops." },
-              { label: "Open Shipyard", href: "/shipyard", icon: Rocket, helper: "Build starships, motherships, and yard upgrades." },
+              { label: "Ground Combat", href: "/ground-combat", icon: Swords, helper: "Launch invasions, raids, and planetary assault formations." },
               { label: "Occupation Ops", href: "/planet-occupation", icon: TowerControl, helper: "Manage garrisons, suppression, and extraction." },
             ]
           : activePageContext?.section === "Exploration"

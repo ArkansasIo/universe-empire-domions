@@ -1,223 +1,654 @@
+import { useMemo, useState } from "react";
 import GameLayout from "@/components/layout/GameLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, Brain, Award, Lightbulb, Zap, Target, Users, Sword } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ALL_KNOWLEDGE_JOBS,
+  KNOWLEDGE_OPERATIONS_META,
+  KNOWLEDGE_SUPPORT_UNITS,
+  RESEARCH_JOB_SYSTEMS,
+  RESEARCH_PROGRAM_LIBRARY_240,
+  RESEARCH_TECH_CATEGORIES,
+  TECHNOLOGY_JOB_SYSTEMS,
+  TECHNOLOGY_SYSTEM_LIBRARY_240,
+  calculateKnowledgeOutput,
+  getJobCoverageForCategory,
+  getKnowledgeEffectSummary,
+  getUnitCoverageForCategory,
+  type KnowledgeCatalogEntry,
+  type KnowledgeDomain,
+  type KnowledgeJobRole,
+  type KnowledgeSupportUnit,
+  type ResearchTechCategory,
+} from "@shared/config";
+import {
+  Atom,
+  BookOpen,
+  BriefcaseBusiness,
+  Cpu,
+  Filter,
+  Microscope,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Wrench,
+} from "lucide-react";
 
-const KNOWLEDGE_TYPES = [
-  { name: "Military", icon: Sword, color: "bg-red-100 text-red-900", description: "Combat & warfare tactics" },
-  { name: "Engineering", icon: Lightbulb, color: "bg-orange-100 text-orange-900", description: "Building & construction" },
-  { name: "Science", icon: Zap, color: "bg-blue-100 text-blue-900", description: "Research & discovery" },
-  { name: "Agriculture", icon: Target, color: "bg-green-100 text-green-900", description: "Food & resources" },
-  { name: "Commerce", icon: Lightbulb, color: "bg-yellow-100 text-yellow-900", description: "Trading & economy" },
-  { name: "Diplomacy", icon: Users, color: "bg-purple-100 text-purple-900", description: "Alliance & negotiation" },
-  { name: "Exploration", icon: Lightbulb, color: "bg-cyan-100 text-cyan-900", description: "Discovery & expansion" },
-  { name: "Arcane", icon: Zap, color: "bg-indigo-100 text-indigo-900", description: "Magic & mystical arts" },
-  { name: "Medicine", icon: Lightbulb, color: "bg-pink-100 text-pink-900", description: "Healing & health" },
-  { name: "Espionage", icon: Target, color: "bg-slate-100 text-slate-900", description: "Spying & intelligence" },
-];
+const MAX_VISIBLE_ENTRIES = 24;
 
-const KNOWLEDGE_CLASSES = [
-  { class: "Novice", tier: 1, levels: "1-10", bonus: 0.1 },
-  { class: "Apprentice", tier: 2, levels: "11-30", bonus: 0.25 },
-  { class: "Journeyman", tier: 3, levels: "31-50", bonus: 0.5 },
-  { class: "Expert", tier: 4, levels: "51-100", bonus: 1.0 },
-];
+function matchesQuery(value: string, query: string) {
+  return value.toLowerCase().includes(query.toLowerCase());
+}
 
-const KNOWLEDGE_TIERS = [
-  { name: "Foundation", tier: 1, maxLevel: 100 },
-  { name: "Intermediate", tier: 2, maxLevel: 100 },
-  { name: "Advanced", tier: 3, maxLevel: 100 },
-  { name: "Master", tier: 4, maxLevel: 100 },
-  { name: "Supreme", tier: 5, maxLevel: 100 },
-];
+function matchesEntry(entry: KnowledgeCatalogEntry, query: string, category: string) {
+  const categoryMatch = category === "all" || entry.category === category;
+  if (!categoryMatch) {
+    return false;
+  }
 
-const TRAINING_TRACKS = [
-  { name: "Empire Builder", focus: "Engineering + Agriculture + Commerce", impact: "Infrastructure and economic scaling" },
-  { name: "War Strategist", focus: "Military + Espionage + Diplomacy", impact: "Combat readiness and geopolitical control" },
-  { name: "Frontier Scientist", focus: "Science + Exploration + Arcane", impact: "Discovery, innovation, and expansion tempo" },
-];
+  if (!query.trim()) {
+    return true;
+  }
+
+  const haystack = [
+    entry.name,
+    entry.summary,
+    entry.detail,
+    entry.category,
+    entry.subCategory,
+    entry.type,
+    entry.subType,
+    entry.class,
+    entry.subClass,
+    ...entry.functions,
+    ...entry.features,
+    ...entry.effects,
+    ...entry.tags,
+  ].join(" ");
+
+  return matchesQuery(haystack, query);
+}
+
+function matchesJob(job: KnowledgeJobRole, query: string, domain: string) {
+  const domainMatch = domain === "all" || job.domain === domain;
+  if (!domainMatch) {
+    return false;
+  }
+
+  if (!query.trim()) {
+    return true;
+  }
+
+  const haystack = [
+    job.name,
+    job.summary,
+    job.detail,
+    job.category,
+    job.subCategory,
+    job.jobType,
+    job.subJobType,
+    job.class,
+    job.subClass,
+    ...job.functions,
+    ...job.features,
+    ...job.effects,
+  ].join(" ");
+
+  return matchesQuery(haystack, query);
+}
+
+function matchesUnit(unit: KnowledgeSupportUnit, query: string, domain: string) {
+  const domainMatch = domain === "all" || unit.domain === domain;
+  if (!domainMatch) {
+    return false;
+  }
+
+  if (!query.trim()) {
+    return true;
+  }
+
+  const haystack = [
+    unit.name,
+    unit.summary,
+    unit.detail,
+    unit.category,
+    unit.class,
+    unit.subClass,
+    unit.unitType,
+    unit.subUnitType,
+    ...unit.functions,
+    ...unit.features,
+    ...unit.effects,
+  ].join(" ");
+
+  return matchesQuery(haystack, query);
+}
+
+function EntryCard({ entry }: { entry: KnowledgeCatalogEntry }) {
+  const projected = calculateKnowledgeOutput(
+    entry,
+    Math.max(3, Math.round(entry.jobCapacity * 0.75)),
+    Math.max(1, Math.round(entry.unitCapacity * 0.75)),
+    Math.max(8, Math.round(entry.tier / 5)),
+  );
+
+  return (
+    <Card className="border-slate-200 bg-white shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <CardTitle className="font-orbitron text-lg text-slate-900">{entry.name}</CardTitle>
+            <CardDescription className="mt-1">
+              {entry.libraryCode} • {entry.class} / {entry.subClass}
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">{entry.domain}</Badge>
+            <Badge className="bg-primary/10 text-primary">Tier {entry.tier}</Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2 text-xs">
+          <Badge variant="secondary">{entry.category}</Badge>
+          <Badge variant="secondary">{entry.subCategory}</Badge>
+          <Badge variant="secondary">{entry.type}</Badge>
+          <Badge variant="secondary">{entry.subType}</Badge>
+        </div>
+
+        <p className="text-sm text-slate-600">{entry.summary}</p>
+
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Capacity</div>
+            <div className="mt-2 text-slate-900">Jobs {entry.jobCapacity} • Units {entry.unitCapacity}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Level Band</div>
+            <div className="mt-2 text-slate-900">
+              {entry.minLevel}-{entry.maxLevel}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>Focus</span>
+            <span>{entry.focusScore}%</span>
+          </div>
+          <Progress value={entry.focusScore} className="h-2" />
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>Readiness</span>
+            <span>{entry.readinessScore}%</span>
+          </div>
+          <Progress value={entry.readinessScore} className="h-2" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
+            <div className="text-xs uppercase tracking-[0.2em]">Projected Output</div>
+            <div className="mt-2">Throughput {projected.throughputPerCycle}</div>
+            <div>Discovery {projected.discoveryPerCycle}</div>
+            <div>Readiness {projected.readinessPerCycle}</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
+            <div className="text-xs uppercase tracking-[0.2em]">Operational Pressure</div>
+            <div className="mt-2">Risk {projected.riskPressure}%</div>
+            <div>Upkeep {projected.upkeepPerCycle}</div>
+            <div>Security {entry.yieldProfile.securityDemand}</div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Functions</div>
+          <div className="flex flex-wrap gap-2">
+            {entry.functions.slice(0, 3).map((item) => (
+              <Badge key={item} variant="secondary" className="whitespace-normal text-left">
+                {item}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Effects</div>
+          <div className="text-sm text-slate-600">{getKnowledgeEffectSummary(entry)}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function JobCard({ job }: { job: KnowledgeJobRole }) {
+  return (
+    <Card className="border-slate-200 bg-white shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <CardTitle className="font-orbitron text-lg text-slate-900">{job.name}</CardTitle>
+            <CardDescription className="mt-1">
+              {job.category} • {job.subCategory} • {job.class}
+            </CardDescription>
+          </div>
+          <Badge variant="outline">{job.domain}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-slate-600">{job.summary}</p>
+        <div className="grid grid-cols-3 gap-3 text-sm">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Minimum</div>
+            <div className="mt-2 text-slate-900">{job.staffing.minimum}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Optimal</div>
+            <div className="mt-2 text-slate-900">{job.staffing.optimal}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Maximum</div>
+            <div className="mt-2 text-slate-900">{job.staffing.maximum}</div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge className="bg-primary/10 text-primary">Throughput +{job.bonuses.throughput}%</Badge>
+          <Badge className="bg-emerald-100 text-emerald-900">Efficiency +{job.bonuses.efficiency}%</Badge>
+          <Badge className="bg-amber-100 text-amber-900">Security +{job.bonuses.security}%</Badge>
+          <Badge className="bg-indigo-100 text-indigo-900">Quality +{job.bonuses.discovery}%</Badge>
+        </div>
+        <div className="text-xs text-slate-500">
+          Supports {job.supportedCategories.length} category bands and {job.supportedSubCategories.length} sub-discipline bands.
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function UnitCard({ unit }: { unit: KnowledgeSupportUnit }) {
+  return (
+    <Card className="border-slate-200 bg-white shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <CardTitle className="font-orbitron text-lg text-slate-900">{unit.name}</CardTitle>
+            <CardDescription className="mt-1">
+              {unit.category} • {unit.class} • Tier {unit.tier}
+            </CardDescription>
+          </div>
+          <Badge variant="outline">{unit.domain}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-slate-600">{unit.summary}</p>
+        <div className="grid grid-cols-3 gap-3 text-sm">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Crew</div>
+            <div className="mt-2 text-slate-900">{unit.crew}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Command</div>
+            <div className="mt-2 text-slate-900">{unit.commandSlots}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Capacity</div>
+            <div className="mt-2 text-slate-900">{unit.assignmentCapacity}</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-sm text-slate-600">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div>Analysis {unit.stats.analysis}</div>
+            <div>Engineering {unit.stats.engineering}</div>
+            <div>Coordination {unit.stats.coordination}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div>Logistics {unit.stats.logistics}</div>
+            <div>Security {unit.stats.security}</div>
+            <div>{unit.subUnitType}</div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function KnowledgeLibrary() {
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [jobDomainFilter, setJobDomainFilter] = useState<string>("all");
+  const [unitDomainFilter, setUnitDomainFilter] = useState<string>("all");
+
+  const filteredResearch = useMemo(
+    () => RESEARCH_PROGRAM_LIBRARY_240.filter((entry) => matchesEntry(entry, query, categoryFilter)),
+    [categoryFilter, query],
+  );
+
+  const filteredTechnology = useMemo(
+    () => TECHNOLOGY_SYSTEM_LIBRARY_240.filter((entry) => matchesEntry(entry, query, categoryFilter)),
+    [categoryFilter, query],
+  );
+
+  const filteredJobs = useMemo(
+    () => ALL_KNOWLEDGE_JOBS.filter((job) => matchesJob(job, query, jobDomainFilter)),
+    [jobDomainFilter, query],
+  );
+
+  const filteredUnits = useMemo(
+    () => KNOWLEDGE_SUPPORT_UNITS.filter((unit) => matchesUnit(unit, query, unitDomainFilter)),
+    [query, unitDomainFilter],
+  );
+
+  const categoryCoverage = useMemo(
+    () =>
+      RESEARCH_TECH_CATEGORIES.map((category) => {
+        const researchCount = RESEARCH_PROGRAM_LIBRARY_240.filter((entry) => entry.category === category.id).length;
+        const technologyCount = TECHNOLOGY_SYSTEM_LIBRARY_240.filter((entry) => entry.category === category.id).length;
+        const researchJobs = getJobCoverageForCategory("research", category.id);
+        const technologyJobs = getJobCoverageForCategory("technology", category.id);
+        const researchUnits = getUnitCoverageForCategory("research", category.id);
+        const technologyUnits = getUnitCoverageForCategory("technology", category.id);
+
+        return {
+          ...category,
+          researchCount,
+          technologyCount,
+          totalCoverage: researchCount + technologyCount,
+          jobCoverage: researchJobs.length + technologyJobs.length,
+          unitCoverage: researchUnits.length + technologyUnits.length,
+        };
+      }),
+    [],
+  );
+
+  const highlightResearch = filteredResearch[0] ?? RESEARCH_PROGRAM_LIBRARY_240[0];
+  const highlightTechnology = filteredTechnology[0] ?? TECHNOLOGY_SYSTEM_LIBRARY_240[0];
+  const highlightJob = filteredJobs[0] ?? RESEARCH_JOB_SYSTEMS[0] ?? TECHNOLOGY_JOB_SYSTEMS[0];
+  const highlightUnit = filteredUnits[0] ?? KNOWLEDGE_SUPPORT_UNITS[0];
+
   return (
     <GameLayout>
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {/* Header */}
-        <div>
-          <h2 className="text-3xl font-orbitron font-bold text-slate-900 flex items-center gap-2">
-            <BookOpen className="w-8 h-8" />
-            Knowledge Library
-          </h2>
-          <p className="text-muted-foreground font-rajdhani text-lg">Master 10 knowledge types across 4 classes and 5 tiers (2000 unique knowledge points)</p>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <h2 className="flex items-center gap-2 text-3xl font-orbitron font-bold text-slate-900">
+              <BookOpen className="h-8 w-8" />
+              Knowledge Library
+            </h2>
+            <p className="mt-2 max-w-4xl text-lg text-slate-600">
+              Browse 240 research programs, 240 technology systems, staffing jobs, specialist units,
+              and the operational logic that turns science into empire-wide power.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <Card className="border-slate-200 bg-white shadow-sm">
+              <CardContent className="p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Research</div>
+                <div className="mt-2 text-3xl font-orbitron font-bold text-slate-900">
+                  {KNOWLEDGE_OPERATIONS_META.researchPrograms}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200 bg-white shadow-sm">
+              <CardContent className="p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Technology</div>
+                <div className="mt-2 text-3xl font-orbitron font-bold text-slate-900">
+                  {KNOWLEDGE_OPERATIONS_META.technologySystems}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200 bg-white shadow-sm">
+              <CardContent className="p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Jobs</div>
+                <div className="mt-2 text-3xl font-orbitron font-bold text-slate-900">
+                  {KNOWLEDGE_OPERATIONS_META.researchJobs + KNOWLEDGE_OPERATIONS_META.technologyJobs}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200 bg-white shadow-sm">
+              <CardContent className="p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Units</div>
+                <div className="mt-2 text-3xl font-orbitron font-bold text-slate-900">
+                  {KNOWLEDGE_OPERATIONS_META.supportUnits}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="types" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-white border border-slate-200 h-14 shadow-sm">
-            <TabsTrigger value="types" className="font-orbitron text-sm flex items-center gap-1">
-              <Brain className="w-4 h-4" />
-              Types
+        <Card className="border-slate-200 bg-white shadow-sm">
+          <CardContent className="grid gap-4 p-4 lg:grid-cols-[1.3fr_0.8fr_0.8fr]">
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+                <Search className="h-4 w-4" />
+                Search
+              </label>
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search names, categories, functions, effects, or tags..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+                <Filter className="h-4 w-4" />
+                Category
+              </label>
+              <select
+                value={categoryFilter}
+                onChange={(event) => setCategoryFilter(event.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+              >
+                <option value="all">All categories</option>
+                {RESEARCH_TECH_CATEGORIES.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-[0.2em] text-slate-500">Job Domain</label>
+                <select
+                  value={jobDomainFilter}
+                  onChange={(event) => setJobDomainFilter(event.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                >
+                  <option value="all">All jobs</option>
+                  <option value="research">Research jobs</option>
+                  <option value="technology">Technology jobs</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-[0.2em] text-slate-500">Unit Domain</label>
+                <select
+                  value={unitDomainFilter}
+                  onChange={(event) => setUnitDomainFilter(event.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                >
+                  <option value="all">All units</option>
+                  <option value="research">Research units</option>
+                  <option value="technology">Technology units</option>
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 border border-slate-200 bg-white p-2 shadow-sm md:grid-cols-5">
+            <TabsTrigger value="overview" className="font-orbitron">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Overview
             </TabsTrigger>
-            <TabsTrigger value="classes" className="font-orbitron text-sm flex items-center gap-1">
-              <Award className="w-4 h-4" />
-              Classes
+            <TabsTrigger value="research" className="font-orbitron">
+              <Microscope className="mr-2 h-4 w-4" />
+              Research
             </TabsTrigger>
-            <TabsTrigger value="progression" className="font-orbitron text-sm flex items-center gap-1">
-              <Zap className="w-4 h-4" />
-              Progression
+            <TabsTrigger value="technology" className="font-orbitron">
+              <Cpu className="mr-2 h-4 w-4" />
+              Technology
             </TabsTrigger>
-            <TabsTrigger value="synergies" className="font-orbitron text-sm flex items-center gap-1">
-              <Target className="w-4 h-4" />
-              Synergies
+            <TabsTrigger value="jobs" className="font-orbitron">
+              <BriefcaseBusiness className="mr-2 h-4 w-4" />
+              Jobs
+            </TabsTrigger>
+            <TabsTrigger value="units" className="font-orbitron">
+              <Users className="mr-2 h-4 w-4" />
+              Units
             </TabsTrigger>
           </TabsList>
 
-          {/* Knowledge Types */}
-          <TabsContent value="types" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {KNOWLEDGE_TYPES.map((type, idx) => {
-                const Icon = type.icon;
-                return (
-                  <Card key={idx} className="bg-white border-slate-200 hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="font-orbitron flex items-center gap-2">
-                          <Icon className="w-5 h-5" />
-                          {type.name}
-                        </CardTitle>
-                        <Badge className={type.color}>Type</Badge>
-                      </div>
-                      <CardDescription>{type.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div>
-                        <p className="text-xs font-rajdhani font-semibold text-slate-600 mb-2">Knowledge Path Progress</p>
-                        <Progress value={45} className="h-2" />
-                        <p className="text-xs text-slate-500 mt-1">450/1000 mastery points</p>
-                      </div>
-                      <div className="grid grid-cols-4 gap-1">
-                        {[1,2,3,4].map(i => (
-                          <div key={i} className="bg-slate-50 border border-slate-200 rounded p-2 text-center">
-                            <p className="text-xs font-bold text-slate-700">C{i}</p>
-                            <p className="text-xs text-slate-600">50L</p>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </TabsContent>
-
-          {/* Knowledge Classes */}
-          <TabsContent value="classes" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {KNOWLEDGE_CLASSES.map((k, idx) => (
-                <Card key={idx} className="bg-white border-slate-200">
-                  <CardHeader>
-                    <CardTitle className="font-orbitron">{k.class}</CardTitle>
-                    <CardDescription>Levels {k.levels}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm font-rajdhani font-semibold mb-2">Mastery Bonus</p>
-                      <Badge className="bg-blue-100 text-blue-900 font-bold text-lg py-2 px-4">
-                        +{(k.bonus * 100).toFixed(0)}%
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs text-center">
-                      <div className="bg-slate-50 border border-slate-200 rounded p-2">
-                        <p className="font-bold">10</p>
-                        <p className="text-slate-600">Types</p>
-                      </div>
-                      <div className="bg-slate-50 border border-slate-200 rounded p-2">
-                        <p className="font-bold">5</p>
-                        <p className="text-slate-600">Tiers</p>
-                      </div>
-                      <div className="bg-slate-50 border border-slate-200 rounded p-2">
-                        <p className="font-bold">500</p>
-                        <p className="text-slate-600">Points</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* Progression */}
-          <TabsContent value="progression" className="mt-6">
-            <div className="space-y-4">
-              {KNOWLEDGE_TIERS.map((tier, idx) => (
-                <Card key={idx} className="bg-white border-slate-200">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="font-orbitron">{tier.name} Tier</CardTitle>
-                      <Badge className="bg-primary/10 text-primary">Tier {tier.tier}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-rajdhani">Progress</span>
-                        <span className="text-sm font-bold text-primary">{(tier.tier * 20)}%</span>
-                      </div>
-                      <Progress value={tier.tier * 20} className="h-3" />
-                    </div>
-                    <p className="text-xs text-slate-600">
-                      Max Level: <span className="font-bold text-slate-900">{tier.maxLevel}</span> • 
-                      {tier.maxLevel * 10} mastery points available
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* Synergies */}
-          <TabsContent value="synergies" className="mt-6">
-            <div className="space-y-4">
-              <Card className="bg-white border-slate-200">
+          <TabsContent value="overview" className="mt-6 space-y-6">
+            <div className="grid gap-4 xl:grid-cols-3">
+              <Card className="border-slate-200 bg-white shadow-sm xl:col-span-2">
                 <CardHeader>
-                  <CardTitle className="font-orbitron">Knowledge Synergies</CardTitle>
-                  <CardDescription>Combining different knowledge types grants bonus effects</CardDescription>
+                  <CardTitle className="font-orbitron text-slate-900">Category Coverage</CardTitle>
+                  <CardDescription>
+                    Every research and technology branch now has generated programs, staffing coverage, and specialist support.
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[
-                      { combo: "Military + Engineering", bonus: "Combat building efficiency +20%" },
-                      { combo: "Science + Arcane", bonus: "Research speed +15%" },
-                      { combo: "Commerce + Diplomacy", bonus: "Trade profit +25%" },
-                      { combo: "Exploration + Navigation", bonus: "Fleet speed +10%" },
-                      { combo: "Medicine + Agriculture", bonus: "Population growth +30%" },
-                      { combo: "Espionage + Intelligence", bonus: "Detection range +40%" },
-                    ].map((syn, idx) => (
-                      <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <p className="font-semibold font-rajdhani text-slate-900">{syn.combo}</p>
-                        <Badge className="bg-green-100 text-green-900 mt-2">{syn.bonus}</Badge>
+                <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {categoryCoverage.map((category) => (
+                    <div key={category.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-semibold text-slate-900">{category.name}</div>
+                          <div className="mt-1 text-xs text-slate-500">{category.description}</div>
+                        </div>
+                        <Badge variant="outline">{category.totalCoverage}</Badge>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-slate-200">
-                <CardHeader>
-                  <CardTitle className="font-orbitron">Recommended Training Tracks</CardTitle>
-                  <CardDescription>Preset specialization paths for commanders and sub-commanders</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {TRAINING_TRACKS.map((track) => (
-                    <div key={track.name} className="rounded border border-slate-200 bg-slate-50 p-3">
-                      <div className="font-semibold text-slate-900">{track.name}</div>
-                      <div className="text-sm text-slate-600 mt-1">Focus: {track.focus}</div>
-                      <div className="text-xs text-slate-500 mt-1">Impact: {track.impact}</div>
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>Research</span>
+                          <span>{category.researchCount}</span>
+                        </div>
+                        <Progress value={(category.researchCount / 20) * 100} className="h-2" />
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>Technology</span>
+                          <span>{category.technologyCount}</span>
+                        </div>
+                        <Progress value={(category.technologyCount / 20) * 100} className="h-2" />
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                        <Badge className="bg-primary/10 text-primary">Jobs {category.jobCoverage}</Badge>
+                        <Badge className="bg-emerald-100 text-emerald-900">Units {category.unitCoverage}</Badge>
+                      </div>
                     </div>
                   ))}
                 </CardContent>
               </Card>
+
+              <div className="space-y-4">
+                <Card className="border-slate-200 bg-white shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 font-orbitron text-slate-900">
+                      <Atom className="h-5 w-5 text-primary" />
+                      Research Logic
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm text-slate-600">
+                    <p>{highlightResearch?.mechanics.primaryLoop}</p>
+                    <p>{highlightResearch?.mechanics.activeFunction}</p>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      {highlightResearch?.mechanics.gameplayEffect}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200 bg-white shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 font-orbitron text-slate-900">
+                      <Wrench className="h-5 w-5 text-primary" />
+                      Technology Logic
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm text-slate-600">
+                    <p>{highlightTechnology?.mechanics.primaryLoop}</p>
+                    <p>{highlightTechnology?.mechanics.activeFunction}</p>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      {highlightTechnology?.mechanics.gameplayEffect}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200 bg-white shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 font-orbitron text-slate-900">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      Workforce Stack
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm text-slate-600">
+                    <p>{highlightJob?.summary}</p>
+                    <p>{highlightUnit?.summary}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">
+                        Research jobs {RESEARCH_JOB_SYSTEMS.length}
+                      </Badge>
+                      <Badge variant="secondary">
+                        Technology jobs {TECHNOLOGY_JOB_SYSTEMS.length}
+                      </Badge>
+                      <Badge variant="secondary">
+                        Support units {KNOWLEDGE_SUPPORT_UNITS.length}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="research" className="mt-6 space-y-4">
+            <div className="flex items-center justify-between text-sm text-slate-500">
+              <span>Showing {Math.min(filteredResearch.length, MAX_VISIBLE_ENTRIES)} of {filteredResearch.length} filtered research programs.</span>
+              <span>Total catalog: {RESEARCH_PROGRAM_LIBRARY_240.length}</span>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              {filteredResearch.slice(0, MAX_VISIBLE_ENTRIES).map((entry) => (
+                <EntryCard key={entry.id} entry={entry} />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="technology" className="mt-6 space-y-4">
+            <div className="flex items-center justify-between text-sm text-slate-500">
+              <span>Showing {Math.min(filteredTechnology.length, MAX_VISIBLE_ENTRIES)} of {filteredTechnology.length} filtered technology systems.</span>
+              <span>Total catalog: {TECHNOLOGY_SYSTEM_LIBRARY_240.length}</span>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              {filteredTechnology.slice(0, MAX_VISIBLE_ENTRIES).map((entry) => (
+                <EntryCard key={entry.id} entry={entry} />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="jobs" className="mt-6 space-y-4">
+            <div className="flex items-center justify-between text-sm text-slate-500">
+              <span>Showing {filteredJobs.length} staffing roles.</span>
+              <span>Total job systems: {ALL_KNOWLEDGE_JOBS.length}</span>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              {filteredJobs.map((job) => (
+                <JobCard key={job.id} job={job} />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="units" className="mt-6 space-y-4">
+            <div className="flex items-center justify-between text-sm text-slate-500">
+              <span>Showing {filteredUnits.length} specialist support units.</span>
+              <span>Total support units: {KNOWLEDGE_SUPPORT_UNITS.length}</span>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              {filteredUnits.map((unit) => (
+                <UnitCard key={unit.id} unit={unit} />
+              ))}
             </div>
           </TabsContent>
         </Tabs>
