@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import GameLayout from "@/components/layout/GameLayout";
+import {
+  ADMIN_FEATURES,
+  ADMIN_SUBSYSTEMS,
+  buildAdminControlSummary,
+  DEFAULT_ADMIN_CONTROL_PLANE_STATE,
+  type AdminControlPlaneState,
+  type AdminSubsystemId,
+} from "@/lib/adminControlSystems";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -160,6 +169,10 @@ type DeveloperShortcutsResponse = {
   }>;
 };
 
+type AdminControlPlaneResponse = {
+  state: AdminControlPlaneState;
+};
+
 function formatAdminUptime(milliseconds: number) {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
   const days = Math.floor(totalSeconds / 86400);
@@ -239,9 +252,12 @@ const DEFAULT_RULES: RulesContent = {
 export default function AdminControl() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [activeSubsystem, setActiveSubsystem] = useState<AdminSubsystemId>("command");
+  const [activeControlSubMenu, setActiveControlSubMenu] = useState("overview");
   const [targetIdentifier, setTargetIdentifier] = useState("");
   const [serverForm, setServerForm] = useState<ServerSettings>(DEFAULT_SERVER_SETTINGS);
   const [rulesForm, setRulesForm] = useState<RulesContent>(DEFAULT_RULES);
+  const [controlPlaneForm, setControlPlaneForm] = useState<AdminControlPlaneState>(DEFAULT_ADMIN_CONTROL_PLANE_STATE);
   const [resourceForm, setResourceForm] = useState({
     metal: "0",
     crystal: "0",
@@ -321,6 +337,13 @@ export default function AdminControl() {
     refetchInterval: 10000,
   });
 
+  const { data: controlPlaneData } = useQuery<AdminControlPlaneResponse>({
+    queryKey: ["admin-control-plane"],
+    queryFn: () => fetchJson<AdminControlPlaneResponse>("/api/admin/control-plane"),
+    enabled: !!meData?.isAdmin,
+    refetchInterval: 15000,
+  });
+
   const { data: statusData } = useQuery<{ success: boolean; data: SystemMetricsSnapshot }>({
     queryKey: ["admin-server-status"],
     queryFn: () => fetchJson<{ success: boolean; data: SystemMetricsSnapshot }>("/api/status"),
@@ -341,6 +364,12 @@ export default function AdminControl() {
   }, [rulesData]);
 
   useEffect(() => {
+    if (controlPlaneData?.state) {
+      setControlPlaneForm(controlPlaneData.state);
+    }
+  }, [controlPlaneData]);
+
+  useEffect(() => {
     if (devData?.buildingCatalog?.length) {
       setBuildingKey((current) => (devData.buildingCatalog.includes(current) ? current : devData.buildingCatalog[0]));
     }
@@ -353,6 +382,17 @@ export default function AdminControl() {
   }, [devData]);
 
   const activeUsers = useMemo(() => usersData?.users || [], [usersData]);
+  const activeSubsystemDefinition = useMemo(
+    () => ADMIN_SUBSYSTEMS.find((subsystem) => subsystem.id === activeSubsystem) || ADMIN_SUBSYSTEMS[0],
+    [activeSubsystem],
+  );
+  const controlSummary = useMemo(() => buildAdminControlSummary(controlPlaneForm), [controlPlaneForm]);
+
+  useEffect(() => {
+    if (!activeSubsystemDefinition.subMenus.some((menu) => menu.id === activeControlSubMenu)) {
+      setActiveControlSubMenu(activeSubsystemDefinition.subMenus[0]?.id || "overview");
+    }
+  }, [activeControlSubMenu, activeSubsystemDefinition]);
 
   const invalidateAdmin = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-me"] });
@@ -365,6 +405,7 @@ export default function AdminControl() {
     queryClient.invalidateQueries({ queryKey: ["admin-rules-content"] });
     queryClient.invalidateQueries({ queryKey: ["admin-developer-shortcuts"] });
     queryClient.invalidateQueries({ queryKey: ["admin-server-status"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-control-plane"] });
   };
 
   const statusMutation = useMutation({
@@ -433,6 +474,72 @@ export default function AdminControl() {
     onError: (error: Error) => toast({ title: "Operation failed", description: error.message, variant: "destructive" }),
   });
 
+  const controlPlaneMutation = useMutation({
+    mutationFn: (payload: {
+      featureFlags?: Partial<AdminControlPlaneState["featureFlags"]>;
+      security?: Partial<AdminControlPlaneState["security"]>;
+      broadcast?: Partial<AdminControlPlaneState["broadcast"]>;
+      liveOps?: Partial<AdminControlPlaneState["liveOps"]>;
+      support?: Partial<AdminControlPlaneState["support"]>;
+    }) =>
+      fetchJson("/api/admin/control-plane", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      invalidateAdmin();
+      toast({ title: "Control plane saved", description: "Admin subsystem settings synchronized." });
+    },
+    onError: (error: Error) => toast({ title: "Control plane update failed", description: error.message, variant: "destructive" }),
+  });
+
+  const broadcastMutation = useMutation({
+    mutationFn: (payload: AdminControlPlaneState["broadcast"]) =>
+      fetchJson("/api/admin/control-plane/broadcast", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      invalidateAdmin();
+      toast({ title: "Broadcast updated", description: "Admin broadcast state applied." });
+    },
+    onError: (error: Error) => toast({ title: "Broadcast failed", description: error.message, variant: "destructive" }),
+  });
+
+  const updateControlPlane = (payload: {
+    featureFlags?: Partial<AdminControlPlaneState["featureFlags"]>;
+    security?: Partial<AdminControlPlaneState["security"]>;
+    broadcast?: Partial<AdminControlPlaneState["broadcast"]>;
+    liveOps?: Partial<AdminControlPlaneState["liveOps"]>;
+    support?: Partial<AdminControlPlaneState["support"]>;
+  }) => {
+    const nextState: AdminControlPlaneState = {
+      featureFlags: {
+        ...controlPlaneForm.featureFlags,
+        ...(payload.featureFlags || {}),
+      },
+      security: {
+        ...controlPlaneForm.security,
+        ...(payload.security || {}),
+      },
+      broadcast: {
+        ...controlPlaneForm.broadcast,
+        ...(payload.broadcast || {}),
+      },
+      liveOps: {
+        ...controlPlaneForm.liveOps,
+        ...(payload.liveOps || {}),
+      },
+      support: {
+        ...controlPlaneForm.support,
+        ...(payload.support || {}),
+      },
+    };
+
+    setControlPlaneForm(nextState);
+    controlPlaneMutation.mutate(payload);
+  };
+
   if (meLoading) {
     return (
       <GameLayout>
@@ -495,6 +602,93 @@ export default function AdminControl() {
           </p>
         </div>
 
+        <Card className="border-slate-200 bg-white">
+          <CardHeader>
+            <CardTitle>Admin Control Plane Systems</CardTitle>
+            <CardDescription>Main systems, sub systems, menus, sub menus, features, functions, and admin logic routing.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {ADMIN_SUBSYSTEMS.map((subsystem) => (
+                <button
+                  key={subsystem.id}
+                  className={`rounded-lg border p-4 text-left transition-all ${
+                    activeSubsystem === subsystem.id ? "border-primary bg-primary/5" : "border-slate-200 bg-slate-50 hover:bg-white"
+                  }`}
+                  onClick={() => setActiveSubsystem(subsystem.id)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold text-slate-900">{subsystem.name}</div>
+                    <Badge variant="outline">{subsystem.subMenus.length} submenus</Badge>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600">{subsystem.description}</div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {subsystem.subMenus.slice(0, 3).map((menu) => (
+                      <Badge key={menu.id} variant="secondary">{menu.label}</Badge>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr]">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs uppercase text-slate-500">Active System</div>
+                    <div className="font-semibold text-slate-900">{activeSubsystemDefinition.pageTitle}</div>
+                  </div>
+                  <Badge>{activeSubsystemDefinition.menuLabel}</Badge>
+                </div>
+                <div className="text-sm text-slate-600">{activeSubsystemDefinition.description}</div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {activeSubsystemDefinition.subMenus.map((menu) => (
+                    <Button
+                      key={menu.id}
+                      size="sm"
+                      variant={activeControlSubMenu === menu.id ? "default" : "outline"}
+                      onClick={() => setActiveControlSubMenu(menu.id)}
+                    >
+                      {menu.label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="font-semibold text-slate-900">
+                    {activeSubsystemDefinition.subMenus.find((menu) => menu.id === activeControlSubMenu)?.pageTitle}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {activeSubsystemDefinition.subMenus.find((menu) => menu.id === activeControlSubMenu)?.description}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {(activeSubsystemDefinition.subMenus.find((menu) => menu.id === activeControlSubMenu)?.functions || []).map((feature) => (
+                      <Badge key={feature} variant="outline">{feature}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase text-slate-500">Logic Summary</div>
+                <div className="mt-3 space-y-2">
+                  {controlSummary.guardedFeatures.map((item) => (
+                    <div key={item} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">{item}</div>
+                  ))}
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    Incident State: {controlSummary.incidentState}
+                  </div>
+                  <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-800">
+                    LiveOps: {controlSummary.liveOpsState}
+                  </div>
+                  <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-800">
+                    Broadcast: {controlSummary.broadcastState}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card><CardContent className="p-5 flex items-center justify-between"><div><div className="text-xs uppercase text-slate-500">Users</div><div className="text-2xl font-bold">{overviewData?.totalUsers ?? 0}</div></div><Users className="w-6 h-6 text-blue-500" /></CardContent></Card>
           <Card><CardContent className="p-5 flex items-center justify-between"><div><div className="text-xs uppercase text-slate-500">Active</div><div className="text-2xl font-bold">{overviewData?.activeUsersEstimate ?? 0}</div></div><Activity className="w-6 h-6 text-emerald-500" /></CardContent></Card>
@@ -505,6 +699,7 @@ export default function AdminControl() {
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="w-full justify-start h-auto flex-wrap">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="control-plane">Control Plane</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="server">Server Settings</TabsTrigger>
             <TabsTrigger value="rules">Rules & Legal</TabsTrigger>
@@ -644,6 +839,279 @@ export default function AdminControl() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="control-plane" className="mt-6">
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{activeSubsystemDefinition.pageTitle}</CardTitle>
+                  <CardDescription>{activeSubsystemDefinition.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <div className="rounded-lg border p-4">
+                      <div className="text-xs uppercase text-slate-500">Subsystem Menus</div>
+                      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {activeSubsystemDefinition.subMenus.map((menu) => (
+                          <button
+                            key={menu.id}
+                            className={`rounded-lg border p-3 text-left transition-all ${
+                              activeControlSubMenu === menu.id ? "border-primary bg-primary/5" : "border-slate-200 bg-slate-50 hover:bg-white"
+                            }`}
+                            onClick={() => setActiveControlSubMenu(menu.id)}
+                          >
+                            <div className="font-semibold text-slate-900">{menu.label}</div>
+                            <div className="mt-1 text-xs text-slate-500">{menu.pageTitle}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border p-4">
+                      <div className="text-xs uppercase text-slate-500">Feature Logic</div>
+                      <div className="mt-3 space-y-3">
+                        {activeSubsystemDefinition.featureIds.map((featureId) => {
+                          const feature = ADMIN_FEATURES[featureId];
+                          return (
+                            <div key={featureId} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                              <div className="font-semibold text-slate-900">{feature.name}</div>
+                              <div className="mt-1 text-sm text-slate-600">{feature.description}</div>
+                              <div className="mt-2 text-xs text-slate-500">Function: {feature.functionLabel}</div>
+                              <div className="mt-1 text-xs text-slate-500">Logic: {feature.logic}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <Card className="border-slate-200">
+                      <CardHeader>
+                        <CardTitle>Security and Approval</CardTitle>
+                        <CardDescription>Threat posture, privileged session windows, and command approval mode.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div>
+                            <div className="text-sm font-medium mb-1">Threat Level</div>
+                            <Select
+                              value={controlPlaneForm.security.threatLevel}
+                              onValueChange={(value) => updateControlPlane({ security: { threatLevel: value as AdminControlPlaneState["security"]["threatLevel"] } })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="guarded">Guarded</SelectItem>
+                                <SelectItem value="elevated">Elevated</SelectItem>
+                                <SelectItem value="critical">Critical</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium mb-1">Approval Mode</div>
+                            <Select
+                              value={controlPlaneForm.security.commandApprovalMode}
+                              onValueChange={(value) => updateControlPlane({ security: { commandApprovalMode: value as AdminControlPlaneState["security"]["commandApprovalMode"] } })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="single">Single Approval</SelectItem>
+                                <SelectItem value="dual">Dual Approval</SelectItem>
+                                <SelectItem value="founder">Founder Approval</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium mb-1">Privileged Session Timeout</div>
+                            <Input
+                              value={String(controlPlaneForm.security.privilegedSessionTimeoutMinutes)}
+                              onChange={(event) => setControlPlaneForm((prev) => ({ ...prev, security: { ...prev.security, privilegedSessionTimeoutMinutes: Number(event.target.value) || 0 } }))}
+                              onBlur={() => updateControlPlane({ security: { privilegedSessionTimeoutMinutes: controlPlaneForm.security.privilegedSessionTimeoutMinutes } })}
+                            />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium mb-1">Audit Retention Days</div>
+                            <Input
+                              value={String(controlPlaneForm.security.auditRetentionDays)}
+                              onChange={(event) => setControlPlaneForm((prev) => ({ ...prev, security: { ...prev.security, auditRetentionDays: Number(event.target.value) || 0 } }))}
+                              onBlur={() => updateControlPlane({ security: { auditRetentionDays: controlPlaneForm.security.auditRetentionDays } })}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          {[
+                            ["adminBroadcastEnabled", "Admin Broadcast"],
+                            ["allowMasquerade", "Masquerade"],
+                            ["advancedWorldTools", "Advanced World Tools"],
+                            ["liveOpsOverridesEnabled", "LiveOps Overrides"],
+                            ["incidentLockdownEnabled", "Incident Lockdown"],
+                            ["auditStreamVisible", "Audit Stream Visible"],
+                          ].map(([key, label]) => (
+                            <div key={key} className="flex items-center justify-between rounded-lg border p-3">
+                              <div className="font-medium">{label}</div>
+                              <Switch
+                                checked={Boolean(controlPlaneForm.featureFlags[key as keyof AdminControlPlaneState["featureFlags"]])}
+                                onCheckedChange={(checked) => updateControlPlane({ featureFlags: { [key]: checked } as Partial<AdminControlPlaneState["featureFlags"]> })}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-slate-200">
+                      <CardHeader>
+                        <CardTitle>LiveOps and Support Routing</CardTitle>
+                        <CardDescription>Temporary admin logic for event presets, multipliers, and support queue systems.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div>
+                            <div className="text-sm font-medium mb-1">Event Preset</div>
+                            <Select
+                              value={controlPlaneForm.liveOps.eventPreset}
+                              onValueChange={(value) => updateControlPlane({ liveOps: { eventPreset: value as AdminControlPlaneState["liveOps"]["eventPreset"] } })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="standard">Standard</SelectItem>
+                                <SelectItem value="boosted">Boosted</SelectItem>
+                                <SelectItem value="war-economy">War Economy</SelectItem>
+                                <SelectItem value="recovery">Recovery</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium mb-1">Ticket Queue Mode</div>
+                            <Select
+                              value={controlPlaneForm.support.ticketQueueMode}
+                              onValueChange={(value) => updateControlPlane({ support: { ticketQueueMode: value as AdminControlPlaneState["support"]["ticketQueueMode"] } })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="manual">Manual</SelectItem>
+                                <SelectItem value="triage">Triage</SelectItem>
+                                <SelectItem value="priority">Priority</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium mb-1">Escalation Policy</div>
+                            <Select
+                              value={controlPlaneForm.support.escalationPolicy}
+                              onValueChange={(value) => updateControlPlane({ support: { escalationPolicy: value as AdminControlPlaneState["support"]["escalationPolicy"] } })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="standard">Standard</SelectItem>
+                                <SelectItem value="fast-track">Fast Track</SelectItem>
+                                <SelectItem value="founder-review">Founder Review</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium mb-1">Player Visibility</div>
+                            <Select
+                              value={controlPlaneForm.support.playerVisibility}
+                              onValueChange={(value) => updateControlPlane({ support: { playerVisibility: value as AdminControlPlaneState["support"]["playerVisibility"] } })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="summary">Summary</SelectItem>
+                                <SelectItem value="detailed">Detailed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          {[
+                            ["dropRateModifier", "Drop Rate %"],
+                            ["upkeepModifier", "Upkeep %"],
+                            ["buildRateModifier", "Build Rate %"],
+                            ["turnMultiplier", "Turn Multiplier %"],
+                          ].map(([key, label]) => (
+                            <div key={key}>
+                              <div className="text-sm font-medium mb-1">{label}</div>
+                              <Input
+                                value={String(controlPlaneForm.liveOps[key as keyof AdminControlPlaneState["liveOps"]])}
+                                onChange={(event) => setControlPlaneForm((prev) => ({ ...prev, liveOps: { ...prev.liveOps, [key]: Number(event.target.value) || 0 } }))}
+                                onBlur={() => updateControlPlane({ liveOps: { [key]: Number(controlPlaneForm.liveOps[key as keyof AdminControlPlaneState["liveOps"]]) || 0 } as Partial<AdminControlPlaneState["liveOps"]> })}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card className="border-slate-200">
+                    <CardHeader>
+                      <CardTitle>Broadcast Center</CardTitle>
+                      <CardDescription>System-wide admin banner with audience and severity routing.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+                        <div className="xl:col-span-2">
+                          <div className="text-sm font-medium mb-1">Banner Title</div>
+                          <Input value={controlPlaneForm.broadcast.title} onChange={(event) => setControlPlaneForm((prev) => ({ ...prev, broadcast: { ...prev.broadcast, title: event.target.value } }))} />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium mb-1">Severity</div>
+                          <Select value={controlPlaneForm.broadcast.severity} onValueChange={(value) => setControlPlaneForm((prev) => ({ ...prev, broadcast: { ...prev.broadcast, severity: value as AdminControlPlaneState["broadcast"]["severity"] } }))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="info">Info</SelectItem>
+                              <SelectItem value="warning">Warning</SelectItem>
+                              <SelectItem value="critical">Critical</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium mb-1">Audience</div>
+                          <Select value={controlPlaneForm.broadcast.audience} onValueChange={(value) => setControlPlaneForm((prev) => ({ ...prev, broadcast: { ...prev.broadcast, audience: value as AdminControlPlaneState["broadcast"]["audience"] } }))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              <SelectItem value="admins">Admins</SelectItem>
+                              <SelectItem value="active-players">Active Players</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium mb-1">Banner Body</div>
+                        <Textarea value={controlPlaneForm.broadcast.body} onChange={(event) => setControlPlaneForm((prev) => ({ ...prev, broadcast: { ...prev.broadcast, body: event.target.value } }))} className="min-h-28" />
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div>
+                          <div className="font-medium">Broadcast Enabled</div>
+                          <div className="text-sm text-slate-500">Toggle whether the current banner is active.</div>
+                        </div>
+                        <Switch checked={controlPlaneForm.broadcast.enabled} onCheckedChange={(checked) => setControlPlaneForm((prev) => ({ ...prev, broadcast: { ...prev.broadcast, enabled: checked } }))} />
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          onClick={() => broadcastMutation.mutate(controlPlaneForm.broadcast)}
+                          disabled={broadcastMutation.isPending}
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" /> Apply Broadcast
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            const next = { ...controlPlaneForm.broadcast, enabled: false };
+                            setControlPlaneForm((prev) => ({ ...prev, broadcast: next }));
+                            broadcastMutation.mutate(next);
+                          }}
+                        >
+                          Disable Banner
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="users" className="mt-6">

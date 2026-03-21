@@ -13,7 +13,7 @@ import {
   Settings as SettingsIcon, Server, Shield, Monitor, Database, Power, Save, RefreshCw, 
   Clock, Play, Pause, Bell, Volume2, VolumeX, Eye, EyeOff, Globe, Palette, Moon, Sun,
   Mail, Key, Smartphone, Lock, LogOut, Trash2, Download, Upload, AlertTriangle, CheckCircle,
-  User as UserIcon, Languages, Zap, Users
+  User as UserIcon, Languages, Zap, Users, Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
@@ -96,6 +96,58 @@ type AdminOperationLogResponse = {
    }>;
 };
 
+type AdminIdentityResponse = {
+   isAdmin: boolean;
+   role: string | null;
+   permissions: string[];
+   masqueradingAsUserId: string | null;
+   actingAdminUserId: string | null;
+};
+
+type AdminAccountRecord = {
+   id: string;
+   userId: string;
+   role: string;
+   permissions: string[];
+   createdAt?: string | number;
+   username: string;
+   email: string;
+};
+
+type AdminAccountsResponse = {
+   accounts: AdminAccountRecord[];
+};
+
+const ADMIN_ROLE_OPTIONS = [
+   { value: "administrator", label: "Admin", description: "Server controls, moderation, and admin account provisioning." },
+   { value: "devadmin", label: "Dev Admin", description: "Admin access plus developer shortcuts, masquerade, and world tools." },
+   { value: "suadmin", label: "Senior Admin", description: "Operations management and live override access without developer tools." },
+   { value: "moderator", label: "Moderator", description: "Moderation and review workflows." },
+   { value: "viewer", label: "Viewer", description: "Read-only admin visibility." },
+] as const;
+
+const PERMISSION_LABELS: Record<string, string> = {
+   all_access: "All Access",
+   administrate: "Administrate",
+   manage: "Manage",
+   moderate: "Moderate",
+   view_only: "View Only",
+   developer_tools: "Developer Tools",
+   masquerade: "Masquerade",
+   world_tools: "World Tools",
+   liveops_override: "LiveOps Override",
+};
+
+function formatAdminRole(role: string | null | undefined): string {
+   const normalized = String(role || "viewer").trim().toLowerCase();
+   if (normalized === "devadmin") return "Dev Admin";
+   if (normalized === "suadmin") return "Senior Admin";
+   return normalized
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+}
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
    const response = await fetch(url, {
       credentials: "include",
@@ -115,7 +167,8 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export default function Settings() {
-  const { config, updateConfig, cronJobs, toggleCronJob, runCronJob, isAdmin, isActualAdmin, adminRole, toggleAdmin, username, logout } = useGame();
+  const isDev = import.meta.env.DEV;
+  const { config, updateConfig, cronJobs, toggleCronJob, runCronJob, isAdmin, isActualAdmin, adminRole, toggleAdmin, username, logout, isLoggedIn } = useGame();
   const [, setLocation] = useLocation();
    const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState(username || "Commander");
@@ -131,6 +184,10 @@ export default function Settings() {
    const [resetConfirmInput, setResetConfirmInput] = useState("");
    const [restartAcknowledge, setRestartAcknowledge] = useState(false);
    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+   const [adminIdentifier, setAdminIdentifier] = useState("");
+   const [adminPassword, setAdminPassword] = useState("");
+   const [newAdminIdentifier, setNewAdminIdentifier] = useState("");
+   const [newAdminRole, setNewAdminRole] = useState("administrator");
    const { toast } = useToast();
   
   const [notifications, setNotifications] = useState({
@@ -196,6 +253,18 @@ export default function Settings() {
       queryFn: () => fetchJson<AdminOperationLogResponse>("/api/admin/operations"),
       enabled: isAdmin,
       refetchInterval: isAdmin ? 15000 : false,
+   });
+
+   const { data: adminIdentity } = useQuery<AdminIdentityResponse>({
+      queryKey: ["admin-identity"],
+      queryFn: () => fetchJson<AdminIdentityResponse>("/api/admin/me"),
+      enabled: isLoggedIn,
+   });
+
+   const { data: adminAccounts } = useQuery<AdminAccountsResponse>({
+      queryKey: ["admin-accounts"],
+      queryFn: () => fetchJson<AdminAccountsResponse>("/api/admin/accounts"),
+      enabled: isActualAdmin,
    });
 
    useEffect(() => {
@@ -377,6 +446,63 @@ export default function Settings() {
       },
    });
 
+   const adminLoginMutation = useMutation({
+      mutationFn: (payload: { identifier: string; password: string }) => fetchJson<{
+         message: string;
+         user: {
+            username: string;
+         };
+      }>("/api/admin/login", {
+         method: "POST",
+         body: JSON.stringify(payload),
+      }),
+      onSuccess: (result, variables) => {
+         localStorage.setItem("stellar_username", result.user.username || variables.identifier);
+         localStorage.setItem("stellar_password", variables.password);
+         window.location.reload();
+      },
+      onError: (error: Error) => {
+         toast({ title: "Admin login failed", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const createAdminAccountMutation = useMutation({
+      mutationFn: (payload: { identifier: string; role: string }) => fetchJson<{
+         success: boolean;
+         user: { id: string; username: string; email: string; role: string };
+      }>("/api/admin/accounts", {
+         method: "POST",
+         body: JSON.stringify(payload),
+      }),
+      onSuccess: async (result) => {
+         toast({
+            title: "Admin account granted",
+            description: `${result.user.username || result.user.email} now has ${formatAdminRole(result.user.role)} access.`,
+         });
+         setNewAdminIdentifier("");
+         setNewAdminRole("administrator");
+         await queryClient.invalidateQueries({ queryKey: ["admin-accounts"] });
+         await queryClient.invalidateQueries({ queryKey: ["admin-identity"] });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Unable to grant admin access", description: error.message, variant: "destructive" });
+      },
+   });
+
+   const removeAdminAccountMutation = useMutation({
+      mutationFn: (userId: string) => fetchJson<{ success: boolean }>(`/api/admin/accounts/${userId}`, {
+         method: "DELETE",
+      }),
+      onSuccess: async () => {
+         toast({ title: "Admin access removed", description: "The account has been removed from the admin roster." });
+         await queryClient.invalidateQueries({ queryKey: ["admin-accounts"] });
+         await queryClient.invalidateQueries({ queryKey: ["admin-identity"] });
+      },
+      onError: (error: Error) => {
+         toast({ title: "Unable to remove admin access", description: error.message, variant: "destructive" });
+      },
+   });
+
    const exportAccountData = async () => {
       try {
          const exportData = await fetchJson<any>("/api/account/export");
@@ -445,6 +571,36 @@ export default function Settings() {
       }
    };
 
+   const handleAdminLogin = () => {
+      const identifier = adminIdentifier.trim();
+      const password = adminPassword.trim();
+
+      if (!identifier || !password) {
+         toast({ title: "Credentials required", description: "Enter an admin username or email and password.", variant: "destructive" });
+         return;
+      }
+
+      adminLoginMutation.mutate({ identifier, password });
+   };
+
+   const handleCreateAdminAccount = () => {
+      const identifier = newAdminIdentifier.trim();
+      if (!identifier) {
+         toast({ title: "Account required", description: "Enter the username or email to grant admin access.", variant: "destructive" });
+         return;
+      }
+
+      createAdminAccountMutation.mutate({ identifier, role: newAdminRole });
+   };
+
+   const currentAdminPermissions = Array.isArray(adminIdentity?.permissions) ? adminIdentity!.permissions : [];
+   const canAdministrate = currentAdminPermissions.includes("all_access") || currentAdminPermissions.includes("administrate");
+   const canUseDevTools =
+      currentAdminPermissions.includes("all_access") ||
+      currentAdminPermissions.includes("developer_tools") ||
+      currentAdminPermissions.includes("masquerade") ||
+      currentAdminPermissions.includes("world_tools");
+
   return (
     <GameLayout>
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -472,6 +628,7 @@ export default function Settings() {
         <Tabs defaultValue="account" className="w-full">
            <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start overflow-x-auto">
               <TabsTrigger value="account" className="font-orbitron"><UserIcon className="w-4 h-4 mr-2" /> Account</TabsTrigger>
+              <TabsTrigger value="admin-access" className={cn("font-orbitron", isActualAdmin ? "text-red-600" : "")}><Shield className="w-4 h-4 mr-2" /> Admin Access</TabsTrigger>
               <TabsTrigger value="notifications" className="font-orbitron"><Bell className="w-4 h-4 mr-2" /> Notifications</TabsTrigger>
               <TabsTrigger value="display" className="font-orbitron"><Monitor className="w-4 h-4 mr-2" /> Display</TabsTrigger>
               <TabsTrigger value="sound" className="font-orbitron"><Volume2 className="w-4 h-4 mr-2" /> Sound</TabsTrigger>
@@ -1010,6 +1167,246 @@ export default function Settings() {
                     </Button>
                  </CardContent>
               </Card>
+           </TabsContent>
+
+           <TabsContent value="admin-access" className="mt-6">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                 <Card className="bg-white border-slate-200 xl:col-span-2">
+                    <CardHeader>
+                       <CardTitle className="flex items-center gap-2 text-slate-900">
+                          <Shield className="w-5 h-5 text-red-600" /> Admin Authentication
+                       </CardTitle>
+                       <CardDescription>
+                          Sign in with an admin account from Settings, review access level, and switch between player view and admin mode.
+                       </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                       {isActualAdmin ? (
+                          <>
+                             <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                   <Badge variant="destructive">{isAdmin ? "Admin Mode Active" : "Admin Account Authenticated"}</Badge>
+                                   <Badge variant="secondary">{formatAdminRole(adminIdentity?.role || adminRole)}</Badge>
+                                   {adminIdentity?.masqueradingAsUserId && <Badge variant="outline">Masquerading Session</Badge>}
+                                </div>
+                                <div className="text-sm text-slate-700">
+                                   {isAdmin
+                                      ? "Privileged systems are active for this session."
+                                      : "This account has admin authority but is currently in player view."}
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                   <Button
+                                      variant={isAdmin ? "destructive" : "outline"}
+                                      onClick={toggleAdmin}
+                                      data-testid="button-inline-toggle-admin-mode"
+                                   >
+                                      {isAdmin ? "Return to User View" : "Enable Admin Mode"}
+                                   </Button>
+                                   <Button variant="outline" onClick={() => setLocation("/admin")}>
+                                      Open Control Panel
+                                   </Button>
+                                </div>
+                             </div>
+                             <div className="space-y-2">
+                                <div className="text-sm font-bold text-slate-700">Current Permission Envelope</div>
+                                <div className="flex flex-wrap gap-2">
+                                   {currentAdminPermissions.length === 0 && (
+                                      <span className="text-sm text-slate-500">No admin permissions assigned.</span>
+                                   )}
+                                   {currentAdminPermissions.map((permission) => (
+                                      <Badge key={permission} variant="outline" className="bg-slate-50">
+                                         {PERMISSION_LABELS[permission] || permission}
+                                      </Badge>
+                                   ))}
+                                </div>
+                             </div>
+                          </>
+                       ) : (
+                          <>
+                             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                                Use an approved admin account to unlock protected configuration menus, the control panel, and developer systems.
+                             </div>
+                             {isDev && (
+                                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                                   Local development defaults: <span className="font-mono">admin / Admin@12345</span> or <span className="font-mono">devadmin / dev-password</span>
+                                </div>
+                             )}
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                   <label className="text-sm font-bold text-slate-700">Admin Username or Email</label>
+                                   <Input
+                                      value={adminIdentifier}
+                                      onChange={(e) => setAdminIdentifier(e.target.value)}
+                                      placeholder="admin or admin@example.com"
+                                      autoComplete="username"
+                                      className="bg-slate-50 border-slate-200"
+                                   />
+                                </div>
+                                <div className="space-y-2">
+                                   <label className="text-sm font-bold text-slate-700">Admin Password</label>
+                                   <Input
+                                      type="password"
+                                      value={adminPassword}
+                                      onChange={(e) => setAdminPassword(e.target.value)}
+                                      placeholder="Enter privileged password"
+                                      autoComplete="current-password"
+                                      className="bg-slate-50 border-slate-200"
+                                   />
+                                </div>
+                             </div>
+                             <Button className="w-full" onClick={handleAdminLogin} disabled={adminLoginMutation.isPending}>
+                                {adminLoginMutation.isPending ? (
+                                   <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Authenticating Admin
+                                   </>
+                                ) : (
+                                   <>
+                                      <Lock className="w-4 h-4 mr-2" /> Sign In As Admin
+                                   </>
+                                )}
+                             </Button>
+                          </>
+                       )}
+                    </CardContent>
+                 </Card>
+
+                 <Card className="bg-white border-slate-200">
+                    <CardHeader>
+                       <CardTitle className="flex items-center gap-2 text-slate-900">
+                          <Users className="w-5 h-5 text-slate-700" /> Role Matrix
+                       </CardTitle>
+                       <CardDescription>Regular admin and dev admin access are separated by real permission gates.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                       {ADMIN_ROLE_OPTIONS.map((roleOption) => (
+                          <div key={roleOption.value} className={cn(
+                             "rounded-lg border p-3",
+                             roleOption.value === "devadmin" ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50",
+                           )}>
+                             <div className="flex items-center justify-between gap-2">
+                                <div className="font-semibold text-slate-900">{roleOption.label}</div>
+                                {roleOption.value === "devadmin" && <Badge variant="secondary">Elevated</Badge>}
+                             </div>
+                             <div className="mt-1 text-xs text-slate-600">{roleOption.description}</div>
+                          </div>
+                       ))}
+                       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                          {canUseDevTools
+                             ? "This session can access developer-only systems such as masquerade, world tools, and shortcut controls."
+                             : "Developer-only systems remain locked unless the account carries dev admin permissions."}
+                       </div>
+                    </CardContent>
+                 </Card>
+              </div>
+
+              {isActualAdmin && (
+                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
+                    <Card className="bg-white border-slate-200">
+                       <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-slate-900">
+                             <Key className="w-5 h-5 text-blue-600" /> Admin Account Provisioning
+                          </CardTitle>
+                          <CardDescription>
+                             Grant admin or dev admin roles to existing player accounts from inside Settings.
+                          </CardDescription>
+                       </CardHeader>
+                       <CardContent className="space-y-4">
+                          {!canAdministrate && (
+                             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                This account can view admin status, but it does not have permission to grant or remove admin roles.
+                             </div>
+                          )}
+                          <div className="space-y-2">
+                             <label className="text-sm font-bold text-slate-700">Target Username or Email</label>
+                             <Input
+                                value={newAdminIdentifier}
+                                onChange={(e) => setNewAdminIdentifier(e.target.value)}
+                                placeholder="playername or player@example.com"
+                                className="bg-slate-50 border-slate-200"
+                                disabled={!canAdministrate}
+                             />
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-sm font-bold text-slate-700">Role Template</label>
+                             <Select value={newAdminRole} onValueChange={setNewAdminRole} disabled={!canAdministrate}>
+                                <SelectTrigger className="bg-slate-50 border-slate-200">
+                                   <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                   {ADMIN_ROLE_OPTIONS.map((roleOption) => (
+                                      <SelectItem key={roleOption.value} value={roleOption.value}>
+                                         {roleOption.label}
+                                      </SelectItem>
+                                   ))}
+                                </SelectContent>
+                             </Select>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                             {(ADMIN_ROLE_OPTIONS.find((roleOption) => roleOption.value === newAdminRole)?.description) || "Permission template selected."}
+                          </div>
+                          <Button className="w-full" onClick={handleCreateAdminAccount} disabled={!canAdministrate || createAdminAccountMutation.isPending}>
+                             {createAdminAccountMutation.isPending ? (
+                                <>
+                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Granting Access
+                                </>
+                             ) : (
+                                <>
+                                   <Shield className="w-4 h-4 mr-2" /> Grant Admin Role
+                                </>
+                             )}
+                          </Button>
+                       </CardContent>
+                    </Card>
+
+                    <Card className="bg-white border-slate-200">
+                       <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-slate-900">
+                             <Users className="w-5 h-5 text-green-600" /> Active Admin Accounts
+                          </CardTitle>
+                          <CardDescription>Review current admin accounts, roles, and permission bundles.</CardDescription>
+                       </CardHeader>
+                       <CardContent className="space-y-3">
+                          {(adminAccounts?.accounts || []).length === 0 && (
+                             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                                No admin accounts are registered yet.
+                             </div>
+                          )}
+                          {(adminAccounts?.accounts || []).map((account) => (
+                             <div key={account.userId} className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                   <div>
+                                      <div className="font-semibold text-slate-900">{account.username}</div>
+                                      <div className="text-xs text-slate-500">{account.email || account.userId}</div>
+                                   </div>
+                                   <div className="flex flex-wrap items-center gap-2">
+                                      <Badge variant={account.role === "devadmin" ? "destructive" : "secondary"}>
+                                         {formatAdminRole(account.role)}
+                                      </Badge>
+                                      {canAdministrate && account.userId !== adminIdentity?.actingAdminUserId && (
+                                         <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeAdminAccountMutation.mutate(account.userId)}
+                                            disabled={removeAdminAccountMutation.isPending}
+                                         >
+                                            <Trash2 className="w-4 h-4 mr-2" /> Remove
+                                         </Button>
+                                      )}
+                                   </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                   {(account.permissions || []).map((permission) => (
+                                      <Badge key={`${account.userId}-${permission}`} variant="outline" className="bg-white">
+                                         {PERMISSION_LABELS[permission] || permission}
+                                      </Badge>
+                                   ))}
+                                </div>
+                             </div>
+                          ))}
+                       </CardContent>
+                    </Card>
+                 </div>
+              )}
            </TabsContent>
 
            {/* GAME RULES TAB (Admin Only) */}

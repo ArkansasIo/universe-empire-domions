@@ -5,8 +5,9 @@ import { storage } from "./storage";
 import { logger } from "./logger";
 import crypto from "crypto";
 import { db } from "./db";
-import { adminUsers, users } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import { adminUsers, users, type User } from "../shared/schema";
+import { eq, ilike, or } from "drizzle-orm";
+import { getRolePermissions, normalizeAdminRole } from "./adminPermissions";
 
 function isDevAuthBypassEnabled() {
   const raw = (process.env.DEV_AUTH_BYPASS || "").trim().toLowerCase();
@@ -32,7 +33,7 @@ async function ensureDevBypassUser() {
   const firstName = (process.env.DEV_AUTH_FIRST_NAME || "Dev Admin").trim();
   const defaultPassword = process.env.DEV_AUTH_PASSWORD || "dev-password";
 
-  let user = await storage.getUserByUsername(username);
+  let user = await resolveUserByIdentifier(username) || await resolveUserByIdentifier(email);
   if (!user) {
     user = await storage.createUser({
       username,
@@ -41,6 +42,24 @@ async function ensureDevBypassUser() {
       passwordHash: hashPassword(defaultPassword),
     });
     logger.info("AUTH", `Dev bypass user created: ${username}`);
+  }
+
+  user = await syncDevPasswordIfNeeded(user, defaultPassword, "Dev bypass");
+
+  const [adminRecord] = await db
+    .select({ id: adminUsers.id })
+    .from(adminUsers)
+    .where(eq(adminUsers.userId, user.id))
+    .limit(1);
+
+  if (!adminRecord) {
+    const role = normalizeAdminRole(process.env.DEV_AUTH_ROLE || "devadmin");
+    await db.insert(adminUsers).values({
+      userId: user.id,
+      role,
+      permissions: getRolePermissions(role),
+    });
+    logger.info("AUTH", `Dev bypass admin role granted: ${username} (${role})`);
   }
 
   return user;
@@ -81,6 +100,44 @@ function verifyPassword(password: string, hash: string): boolean {
   return hashPassword(password) === hash;
 }
 
+async function resolveUserByIdentifier(identifier: string | null | undefined): Promise<User | null> {
+  const normalized = String(identifier || "").trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(
+      normalized.includes("@")
+        ? ilike(users.email, normalized)
+        : or(ilike(users.username, normalized), ilike(users.email, normalized)),
+    )
+    .limit(1);
+
+  return user || null;
+}
+
+async function syncDevPasswordIfNeeded(
+  user: User,
+  password: string,
+  label: string,
+): Promise<User> {
+  if (process.env.NODE_ENV !== "development") {
+    return user;
+  }
+
+  const nextHash = hashPassword(password);
+  if (user.passwordHash === nextHash) {
+    return user;
+  }
+
+  const updatedUser = await storage.updateUser(user.id, { passwordHash: nextHash });
+  logger.info("AUTH", `${label} password synchronized for development: ${updatedUser.username || updatedUser.id}`);
+  return updatedUser;
+}
+
 async function resolveAdminStatus(userId: string): Promise<{ isAdmin: boolean; adminRole: string | null }> {
   if (!userId) {
     return { isAdmin: false, adminRole: null };
@@ -103,14 +160,14 @@ async function ensureBootstrapAdminAccount() {
     const bootstrapUsername = (process.env.ADMIN_BOOTSTRAP_USERNAME || "admin").trim();
     const bootstrapEmail = (process.env.ADMIN_BOOTSTRAP_EMAIL || "admin@universee.game").trim();
     const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || "Admin@12345";
-    const bootstrapRole = (process.env.ADMIN_BOOTSTRAP_ROLE || "founder").trim();
+    const bootstrapRole = normalizeAdminRole(process.env.ADMIN_BOOTSTRAP_ROLE || "founder");
 
     if (!bootstrapUsername || !bootstrapEmail || !bootstrapPassword) {
       logger.warn("AUTH", "Bootstrap admin account skipped due to missing credentials");
       return;
     }
 
-    let bootstrapUser = await storage.getUserByUsername(bootstrapUsername);
+    let bootstrapUser = await resolveUserByIdentifier(bootstrapUsername) || await resolveUserByIdentifier(bootstrapEmail);
     if (!bootstrapUser) {
       bootstrapUser = await storage.createUser({
         username: bootstrapUsername,
@@ -120,6 +177,8 @@ async function ensureBootstrapAdminAccount() {
       });
       logger.info("AUTH", `Bootstrap admin user created: ${bootstrapUsername}`);
     }
+
+    bootstrapUser = await syncDevPasswordIfNeeded(bootstrapUser, bootstrapPassword, "Bootstrap admin");
 
     const [adminRecord] = await db
       .select({ id: adminUsers.id })
@@ -131,7 +190,7 @@ async function ensureBootstrapAdminAccount() {
       await db.insert(adminUsers).values({
         userId: bootstrapUser.id,
         role: bootstrapRole,
-        permissions: ["all_access", "administrate", "manage", "moderate", "view_only"],
+        permissions: getRolePermissions(bootstrapRole),
       });
       logger.info("AUTH", `Bootstrap admin role granted: ${bootstrapUsername} (${bootstrapRole})`);
     }
@@ -221,7 +280,7 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username and password required" });
       }
 
-      const user = await storage.getUserByUsername(username);
+      const user = await resolveUserByIdentifier(username);
       
       if (!user) {
         logger.warn("AUTH", `User not found: ${username}`);
@@ -266,15 +325,7 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username/email and password required" });
       }
 
-      let user = await storage.getUserByUsername(identifier);
-      if (!user && identifier.includes("@")) {
-        const [byEmail] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, identifier))
-          .limit(1);
-        user = byEmail;
-      }
+      const user = await resolveUserByIdentifier(identifier);
 
       if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -378,9 +429,9 @@ export async function setupAuth(app: Express) {
           const encoded = authHeader.slice(6);
           const decoded = Buffer.from(encoded, 'base64').toString('utf-8');
           const [username, password] = decoded.split(':');
-          
+
           if (username && password) {
-            const user = await storage.getUserByUsername(username);
+            const user = await resolveUserByIdentifier(username);
             if (user && user.passwordHash && verifyPassword(password, user.passwordHash)) {
               (req.session as any).userId = user.id;
               const adminStatus = await resolveAdminStatus(user.id);
@@ -444,9 +495,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       const encoded = authHeader.slice(6);
       const decoded = Buffer.from(encoded, 'base64').toString('utf-8');
       const [username, password] = decoded.split(':');
-      
+
       if (username && password) {
-        const user = await storage.getUserByUsername(username);
+        const user = await resolveUserByIdentifier(username);
         if (user && user.passwordHash) {
           const passwordValid = verifyPassword(password, user.passwordHash);
           if (passwordValid) {

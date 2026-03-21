@@ -5,6 +5,12 @@ import { isAuthenticated } from "./basicAuth";
 import { storage } from "./storage";
 import { adminUsers, users, playerStates } from "../shared/schema";
 import { UniverseResetService } from "./services/universeResetService";
+import {
+  type AdminPermission,
+  getRolePermissions,
+  hasAdminPermission,
+  normalizeAdminRole,
+} from "./adminPermissions";
 
 type ModerationStatus = "active" | "muted" | "banned";
 
@@ -79,6 +85,42 @@ type RulesLegalContent = {
   contactContent: string;
 };
 
+type AdminControlPlaneState = {
+  featureFlags: {
+    adminBroadcastEnabled: boolean;
+    allowMasquerade: boolean;
+    advancedWorldTools: boolean;
+    liveOpsOverridesEnabled: boolean;
+    incidentLockdownEnabled: boolean;
+    auditStreamVisible: boolean;
+  };
+  security: {
+    threatLevel: "guarded" | "elevated" | "critical";
+    commandApprovalMode: "single" | "dual" | "founder";
+    privilegedSessionTimeoutMinutes: number;
+    auditRetentionDays: number;
+  };
+  broadcast: {
+    title: string;
+    body: string;
+    severity: "info" | "warning" | "critical";
+    audience: "all" | "admins" | "active-players";
+    enabled: boolean;
+  };
+  liveOps: {
+    eventPreset: "standard" | "boosted" | "war-economy" | "recovery";
+    dropRateModifier: number;
+    upkeepModifier: number;
+    buildRateModifier: number;
+    turnMultiplier: number;
+  };
+  support: {
+    ticketQueueMode: "manual" | "triage" | "priority";
+    escalationPolicy: "standard" | "fast-track" | "founder-review";
+    playerVisibility: "summary" | "detailed";
+  };
+};
+
 type AdminWorldObject = {
   id: string;
   type: "planet" | "moon" | "debris";
@@ -110,16 +152,28 @@ async function isAdminUser(userId: string): Promise<boolean> {
   return Boolean(adminRecord);
 }
 
-async function getAdminRole(userId: string): Promise<string | null> {
-  if (!userId) return null;
+async function getAdminAccess(userId: string): Promise<{
+  isAdmin: boolean;
+  role: string | null;
+  permissions: string[];
+}> {
+  if (!userId) {
+    return { isAdmin: false, role: null, permissions: [] };
+  }
 
   const [adminRecord] = await db
-    .select({ role: adminUsers.role })
+    .select({ role: adminUsers.role, permissions: adminUsers.permissions })
     .from(adminUsers)
     .where(eq(adminUsers.userId, userId))
     .limit(1);
 
-  return adminRecord?.role || null;
+  return {
+    isAdmin: Boolean(adminRecord),
+    role: adminRecord?.role || null,
+    permissions: Array.isArray(adminRecord?.permissions)
+      ? adminRecord.permissions.filter((value): value is string => typeof value === "string")
+      : [],
+  };
 }
 
 async function getAdminActorId(req: Request): Promise<string | null> {
@@ -144,6 +198,26 @@ async function requireAdminActorId(req: Request, res: Response): Promise<string 
   }
 
   return actorId;
+}
+
+async function requireAdminPermission(
+  req: Request,
+  res: Response,
+  permission: AdminPermission,
+): Promise<{ actorId: string; role: string | null; permissions: string[] } | null> {
+  const actorId = await getAdminActorId(req);
+  if (!actorId) {
+    res.status(403).json({ message: "Admin access required" });
+    return null;
+  }
+
+  const access = await getAdminAccess(actorId);
+  if (!hasAdminPermission(access.permissions, permission)) {
+    res.status(403).json({ message: `Missing permission: ${permission}` });
+    return null;
+  }
+
+  return { actorId, role: access.role, permissions: access.permissions };
 }
 
 function parseNumberish(value: unknown, fallback: number): number {
@@ -180,6 +254,10 @@ function getWorldObjectsKey(): string {
 
 function getDeveloperShortcutLogKey(): string {
   return "ogamex_admin_shortcut_log";
+}
+
+function getControlPlaneKey(): string {
+  return "admin_control_plane_systems";
 }
 
 function getDefaultServerSettings(): OGameXServerSettings {
@@ -236,6 +314,44 @@ function getDefaultRulesLegalContent(): RulesLegalContent {
   };
 }
 
+function getDefaultControlPlaneState(): AdminControlPlaneState {
+  return {
+    featureFlags: {
+      adminBroadcastEnabled: true,
+      allowMasquerade: true,
+      advancedWorldTools: true,
+      liveOpsOverridesEnabled: false,
+      incidentLockdownEnabled: false,
+      auditStreamVisible: true,
+    },
+    security: {
+      threatLevel: "guarded",
+      commandApprovalMode: "single",
+      privilegedSessionTimeoutMinutes: 45,
+      auditRetentionDays: 30,
+    },
+    broadcast: {
+      title: "Operations Nominal",
+      body: "Admin systems online. No action required.",
+      severity: "info",
+      audience: "all",
+      enabled: false,
+    },
+    liveOps: {
+      eventPreset: "standard",
+      dropRateModifier: 100,
+      upkeepModifier: 100,
+      buildRateModifier: 100,
+      turnMultiplier: 100,
+    },
+    support: {
+      ticketQueueMode: "triage",
+      escalationPolicy: "standard",
+      playerVisibility: "summary",
+    },
+  };
+}
+
 async function loadServerSettings(): Promise<OGameXServerSettings> {
   const defaults = getDefaultServerSettings();
   const setting = await storage.getSetting(getServerSettingsKey());
@@ -286,6 +402,44 @@ async function saveRulesLegalContent(nextContent: RulesLegalContent): Promise<vo
     getRulesContentKey(),
     nextContent,
     "Imported OGameX rules, legal, privacy, and contact editor",
+    "admin",
+  );
+}
+
+async function loadControlPlaneState(): Promise<AdminControlPlaneState> {
+  const defaults = getDefaultControlPlaneState();
+  const setting = await storage.getSetting(getControlPlaneKey());
+  const value = (setting?.value && typeof setting.value === "object") ? setting.value as any : {};
+
+  return {
+    featureFlags: {
+      ...defaults.featureFlags,
+      ...(value.featureFlags || {}),
+    },
+    security: {
+      ...defaults.security,
+      ...(value.security || {}),
+    },
+    broadcast: {
+      ...defaults.broadcast,
+      ...(value.broadcast || {}),
+    },
+    liveOps: {
+      ...defaults.liveOps,
+      ...(value.liveOps || {}),
+    },
+    support: {
+      ...defaults.support,
+      ...(value.support || {}),
+    },
+  };
+}
+
+async function saveControlPlaneState(nextState: AdminControlPlaneState): Promise<void> {
+  await storage.setSetting(
+    getControlPlaneKey(),
+    nextState,
+    "Admin control plane systems state",
     "admin",
   );
 }
@@ -512,10 +666,11 @@ export function registerAdminRoutes(app: Express) {
     try {
       const currentUserId = getUserId(req);
       const actorId = await getAdminActorId(req);
-      const role = actorId ? await getAdminRole(actorId) : null;
+      const access = actorId ? await getAdminAccess(actorId) : { isAdmin: false, role: null, permissions: [] };
       res.json({
-        isAdmin: Boolean(role),
-        role,
+        isAdmin: access.isAdmin,
+        role: access.role,
+        permissions: access.permissions,
         masqueradingAsUserId: actorId && currentUserId !== actorId ? currentUserId : null,
         actingAdminUserId: actorId,
       });
@@ -527,8 +682,7 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/settings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      if (!(await requireAdminPermission(req, res, "view_only"))) return;
 
       const settings = await loadAdminSettings();
       res.json({ settings });
@@ -540,8 +694,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.patch("/api/admin/settings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "manage");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const current = await loadAdminSettings();
       const next = {
@@ -563,10 +718,116 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  app.get("/api/admin/control-plane", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!(await requireAdminPermission(req, res, "view_only"))) return;
+
+      const state = await loadControlPlaneState();
+      res.json({ state });
+    } catch (error) {
+      console.error("Failed to load admin control plane:", error);
+      res.status(500).json({ message: "Failed to load admin control plane" });
+    }
+  });
+
+  app.patch("/api/admin/control-plane", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const access = await requireAdminPermission(req, res, "manage");
+      if (!access) return;
+      const actorId = access.actorId;
+
+      const current = await loadControlPlaneState();
+      const payload = (req.body && typeof req.body === "object") ? req.body as any : {};
+      const next: AdminControlPlaneState = {
+        featureFlags: {
+          ...current.featureFlags,
+          ...(payload.featureFlags || {}),
+        },
+        security: {
+          ...current.security,
+          ...(payload.security || {}),
+        },
+        broadcast: {
+          ...current.broadcast,
+          ...(payload.broadcast || {}),
+        },
+        liveOps: {
+          ...current.liveOps,
+          ...(payload.liveOps || {}),
+        },
+        support: {
+          ...current.support,
+          ...(payload.support || {}),
+        },
+      };
+
+      await saveControlPlaneState(next);
+      await appendAudit({
+        actorId,
+        action: "update_admin_control_plane",
+        details: JSON.stringify({
+          featureFlags: Object.keys(payload.featureFlags || {}),
+          security: Object.keys(payload.security || {}),
+          broadcast: Object.keys(payload.broadcast || {}),
+          liveOps: Object.keys(payload.liveOps || {}),
+          support: Object.keys(payload.support || {}),
+        }),
+      });
+
+      res.json({ success: true, state: next });
+    } catch (error) {
+      console.error("Failed to update admin control plane:", error);
+      res.status(500).json({ message: "Failed to update admin control plane" });
+    }
+  });
+
+  app.post("/api/admin/control-plane/broadcast", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const access = await requireAdminPermission(req, res, "manage");
+      if (!access) return;
+      const actorId = access.actorId;
+
+      const current = await loadControlPlaneState();
+      const payload = (req.body && typeof req.body === "object") ? req.body as any : {};
+      const next: AdminControlPlaneState = {
+        ...current,
+        broadcast: {
+          ...current.broadcast,
+          title: String(payload.title || current.broadcast.title || "").trim().slice(0, 120),
+          body: String(payload.body || current.broadcast.body || "").trim().slice(0, 800),
+          severity: (["info", "warning", "critical"].includes(String(payload.severity)) ? payload.severity : current.broadcast.severity) as AdminControlPlaneState["broadcast"]["severity"],
+          audience: (["all", "admins", "active-players"].includes(String(payload.audience)) ? payload.audience : current.broadcast.audience) as AdminControlPlaneState["broadcast"]["audience"],
+          enabled: Boolean(payload.enabled),
+        },
+      };
+
+      if (!next.featureFlags.adminBroadcastEnabled) {
+        next.broadcast.enabled = false;
+      }
+
+      await saveControlPlaneState(next);
+      await appendAudit({
+        actorId,
+        action: next.broadcast.enabled ? "publish_admin_broadcast" : "disable_admin_broadcast",
+        details: `${next.broadcast.severity}:${next.broadcast.audience}:${next.broadcast.title}`,
+      });
+      await appendDeveloperShortcutLog(
+        next.broadcast.enabled
+          ? `Broadcast published: ${next.broadcast.title}`
+          : `Broadcast disabled: ${next.broadcast.title || "untitled"}`
+      );
+
+      res.json({ success: true, broadcast: next.broadcast, state: next });
+    } catch (error) {
+      console.error("Failed to update admin broadcast:", error);
+      res.status(500).json({ message: "Failed to update admin broadcast" });
+    }
+  });
+
   app.get("/api/admin/accounts", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "administrate");
+      if (!access) return;
 
       const rows = await db
         .select({
@@ -601,13 +862,18 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/accounts", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "administrate");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const identifier = String(req.body?.identifier || "").trim();
-      const role = String(req.body?.role || "moderator").trim();
+      const role = normalizeAdminRole(req.body?.role || "moderator");
       if (!identifier) {
         return res.status(400).json({ message: "identifier is required" });
+      }
+
+      if (["founder", "devadmin"].includes(role) && !hasAdminPermission(access.permissions, "all_access")) {
+        return res.status(403).json({ message: "Only founders can assign founder or dev admin access" });
       }
 
       const [userRow] = await db
@@ -636,16 +902,7 @@ export function registerAdminRoutes(app: Express) {
         return res.status(400).json({ message: "User is already an admin" });
       }
 
-      const permissions =
-        role === "founder"
-          ? ["all_access", "administrate", "manage", "moderate", "view_only"]
-          : role === "administrator"
-            ? ["administrate", "manage", "moderate", "view_only"]
-            : role === "suadmin"
-              ? ["manage", "moderate", "view_only"]
-              : role === "moderator"
-                ? ["moderate", "view_only"]
-                : ["view_only"];
+      const permissions = getRolePermissions(role);
 
       await db.insert(adminUsers).values({
         userId: resolvedUser.id,
@@ -677,8 +934,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.delete("/api/admin/accounts/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "administrate");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const { userId } = req.params;
       if (actorId === userId) {
@@ -712,8 +970,7 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/users", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      if (!(await requireAdminPermission(req, res, "view_only"))) return;
 
       const moderationMap = await loadModerationMap();
 
@@ -753,8 +1010,7 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/users/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      if (!(await requireAdminPermission(req, res, "view_only"))) return;
 
       const { userId } = req.params;
       const moderationMap = await loadModerationMap();
@@ -800,8 +1056,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/users/:userId/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "moderate");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const { userId } = req.params;
       const nextStatus = String(req.body?.status || "").toLowerCase() as ModerationStatus;
@@ -829,8 +1086,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/console/execute", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "liveops_override");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const rawCommand = String(req.body?.command || "").trim();
       if (!rawCommand) {
@@ -927,8 +1185,7 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/audit", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      if (!(await requireAdminPermission(req, res, "view_only"))) return;
 
       const logs = await loadAuditLog();
       res.json({ logs: logs.slice().reverse().slice(0, 100) });
@@ -940,8 +1197,7 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/overview", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      if (!(await requireAdminPermission(req, res, "view_only"))) return;
 
       const moderationMap = await loadModerationMap();
       const usersRows = await db.select({ id: users.id }).from(users);
@@ -963,8 +1219,7 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/operations", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      if (!(await requireAdminPermission(req, res, "view_only"))) return;
 
       const operations = await loadOperations();
       res.json({ operations: operations.slice().reverse().slice(0, 30) });
@@ -976,8 +1231,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/operations/backup", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "manage");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const operation = await appendOperation({
         type: "backup_snapshot",
@@ -1017,8 +1273,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/operations/reset-universe", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "liveops_override");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const confirmText = String(req.body?.confirmText || "");
       if (confirmText !== "RESET") {
@@ -1079,8 +1336,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/operations/restart", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "liveops_override");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const operation = await appendOperation({
         type: "restart_server",
@@ -1120,8 +1378,7 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/server-settings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      if (!(await requireAdminPermission(req, res, "view_only"))) return;
 
       const settings = await loadServerSettings();
       res.json({ settings });
@@ -1133,8 +1390,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.patch("/api/admin/server-settings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "manage");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const current = await loadServerSettings();
       const raw = (req.body && typeof req.body === "object") ? req.body as Record<string, unknown> : {};
@@ -1197,8 +1455,7 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/rules-content", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      if (!(await requireAdminPermission(req, res, "view_only"))) return;
 
       const content = await loadRulesLegalContent();
       res.json({ content });
@@ -1210,8 +1467,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.patch("/api/admin/rules-content", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "manage");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const current = await loadRulesLegalContent();
       const raw = (req.body && typeof req.body === "object") ? req.body as Record<string, unknown> : {};
@@ -1239,8 +1497,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/developer-shortcuts", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "developer_tools");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const currentUserId = getUserId(req);
       const worldObjects = await loadWorldObjects();
@@ -1316,8 +1575,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/impersonate", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "masquerade");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const identifier = String(req.body?.identifier || "").trim();
       if (!identifier) {
@@ -1394,8 +1654,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/grant-resources", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "developer_tools");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const identifier = String(req.body?.identifier || "").trim();
       if (!identifier) {
@@ -1443,8 +1704,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/apply-preset", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "developer_tools");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const identifier = String(req.body?.identifier || "").trim();
       const preset = String(req.body?.preset || "").trim();
@@ -1534,8 +1796,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/set-building-level", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "developer_tools");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const identifier = String(req.body?.identifier || "").trim();
       const buildingKey = String(req.body?.buildingKey || "").trim();
@@ -1571,8 +1834,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/set-research-level", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "developer_tools");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const identifier = String(req.body?.identifier || "").trim();
       const researchKey = String(req.body?.researchKey || "").trim();
@@ -1608,8 +1872,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/add-unit", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "developer_tools");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const identifier = String(req.body?.identifier || "").trim();
       const unitId = String(req.body?.unitId || "").trim();
@@ -1648,8 +1913,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/reset-player", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "developer_tools");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const identifier = String(req.body?.identifier || "").trim();
       const scope = String(req.body?.scope || "").trim();
@@ -1694,8 +1960,9 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/world-object", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const actorId = await requireAdminActorId(req, res);
-      if (!actorId) return;
+      const access = await requireAdminPermission(req, res, "world_tools");
+      if (!access) return;
+      const actorId = access.actorId;
 
       const action = String(req.body?.action || "").trim();
       const type = String(req.body?.type || "").trim() as AdminWorldObject["type"];

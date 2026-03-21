@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 export default function AdminLogin() {
+  const isDev = import.meta.env.DEV;
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -34,7 +35,7 @@ export default function AdminLogin() {
         return;
       }
 
-      localStorage.setItem("stellar_username", identifier);
+      localStorage.setItem("stellar_username", payload?.user?.username || identifier);
       localStorage.setItem("stellar_password", password);
       window.location.href = "/admin";
     } catch (err) {
@@ -66,6 +67,11 @@ export default function AdminLogin() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isDev ? (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                Local dev defaults: `admin` / `Admin@12345` or `devadmin` / `dev-password`
+              </div>
+            ) : null}
             <div>
               <Label htmlFor="admin-identifier" className="text-slate-200">Username or Email</Label>
               <Input
