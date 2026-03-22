@@ -1,11 +1,12 @@
-3D source resources
+Source 3D Asset Root
 
-Use this folder for higher-fidelity source assets before optimization.
+This folder is reserved for higher-fidelity source art before conversion into browser runtime packages.
 
-Suggested layout:
-- source/models/obj
-- source/models/fbx
-- source/models/dae
-- source/textures/tga
-- source/textures/dds
-- exports/j3o
+Current local starter pack:
+- viewer textures: ../../../threejs_galaxy_viewer_project/assets/textures/png/
+- viewer source meshes: ../../../threejs_galaxy_viewer_project/assets/models/obj/
+
+Recommended pipeline:
+1. block out ships and stations in OBJ or FBX
+2. export runtime GLTF or GLB copies
+3. copy optimized runtime assets into ../../public/assets/3d/

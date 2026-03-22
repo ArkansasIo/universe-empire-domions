@@ -31,11 +31,15 @@ Features:
 - keyboard, mouse, Xbox, PS5, and generic Gamepad API support for navigation and camera control
 - responsive HUD for desktop and mobile
 - asset template folders for browser delivery and Java-friendly 3D pipelines
+- handcrafted sci-fi asset pack with browser-safe 2D plates and low-poly OBJ starter meshes
+- in-viewer featured asset gallery showing sky, UI, planet, ship, and station packs
+- nebula background and sector-grid overlay mounted directly into the live viewer shell
 
 Folder notes:
 - docs/asset_pipeline_guide.txt : format guidance for PNG, JPG, BMP, TGA, DDS, OBJ, FBX, GLTF, DAE, and J3O
 - assets/textures : starter texture folders by format
 - assets/models : starter model folders and template files
+- src/data/assetCatalog.js : featured asset catalog mapped into the HUD by page context
 - src/data/projectLinks.js : source-map manifest linking the viewer to the main game code and 3D content roots
 - src/data/projectLinks.js : also maps active pages to concrete source files such as universe config, schema, storage, and client 3D modules
 - src/data/gameRuntimeBridge.js : runtime bridge snapshot derived from main-game universe, travel, planet, and client 3D source data

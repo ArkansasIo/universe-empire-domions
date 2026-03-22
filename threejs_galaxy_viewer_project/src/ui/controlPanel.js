@@ -1,5 +1,6 @@
 import { getMenuById, getPageById } from "../data/menuConfig.js";
 import { CONTROLLER_BINDINGS, KEYBOARD_BINDINGS, KEYBOARD_LAYOUT } from "../data/inputBindings.js";
+import { getFeaturedAssetsForPage } from "../data/assetCatalog.js";
 import { getGameFileLinksForPage } from "../data/projectLinks.js";
 
 function formatMetric(value) {
@@ -106,6 +107,29 @@ function renderGameFileLinks(pageId) {
       `,
     )
     .join("");
+}
+
+function renderAssetGallery(pageId) {
+  const assets = getFeaturedAssetsForPage(pageId);
+  return `
+    <div class="sd-asset-gallery">
+      ${assets
+        .map(
+          (asset) => `
+            <article class="sd-asset-card">
+              <div class="sd-asset-preview" style="background-image: url('${asset.previewPath}')"></div>
+              <div class="sd-asset-meta">
+                <span class="sd-kicker">${asset.kind.toUpperCase()} / ${asset.category}</span>
+                <strong>${asset.label}</strong>
+                <p>${asset.description}</p>
+                <span class="sd-asset-path">${asset.sourcePath}</span>
+              </div>
+            </article>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
 }
 
 function renderKeyboardLayout() {
@@ -483,6 +507,10 @@ function renderRightPagePanel(currentState, page, activeSystem) {
       <div class="sd-section">
         <div class="sd-section-title">3D Asset Mounts</div>
         ${renderAssetMounts(currentState.assetMounts)}
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title">Featured Asset Pack</div>
+        ${renderAssetGallery(page.id)}
       </div>
       ${renderInputSection(currentState)}
       <div class="sd-section">
