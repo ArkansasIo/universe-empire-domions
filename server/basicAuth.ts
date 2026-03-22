@@ -399,6 +399,10 @@ export async function setupAuth(app: Express) {
 
       logger.info("AUTH", `Login successful for user: ${username}`, { userId: user.id });
       (req.session as any).userId = user.id;
+      const adminStatus = await resolveAdminStatus(user.id);
+      if (adminStatus.isAdmin) {
+        (req.session as any).adminAuthenticatedAt = Date.now();
+      }
       
       req.session.save((err) => {
         if (err) {
@@ -436,6 +440,7 @@ export async function setupAuth(app: Express) {
 
       delete (req.session as any).impersonatorId;
       (req.session as any).userId = user.id;
+      (req.session as any).adminAuthenticatedAt = Date.now();
 
       req.session.save((err) => {
         if (err) {
@@ -533,6 +538,9 @@ export async function setupAuth(app: Express) {
             if (user && user.passwordHash && verifyPassword(password, user.passwordHash)) {
               (req.session as any).userId = user.id;
               const adminStatus = await resolveAdminStatus(user.id);
+              if (adminStatus.isAdmin) {
+                (req.session as any).adminAuthenticatedAt = Date.now();
+              }
               logger.info("AUTH", `Basic auth successful for user: ${username}`);
               
               // Explicitly save session to persist it

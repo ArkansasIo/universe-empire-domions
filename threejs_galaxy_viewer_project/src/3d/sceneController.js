@@ -1,5 +1,6 @@
 import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+import { OBJLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/OBJLoader.js";
 import { buildGalaxyBlueprint } from "./galaxyBlueprint.js";
 
 function createCircleLine(radius, color, opacity) {
@@ -24,6 +25,39 @@ function createLineBetween(from, to, color, opacity) {
   );
 }
 
+function createAnimatedJumpGateConnection(from, to) {
+  const group = new THREE.Group();
+
+  // Main connection line
+  const line = createLineBetween(from, to, 0xa855f7, 0.4);
+  group.add(line);
+
+  // Animated energy particles along the connection
+  const particleCount = 20;
+  for (let i = 0; i < particleCount; i++) {
+    const t = i / particleCount;
+    const position = new THREE.Vector3(
+      from.x + (to.x - from.x) * t,
+      from.y + (to.y - from.y) * t,
+      from.z + (to.z - from.z) * t
+    );
+
+    const particle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.8, 8, 8),
+      new THREE.MeshBasicMaterial({
+        color: 0xa855f7,
+        transparent: true,
+        opacity: 0.6
+      })
+    );
+    particle.position.copy(position);
+    particle.userData = { offset: i * 0.1, speed: 0.02 };
+    group.add(particle);
+  }
+
+  return group;
+}
+
 function metricToColor(metricName, metrics) {
   const value = metrics[metricName] || 0;
   if (metricName === "threat") return new THREE.Color(`hsl(${Math.max(0, 42 - value * 0.35)} 88% 58%)`);
@@ -42,58 +76,245 @@ function shipModeProfile(mode) {
   return { color: 0xfb7185, emissive: 0x5e1026, speed: 1, radius: 1 };
 }
 
-function objectStyle(type) {
-  if (type === "asteroid") return { geometry: new THREE.DodecahedronGeometry(0.8, 0), color: 0xa8b4c7, emissive: 0x0d1117 };
-  if (type === "comet") return { geometry: new THREE.OctahedronGeometry(1.1, 0), color: 0x7dd3fc, emissive: 0x0b3551 };
-  if (type === "relay") return { geometry: new THREE.BoxGeometry(1.3, 1.3, 1.3), color: 0x38bdf8, emissive: 0x0d2943 };
-  if (type === "derelict") return { geometry: new THREE.TetrahedronGeometry(1.2, 0), color: 0xf59e0b, emissive: 0x3a2106 };
-  if (type === "anomaly") return { geometry: new THREE.TorusKnotGeometry(0.8, 0.22, 40, 6), color: 0x4ade80, emissive: 0x0a4228 };
-  return { geometry: new THREE.BoxGeometry(1.1, 0.8, 2.2), color: 0xfb7185, emissive: 0x4b1023 };
+function createPlanetMesh(planet) {
+  let geometry, material;
+
+  // Different planet types based on biome
+  switch (planet.biome) {
+    case 'gas_giant':
+      geometry = new THREE.SphereGeometry(planet.size, 20, 20);
+      material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(planet.color),
+        roughness: 0.3,
+        metalness: 0.1,
+        emissive: new THREE.Color(planet.color).multiplyScalar(0.1)
+      });
+      // Add gas giant rings
+      const rings = new THREE.Mesh(
+        new THREE.RingGeometry(planet.size * 1.2, planet.size * 1.8, 32),
+        new THREE.MeshBasicMaterial({
+          color: new THREE.Color(planet.color).multiplyScalar(0.6),
+          transparent: true,
+          opacity: 0.4,
+          side: THREE.DoubleSide
+        })
+      );
+      rings.rotation.x = Math.PI / 2;
+      return { mesh: new THREE.Mesh(geometry, material), rings };
+
+    case 'ice':
+      geometry = new THREE.SphereGeometry(planet.size, 16, 16);
+      material = new THREE.MeshStandardMaterial({
+        color: 0xe2f3ff,
+        roughness: 0.9,
+        metalness: 0.0,
+        emissive: 0x406080
+      });
+      break;
+
+    case 'volcanic':
+      geometry = new THREE.SphereGeometry(planet.size, 16, 16);
+      material = new THREE.MeshStandardMaterial({
+        color: 0xff6b35,
+        roughness: 0.7,
+        metalness: 0.2,
+        emissive: 0x331a0a
+      });
+      break;
+
+    case 'barren':
+      geometry = new THREE.SphereGeometry(planet.size, 16, 16);
+      material = new THREE.MeshStandardMaterial({
+        color: 0x8b7355,
+        roughness: 0.95,
+        metalness: 0.1,
+        emissive: 0x2a2418
+      });
+      break;
+
+    case 'oceanic':
+      geometry = new THREE.SphereGeometry(planet.size, 16, 16);
+      material = new THREE.MeshStandardMaterial({
+        color: 0x1e40af,
+        roughness: 0.2,
+        metalness: 0.8,
+        emissive: 0x0a1a40
+      });
+      break;
+
+    case 'verdant':
+      geometry = new THREE.SphereGeometry(planet.size, 16, 16);
+      material = new THREE.MeshStandardMaterial({
+        color: 0x22c55e,
+        roughness: 0.8,
+        metalness: 0.1,
+        emissive: 0x0a2a15
+      });
+      break;
+
+    case 'storm':
+      geometry = new THREE.SphereGeometry(planet.size, 16, 16);
+      material = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        roughness: 0.4,
+        metalness: 0.3,
+        emissive: 0x4a2a05
+      });
+      break;
+
+    default: // forge/desert
+      geometry = new THREE.SphereGeometry(planet.size, 16, 16);
+      material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(planet.color),
+        roughness: 0.85,
+        metalness: 0.15
+      });
+  }
+
+  const mesh = new THREE.Mesh(geometry, material);
+  return { mesh, rings: null };
 }
 
 function createAsteroidBelt(belt) {
+  const group = new THREE.Group();
+
+  // Create main asteroid field
   const points = [];
-  const total = 120 + Math.round(belt.density * 1.4);
+  const total = 200 + Math.round(belt.density * 2.0);
   for (let i = 0; i < total; i += 1) {
     const angle = (i / total) * Math.PI * 2;
-    const radius = belt.radius + Math.sin(i * 1.7) * belt.thickness;
+    const radius = belt.radius + (Math.random() - 0.5) * belt.thickness * 2;
+    const height = (Math.random() - 0.5) * belt.thickness * 0.3;
     points.push(
       new THREE.Vector3(
         Math.cos(angle) * radius,
-        Math.sin(i * 0.6) * belt.thickness * 0.12,
+        height,
         Math.sin(angle) * radius,
       ),
     );
   }
-  return new THREE.Points(
+  const mainField = new THREE.Points(
     new THREE.BufferGeometry().setFromPoints(points),
     new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.7, transparent: true, opacity: 0.58 }),
   );
+  group.add(mainField);
+
+  // Add some larger asteroid clusters
+  for (let cluster = 0; cluster < 3; cluster++) {
+    const clusterPoints = [];
+    const clusterSize = 15 + Math.random() * 20;
+    const clusterAngle = (cluster / 3) * Math.PI * 2;
+    const clusterRadius = belt.radius + (Math.random() - 0.5) * belt.thickness;
+
+    for (let i = 0; i < clusterSize; i++) {
+      const localAngle = clusterAngle + (Math.random() - 0.5) * 0.5;
+      const localRadius = clusterRadius + (Math.random() - 0.5) * belt.thickness * 0.5;
+      const height = (Math.random() - 0.5) * belt.thickness * 0.2;
+      clusterPoints.push(new THREE.Vector3(
+        Math.cos(localAngle) * localRadius,
+        height,
+        Math.sin(localAngle) * localRadius
+      ));
+    }
+
+    const clusterField = new THREE.Points(
+      new THREE.BufferGeometry().setFromPoints(clusterPoints),
+      new THREE.PointsMaterial({ color: 0x64748b, size: 1.2, transparent: true, opacity: 0.7 }),
+    );
+    group.add(clusterField);
+  }
+
+  return group;
+}
+
+function createNebula(position, size, color) {
+  const group = new THREE.Group();
+  group.position.copy(position);
+
+  // Create multiple cloud layers for depth
+  for (let i = 0; i < 3; i++) {
+    const cloudGeometry = new THREE.SphereGeometry(size * (0.8 + i * 0.3), 32, 32);
+    const cloudMaterial = new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.15 - i * 0.03,
+      side: THREE.DoubleSide
+    });
+    const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial);
+    cloud.position.set(
+      (Math.random() - 0.5) * size * 0.5,
+      (Math.random() - 0.5) * size * 0.3,
+      (Math.random() - 0.5) * size * 0.5
+    );
+    group.add(cloud);
+  }
+
+  // Add some dust particles
+  const dustPoints = [];
+  for (let i = 0; i < 200; i++) {
+    const angle1 = Math.random() * Math.PI * 2;
+    const angle2 = Math.random() * Math.PI * 2;
+    const radius = Math.random() * size;
+    dustPoints.push(new THREE.Vector3(
+      Math.sin(angle1) * Math.cos(angle2) * radius,
+      Math.sin(angle1) * Math.sin(angle2) * radius,
+      Math.cos(angle1) * radius
+    ));
+  }
+  const dustGeometry = new THREE.BufferGeometry().setFromPoints(dustPoints);
+  const dustMaterial = new THREE.PointsMaterial({
+    color: color,
+    size: 0.3,
+    transparent: true,
+    opacity: 0.4
+  });
+  const dust = new THREE.Points(dustGeometry, dustMaterial);
+  group.add(dust);
+
+  return group;
 }
 
 function createShipToken(system, index, profile) {
   const group = new THREE.Group();
-  const hullMaterial = new THREE.MeshStandardMaterial({
-    color: profile.color,
-    emissive: profile.emissive,
-    roughness: 0.35,
-    metalness: 0.45,
-  });
-  const hull = new THREE.Mesh(new THREE.ConeGeometry(4, 14, 5), hullMaterial);
-  hull.rotation.x = Math.PI / 2;
-  group.add(hull);
 
-  const wingMaterial = new THREE.MeshStandardMaterial({
-    color: profile.color,
-    emissive: profile.emissive,
-    roughness: 0.35,
-    metalness: 0.4,
+  // Try to load OBJ model, fallback to procedural geometry
+  loadOBJModel('./assets/models/obj/ship_frigate_a.obj').then((model) => {
+    model.scale.setScalar(0.1);
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.material = new THREE.MeshStandardMaterial({
+          color: profile.color,
+          emissive: profile.emissive,
+          roughness: 0.35,
+          metalness: 0.45,
+        });
+      }
+    });
+    group.add(model);
+  }).catch(() => {
+    // Fallback to procedural geometry
+    const hullMaterial = new THREE.MeshStandardMaterial({
+      color: profile.color,
+      emissive: profile.emissive,
+      roughness: 0.35,
+      metalness: 0.45,
+    });
+    const hull = new THREE.Mesh(new THREE.ConeGeometry(4, 14, 5), hullMaterial);
+    hull.rotation.x = Math.PI / 2;
+    group.add(hull);
+
+    const wingMaterial = new THREE.MeshStandardMaterial({
+      color: profile.color,
+      emissive: profile.emissive,
+      roughness: 0.35,
+      metalness: 0.4,
+    });
+    const wingA = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 6), wingMaterial);
+    wingA.position.set(-3.4, 0, 0);
+    const wingB = wingA.clone();
+    wingB.position.x = 3.4;
+    group.add(wingA, wingB);
   });
-  const wingA = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 6), wingMaterial);
-  wingA.position.set(-3.4, 0, 0);
-  const wingB = wingA.clone();
-  wingB.position.x = 3.4;
-  group.add(wingA, wingB);
 
   const trailMaterial = new THREE.LineBasicMaterial({
     color: profile.color,
@@ -110,8 +331,6 @@ function createShipToken(system, index, profile) {
 
   return {
     group,
-    hullMaterial,
-    wingMaterial,
     trailMaterial,
     systemId: system.id,
     baseRadius: 24 + (index % 3) * 8,
@@ -151,20 +370,23 @@ export function createSceneController(options) {
 
   const rootGroup = new THREE.Group();
   const dustGroup = new THREE.Group();
+  const nebulaGroup = new THREE.Group();
   const sectorGroup = new THREE.Group();
   const routeGroup = new THREE.Group();
   const tradeGroup = new THREE.Group();
   const diplomacyGroup = new THREE.Group();
+  const jumpGateGroup = new THREE.Group();
   const fleetGroup = new THREE.Group();
   const systemGroup = new THREE.Group();
   scene.add(rootGroup);
-  rootGroup.add(dustGroup, sectorGroup, routeGroup, tradeGroup, diplomacyGroup, fleetGroup, systemGroup);
+  rootGroup.add(dustGroup, nebulaGroup, sectorGroup, routeGroup, tradeGroup, diplomacyGroup, jumpGateGroup, fleetGroup, systemGroup);
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const systemMap = new Map();
   const selectableMeshes = [];
   const fleetTokens = [];
+  const modelCache = new Map();
 
   let currentBlueprint = null;
   let currentPage = null;
@@ -180,6 +402,26 @@ export function createSceneController(options) {
       node.geometry?.dispose?.();
       if (Array.isArray(node.material)) node.material.forEach((material) => material.dispose?.());
       else node.material?.dispose?.();
+    });
+  }
+
+  function loadOBJModel(path) {
+    return new Promise((resolve, reject) => {
+      if (modelCache.has(path)) {
+        resolve(modelCache.get(path).clone());
+        return;
+      }
+
+      const loader = new OBJLoader();
+      loader.load(
+        path,
+        (object) => {
+          modelCache.set(path, object);
+          resolve(object.clone());
+        },
+        undefined,
+        reject
+      );
     });
   }
 
@@ -211,6 +453,29 @@ export function createSceneController(options) {
       opacity: 0.38,
       sizeAttenuation: true,
     })));
+  }
+
+  function buildNebulae(seed) {
+    clearGroup(nebulaGroup);
+    const rng = ((seed * 49297 + 9301) % 233280) / 233280;
+
+    // Create several nebulae scattered around the galaxy
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2 + rng * Math.PI;
+      const radius = 400 + rng * 800;
+      const position = new THREE.Vector3(
+        Math.cos(angle) * radius,
+        (Math.random() - 0.5) * 200,
+        Math.sin(angle) * radius
+      );
+
+      const size = 80 + Math.random() * 120;
+      const colors = [0x8b5cf6, 0x06b6d4, 0x10b981, 0xf59e0b, 0xef4444];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+
+      const nebula = createNebula(position, size, color);
+      nebulaGroup.add(nebula);
+    }
   }
 
   function buildSectorShells() {
@@ -262,6 +527,33 @@ export function createSceneController(options) {
     starMesh.userData = { kind: "system", systemId: system.id };
     group.add(starMesh);
     selectableMeshes.push(starMesh);
+
+    // Add corona effect
+    const corona = new THREE.Mesh(
+      new THREE.SphereGeometry(system.starSize * 1.5, 16, 16),
+      new THREE.MeshBasicMaterial({
+        color: metricToColor("economy", system.metrics),
+        transparent: true,
+        opacity: 0.3
+      })
+    );
+    group.add(corona);
+
+    // Add solar flares
+    for (let i = 0; i < 3; i++) {
+      const flare = new THREE.Mesh(
+        new THREE.ConeGeometry(system.starSize * 0.3, system.starSize * 2, 8),
+        new THREE.MeshBasicMaterial({
+          color: 0xffaa44,
+          transparent: true,
+          opacity: 0.4
+        })
+      );
+      flare.rotation.z = (i / 3) * Math.PI * 2;
+      flare.rotation.x = Math.PI / 6;
+      flare.position.y = system.starSize * 0.5;
+      group.add(flare);
+    }
 
     const haloMesh = new THREE.Mesh(
       new THREE.SphereGeometry(system.starSize * 2.2, 18, 18),
@@ -323,15 +615,34 @@ export function createSceneController(options) {
       planetGroup.add(orbit);
 
       const anchor = new THREE.Group();
-      anchor.userData = { orbitRadius: planet.orbitRadius, orbitSpeed: planet.orbitSpeed, orbitAngle: planet.orbitAngle };
+      anchor.userData = {
+        orbitRadius: planet.orbitRadius,
+        orbitSpeed: planet.orbitSpeed,
+        orbitAngle: planet.orbitAngle,
+        eccentricity: planet.eccentricity || 0.1 + Math.random() * 0.2 // Add elliptical orbits
+      };
 
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(planet.size, 14, 14),
-        new THREE.MeshStandardMaterial({ color: new THREE.Color(planet.color), roughness: 0.78, metalness: 0.06 }),
-      );
+      const { mesh, rings } = createPlanetMesh(planet);
       mesh.userData = { kind: "planet", systemId: system.id, planetId: planet.id };
       selectableMeshes.push(mesh);
       anchor.add(mesh);
+
+      if (rings) {
+        anchor.add(rings);
+      }
+
+      // Add atmosphere effect for habitable planets
+      if (planet.habitability > 50) {
+        const atmosphere = new THREE.Mesh(
+          new THREE.SphereGeometry(planet.size * 1.05, 16, 16),
+          new THREE.MeshBasicMaterial({
+            color: 0x87ceeb,
+            transparent: true,
+            opacity: 0.2
+          })
+        );
+        anchor.add(atmosphere);
+      }
 
       const moonGroup = new THREE.Group();
       const moonEntries = [];
@@ -355,7 +666,7 @@ export function createSceneController(options) {
 
       anchor.add(moonGroup);
       planetGroup.add(anchor);
-      planetEntries.push({ planet, anchor, mesh, orbit, moonGroup, moonEntries });
+      planetEntries.push({ planet, anchor, mesh, orbit, moonGroup, moonEntries, rings });
     });
 
     system.stations.forEach((station) => {
@@ -382,28 +693,84 @@ export function createSceneController(options) {
 
     system.interstellarObjects.forEach((object) => {
       const style = objectStyle(object.type);
-      const mesh = new THREE.Mesh(
-        style.geometry,
-        new THREE.MeshStandardMaterial({
-          color: style.color,
-          emissive: style.emissive,
-          roughness: 0.45,
-          metalness: object.type === "relay" ? 0.7 : 0.2,
-        }),
-      );
-      mesh.userData = {
-        orbitRadius: object.orbitRadius,
-        orbitSpeed: object.orbitSpeed,
-        orbitAngle: object.orbitAngle,
-        elevation: object.elevation,
-      };
-      mesh.position.set(
-        Math.cos(object.orbitAngle) * object.orbitRadius,
-        object.elevation,
-        Math.sin(object.orbitAngle) * object.orbitRadius,
-      );
-      objectGroup.add(mesh);
-      objectEntries.push({ mesh, type: object.type });
+
+      if (style.modelPath) {
+        // Load 3D model
+        loadOBJModel(style.modelPath).then((model) => {
+          model.scale.setScalar(0.05); // Scale down the model
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.material = new THREE.MeshStandardMaterial({
+                color: style.color,
+                emissive: style.emissive,
+                roughness: 0.45,
+                metalness: 0.7,
+              });
+            }
+          });
+          model.userData = {
+            orbitRadius: object.orbitRadius,
+            orbitSpeed: object.orbitSpeed,
+            orbitAngle: object.orbitAngle,
+            elevation: object.elevation,
+          };
+          model.position.set(
+            Math.cos(object.orbitAngle) * object.orbitRadius,
+            object.elevation,
+            Math.sin(object.orbitAngle) * object.orbitRadius,
+          );
+          objectGroup.add(model);
+          objectEntries.push({ mesh: model, type: object.type });
+        }).catch(() => {
+          // Fallback to procedural geometry
+          const mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(1.3, 1.3, 1.3),
+            new THREE.MeshStandardMaterial({
+              color: style.color,
+              emissive: style.emissive,
+              roughness: 0.45,
+              metalness: 0.7,
+            }),
+          );
+          mesh.userData = {
+            orbitRadius: object.orbitRadius,
+            orbitSpeed: object.orbitSpeed,
+            orbitAngle: object.orbitAngle,
+            elevation: object.elevation,
+          };
+          mesh.position.set(
+            Math.cos(object.orbitAngle) * object.orbitRadius,
+            object.elevation,
+            Math.sin(object.orbitAngle) * object.orbitRadius,
+          );
+          objectGroup.add(mesh);
+          objectEntries.push({ mesh, type: object.type });
+        });
+      } else {
+        // Use procedural geometry
+        const mesh = new THREE.Mesh(
+          style.geometry,
+          new THREE.MeshStandardMaterial({
+            color: style.color,
+            emissive: style.emissive,
+            roughness: 0.45,
+            metalness: object.type === "relay" ? 0.7 : 0.2,
+          }),
+        );
+        mesh.userData = {
+          orbitRadius: object.orbitRadius,
+          orbitSpeed: object.orbitSpeed,
+          orbitAngle: object.orbitAngle,
+          elevation: object.elevation,
+        };
+        mesh.position.set(
+          Math.cos(object.orbitAngle) * object.orbitRadius,
+          object.elevation,
+          Math.sin(object.orbitAngle) * object.orbitRadius,
+        );
+        objectGroup.add(mesh);
+        objectEntries.push({ mesh, type: object.type });
+      }
     });
 
     group.add(planetGroup, stationGroup, objectGroup, beltGroup);
@@ -447,6 +814,20 @@ export function createSceneController(options) {
       const from = lookup.get(link.fromId);
       const to = lookup.get(link.toId);
       if (from && to) diplomacyGroup.add(createLineBetween(from.position, to.position, 0x82cfff, 0.3));
+    });
+  }
+
+  function buildJumpGates(blueprint) {
+    clearGroup(jumpGateGroup);
+    const lookup = new Map(blueprint.systems.map((system) => [system.id, system]));
+    blueprint.jumpGateLinks?.forEach((link) => {
+      const from = lookup.get(link.fromId);
+      const to = lookup.get(link.toId);
+      if (from && to) {
+        // Create animated jump gate connection
+        const connection = createAnimatedJumpGateConnection(from.position, to.position);
+        jumpGateGroup.add(connection);
+      }
     });
   }
 
@@ -546,8 +927,10 @@ export function createSceneController(options) {
     systemMap.clear();
     clearGroup(systemGroup);
     buildDustField(seed);
+    buildNebulae(seed);
     buildSectorShells();
     buildConnections(currentBlueprint);
+    buildJumpGates(currentBlueprint);
     currentBlueprint.systems.forEach(createSystemObject);
     buildFleetTokens(currentBlueprint.systems);
     syncSelection({ selectedSystemId: null, hoveredSystemId: null, selectedPlanetId: null });
@@ -673,12 +1056,22 @@ export function createSceneController(options) {
         entry.planetEntries.forEach((planetEntry) => {
           const orbit = planetEntry.anchor.userData;
           orbit.orbitAngle += orbit.orbitSpeed;
-          planetEntry.anchor.position.set(
-            Math.cos(orbit.orbitAngle) * orbit.orbitRadius,
-            0,
-            Math.sin(orbit.orbitAngle) * orbit.orbitRadius,
-          );
+
+          // Elliptical orbit calculation
+          const eccentricity = orbit.eccentricity || 0.1;
+          const a = orbit.orbitRadius; // semi-major axis
+          const b = a * Math.sqrt(1 - eccentricity * eccentricity); // semi-minor axis
+          const x = a * Math.cos(orbit.orbitAngle);
+          const z = b * Math.sin(orbit.orbitAngle);
+
+          planetEntry.anchor.position.set(x, 0, z);
           planetEntry.mesh.rotation.y += 0.004;
+
+          // Update rings position if they exist
+          if (planetEntry.rings) {
+            planetEntry.rings.position.copy(planetEntry.anchor.position);
+          }
+
           planetEntry.moonEntries.forEach((moonEntry) => {
             const moonOrbit = moonEntry.mesh.userData;
             moonOrbit.orbitAngle += moonOrbit.orbitSpeed;
@@ -711,6 +1104,29 @@ export function createSceneController(options) {
           );
           objectEntry.mesh.rotation.x += 0.008;
           objectEntry.mesh.rotation.y += 0.01;
+        });
+      });
+
+      // Animate nebulae
+      nebulaGroup.children.forEach((nebula, index) => {
+        nebula.rotation.y += 0.0005;
+        nebula.rotation.x += 0.0003;
+        // Gentle pulsing effect
+        const scale = 1 + Math.sin(elapsed * 0.5 + index) * 0.05;
+        nebula.scale.setScalar(scale);
+      });
+
+      // Animate jump gate particles
+      jumpGateGroup.children.forEach((connection) => {
+        connection.children.forEach((child, index) => {
+          if (child.userData.offset !== undefined) {
+            const particle = child;
+            const offset = particle.userData.offset;
+            const speed = particle.userData.speed;
+            const t = (elapsed * speed + offset) % 1;
+            particle.material.opacity = 0.6 * (1 - Math.abs(t - 0.5) * 2);
+            particle.scale.setScalar(0.5 + Math.sin(elapsed * 2 + offset * 10) * 0.3);
+          }
         });
       });
 

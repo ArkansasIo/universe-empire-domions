@@ -39,6 +39,7 @@ import type { SystemMetricsSnapshot } from "@shared/config/statusConfig";
 type AdminMeResponse = {
   isAdmin: boolean;
   role: string | null;
+  permissions?: string[];
   masqueradingAsUserId?: string | null;
   actingAdminUserId?: string | null;
 };
@@ -80,6 +81,8 @@ type AdminAccountsResponse = {
     role: string;
     username: string;
     email: string;
+    permissions?: string[];
+    createdAt?: string | number | null;
   }>;
 };
 
@@ -153,6 +156,22 @@ type DeveloperShortcutsResponse = {
   currentUserId: string;
   actingAdminUserId: string | null;
   masqueradingAsUserId: string | null;
+  policy: {
+    isFounder: boolean;
+    incidentLockdownEnabled: boolean;
+    commandApprovalMode: "single" | "dual" | "founder";
+    privilegedSessionTimeoutMinutes: number;
+    features: {
+      masquerade: boolean;
+      advancedWorldTools: boolean;
+      liveOpsOverrides: boolean;
+      auditStreamVisible: boolean;
+    };
+    support: AdminControlPlaneState["support"];
+    requiresFounderApproval: boolean;
+    requiresDualApproval: boolean;
+    sessionFresh: boolean;
+  };
   recentActions: string[];
   worldObjects: Array<{
     id: string;
@@ -277,6 +296,8 @@ export default function AdminControl() {
   const [worldType, setWorldType] = useState<"planet" | "moon" | "debris">("planet");
   const [worldCoordinates, setWorldCoordinates] = useState("1:1:1");
   const [worldName, setWorldName] = useState("Admin Created World Object");
+  const [newAdminIdentifier, setNewAdminIdentifier] = useState("");
+  const [newAdminRole, setNewAdminRole] = useState("moderator");
 
   const { data: meData, isLoading: meLoading } = useQuery<AdminMeResponse>({
     queryKey: ["admin-me"],
@@ -387,6 +408,18 @@ export default function AdminControl() {
     [activeSubsystem],
   );
   const controlSummary = useMemo(() => buildAdminControlSummary(controlPlaneForm), [controlPlaneForm]);
+  const adminPermissions = meData?.permissions || [];
+  const isFounder = adminPermissions.includes("all_access");
+  const canAdministrate = isFounder || adminPermissions.includes("administrate");
+  const visibleAdminRoles = useMemo(
+    () => ["viewer", "moderator", "suadmin", "administrator", ...(isFounder ? ["devadmin", "founder"] : [])],
+    [isFounder],
+  );
+  const canUseMasquerade = devData?.policy?.features.masquerade ?? (controlPlaneForm.featureFlags.allowMasquerade || isFounder);
+  const canUseWorldTools = devData?.policy?.features.advancedWorldTools ?? (controlPlaneForm.featureFlags.advancedWorldTools || isFounder);
+  const canUseLiveOps = devData?.policy?.features.liveOpsOverrides ?? (controlPlaneForm.featureFlags.liveOpsOverridesEnabled || isFounder);
+  const canViewAudit = devData?.policy?.features.auditStreamVisible ?? (controlPlaneForm.featureFlags.auditStreamVisible || isFounder);
+  const privilegedSessionFresh = devData?.policy?.sessionFresh ?? true;
 
   useEffect(() => {
     if (!activeSubsystemDefinition.subMenus.some((menu) => menu.id === activeControlSubMenu)) {
@@ -472,6 +505,32 @@ export default function AdminControl() {
       toast({ title: "Operation queued", description: "Administrative operation was accepted." });
     },
     onError: (error: Error) => toast({ title: "Operation failed", description: error.message, variant: "destructive" }),
+  });
+
+  const createAdminMutation = useMutation({
+    mutationFn: ({ identifier, role }: { identifier: string; role: string }) =>
+      fetchJson("/api/admin/accounts", {
+        method: "POST",
+        body: JSON.stringify({ identifier, role }),
+      }),
+    onSuccess: () => {
+      setNewAdminIdentifier("");
+      invalidateAdmin();
+      toast({ title: "Admin account created", description: "The selected user now has administrative access." });
+    },
+    onError: (error: Error) => toast({ title: "Admin account creation failed", description: error.message, variant: "destructive" }),
+  });
+
+  const removeAdminMutation = useMutation({
+    mutationFn: (userId: string) =>
+      fetchJson(`/api/admin/accounts/${userId}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      invalidateAdmin();
+      toast({ title: "Admin account removed", description: "Administrative access has been revoked." });
+    },
+    onError: (error: Error) => toast({ title: "Admin account removal failed", description: error.message, variant: "destructive" }),
   });
 
   const controlPlaneMutation = useMutation({
@@ -601,6 +660,43 @@ export default function AdminControl() {
             Unified admin panel with imported server settings, rules editors, moderation, operations, and developer shortcuts.
           </p>
         </div>
+
+        <Card className="border-slate-200 bg-white">
+          <CardHeader>
+            <CardTitle>Policy Status</CardTitle>
+            <CardDescription>Current control-plane posture applied to sensitive admin actions.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={canUseMasquerade ? "secondary" : "destructive"}>Masquerade {canUseMasquerade ? "enabled" : "locked"}</Badge>
+              <Badge variant={canUseWorldTools ? "secondary" : "destructive"}>World tools {canUseWorldTools ? "enabled" : "locked"}</Badge>
+              <Badge variant={canUseLiveOps ? "secondary" : "destructive"}>LiveOps {canUseLiveOps ? "enabled" : "locked"}</Badge>
+              <Badge variant={canViewAudit ? "secondary" : "destructive"}>Audit stream {canViewAudit ? "visible" : "hidden"}</Badge>
+              <Badge variant="outline">Approval mode: {devData?.policy?.commandApprovalMode || controlPlaneForm.security.commandApprovalMode}</Badge>
+              <Badge variant="outline">Support visibility: {devData?.policy?.support.playerVisibility || controlPlaneForm.support.playerVisibility}</Badge>
+            </div>
+            {!privilegedSessionFresh ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Your privileged admin session expired for protected actions. Sign in again through `/admin-login` before running sensitive tools.
+              </div>
+            ) : null}
+            {devData?.policy?.incidentLockdownEnabled ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+                Incident lockdown is active. Non-founder admins will be blocked from high-risk account, live-ops, and world-tool actions.
+              </div>
+            ) : null}
+            {devData?.policy?.requiresFounderApproval ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+                Founder approval mode is active. Destructive control-plane actions require a founder session.
+              </div>
+            ) : null}
+            {devData?.policy?.requiresDualApproval ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Dual approval mode is active. Sensitive actions are restricted until the posture is lowered or a founder handles them.
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
 
         <Card className="border-slate-200 bg-white">
           <CardHeader>
@@ -753,10 +849,15 @@ export default function AdminControl() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" onClick={() => operationsMutation.mutate({ url: "/api/admin/operations/backup" })}>Create Backup</Button>
-                    <Button variant="outline" onClick={() => operationsMutation.mutate({ url: "/api/admin/operations/restart" })}>Queue Restart</Button>
-                    <Button variant="destructive" onClick={() => operationsMutation.mutate({ url: "/api/admin/operations/reset-universe", payload: { confirmText: "RESET" } })}>Reset Universe</Button>
+                    <Button variant="outline" onClick={() => operationsMutation.mutate({ url: "/api/admin/operations/backup" })} disabled={!privilegedSessionFresh}>Create Backup</Button>
+                    <Button variant="outline" onClick={() => operationsMutation.mutate({ url: "/api/admin/operations/restart" })} disabled={!canUseLiveOps || !privilegedSessionFresh}>Queue Restart</Button>
+                    <Button variant="destructive" onClick={() => operationsMutation.mutate({ url: "/api/admin/operations/reset-universe", payload: { confirmText: "RESET" } })} disabled={!canUseLiveOps || !privilegedSessionFresh}>Reset Universe</Button>
                   </div>
+                  {!canUseLiveOps ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                      LiveOps override actions are currently disabled by the control plane.
+                    </div>
+                  ) : null}
                   <div className="space-y-2">
                     {(operationsData?.operations || []).map((operation) => (
                       <div key={operation.id} className="border rounded-lg p-3">
@@ -1124,14 +1225,62 @@ export default function AdminControl() {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                   <div>
                     <div className="font-semibold mb-2">Admin Accounts</div>
+                    {canAdministrate ? (
+                      <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.4fr_1fr_auto]">
+                          <Input
+                            value={newAdminIdentifier}
+                            onChange={(event) => setNewAdminIdentifier(event.target.value)}
+                            placeholder="username, email, or user id"
+                          />
+                          <Select value={newAdminRole} onValueChange={setNewAdminRole}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {visibleAdminRoles.map((role) => (
+                                <SelectItem key={role} value={role}>
+                                  {role}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            onClick={() => createAdminMutation.mutate({ identifier: newAdminIdentifier.trim(), role: newAdminRole })}
+                            disabled={!newAdminIdentifier.trim() || createAdminMutation.isPending}
+                          >
+                            Add Admin
+                          </Button>
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500">
+                          Founder and devadmin roles are available only to founder sessions.
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                        Your role can review admin accounts but cannot create or remove them.
+                      </div>
+                    )}
                     <div className="space-y-2">
                       {(accountsData?.accounts || []).map((account) => (
-                        <div key={account.id} className="border rounded-lg p-3 flex items-center justify-between">
+                        <div key={account.id} className="border rounded-lg p-3 flex items-center justify-between gap-3">
                           <div>
                             <div className="font-semibold">{account.username}</div>
                             <div className="text-xs text-slate-500">{account.email} · {account.role}</div>
                           </div>
-                          <Badge variant="outline">{account.role}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{account.role}</Badge>
+                            {canAdministrate && account.userId !== meData?.actingAdminUserId ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeAdminMutation.mutate(account.userId)}
+                                disabled={removeAdminMutation.isPending}
+                              >
+                                Remove
+                              </Button>
+                            ) : null}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1296,6 +1445,19 @@ export default function AdminControl() {
 
           <TabsContent value="developer" className="mt-6">
             <div className="space-y-4">
+              {!canUseMasquerade || !canUseWorldTools || !privilegedSessionFresh ? (
+                <Card className="border-amber-200 bg-amber-50">
+                  <CardHeader>
+                    <CardTitle>Developer Tool Guardrails</CardTitle>
+                    <CardDescription>Current control-plane policy affecting impersonation and deep world tools.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm text-amber-950">
+                    {!canUseMasquerade ? <div>Masquerade is disabled by the control plane.</div> : null}
+                    {!canUseWorldTools ? <div>Advanced world tools are disabled by the control plane.</div> : null}
+                    {!privilegedSessionFresh ? <div>Your privileged session has expired. Re-authenticate at `/admin-login` to run protected developer actions.</div> : null}
+                  </CardContent>
+                </Card>
+              ) : null}
               <Card>
                 <CardHeader>
                   <CardTitle>Target Player</CardTitle>
@@ -1304,14 +1466,14 @@ export default function AdminControl() {
                 <CardContent className="space-y-4">
                   <Input value={targetIdentifier} onChange={(event) => setTargetIdentifier(event.target.value)} placeholder="player username, email, or user id" />
                   <div className="flex flex-wrap gap-2">
-                    <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/impersonate", payload: { identifier: targetIdentifier } })} disabled={!targetIdentifier}>
+                    <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/impersonate", payload: { identifier: targetIdentifier } })} disabled={!targetIdentifier || !canUseMasquerade || !privilegedSessionFresh}>
                       <Users className="w-4 h-4 mr-2" /> Impersonate
                     </Button>
                     <Button variant="outline" onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/stop-impersonation" })}>
                       Restore Admin
                     </Button>
                     {(devData?.presets || []).map((preset) => (
-                      <Button key={preset.id} variant="outline" onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/apply-preset", payload: { identifier: targetIdentifier, preset: preset.id } })} disabled={!targetIdentifier}>
+                      <Button key={preset.id} variant="outline" onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/apply-preset", payload: { identifier: targetIdentifier, preset: preset.id } })} disabled={!targetIdentifier || !canUseWorldTools || !privilegedSessionFresh}>
                         <Wand2 className="w-4 h-4 mr-2" /> {preset.label}
                       </Button>
                     ))}
@@ -1338,7 +1500,7 @@ export default function AdminControl() {
                         url: "/api/admin/developer-shortcuts/grant-resources",
                         payload: { identifier: targetIdentifier, resources: resourceForm },
                       })}
-                      disabled={!targetIdentifier}
+                      disabled={!targetIdentifier || !canUseWorldTools || !privilegedSessionFresh}
                     >
                       Grant Resources
                     </Button>
@@ -1353,21 +1515,21 @@ export default function AdminControl() {
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2 items-end">
                       <div><div className="text-sm font-medium mb-1">Building Key</div><Input value={buildingKey} onChange={(event) => setBuildingKey(event.target.value)} list="building-catalog" /></div>
                       <div><div className="text-sm font-medium mb-1">Level</div><Input value={buildingLevel} onChange={(event) => setBuildingLevel(event.target.value)} /></div>
-                      <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/set-building-level", payload: { identifier: targetIdentifier, buildingKey, level: buildingLevel } })} disabled={!targetIdentifier}>Set Building</Button>
+                      <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/set-building-level", payload: { identifier: targetIdentifier, buildingKey, level: buildingLevel } })} disabled={!targetIdentifier || !canUseWorldTools || !privilegedSessionFresh}>Set Building</Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2 items-end">
                       <div><div className="text-sm font-medium mb-1">Research Key</div><Input value={researchKey} onChange={(event) => setResearchKey(event.target.value)} list="research-catalog" /></div>
                       <div><div className="text-sm font-medium mb-1">Level</div><Input value={researchLevel} onChange={(event) => setResearchLevel(event.target.value)} /></div>
-                      <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/set-research-level", payload: { identifier: targetIdentifier, researchKey, level: researchLevel } })} disabled={!targetIdentifier}>Set Research</Button>
+                      <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/set-research-level", payload: { identifier: targetIdentifier, researchKey, level: researchLevel } })} disabled={!targetIdentifier || !canUseWorldTools || !privilegedSessionFresh}>Set Research</Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2 items-end">
                       <div><div className="text-sm font-medium mb-1">Unit Id</div><Input value={unitId} onChange={(event) => setUnitId(event.target.value)} list="unit-catalog" /></div>
                       <div><div className="text-sm font-medium mb-1">Amount</div><Input value={unitAmount} onChange={(event) => setUnitAmount(event.target.value)} /></div>
-                      <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/add-unit", payload: { identifier: targetIdentifier, unitId, amount: unitAmount } })} disabled={!targetIdentifier}>Add Unit</Button>
+                      <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/add-unit", payload: { identifier: targetIdentifier, unitId, amount: unitAmount } })} disabled={!targetIdentifier || !canUseWorldTools || !privilegedSessionFresh}>Add Unit</Button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {["resources", "units", "buildings", "research"].map((scope) => (
-                        <Button key={scope} variant="outline" onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/reset-player", payload: { identifier: targetIdentifier, scope } })} disabled={!targetIdentifier}>
+                        <Button key={scope} variant="outline" onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/reset-player", payload: { identifier: targetIdentifier, scope } })} disabled={!targetIdentifier || !canUseWorldTools || !privilegedSessionFresh}>
                           Reset {scope}
                         </Button>
                       ))}
@@ -1392,10 +1554,10 @@ export default function AdminControl() {
                       <Input value={worldName} onChange={(event) => setWorldName(event.target.value)} placeholder="object name" />
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/world-object", payload: { action: "create", type: worldType, coordinates: worldCoordinates, name: worldName } })}>
+                      <Button onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/world-object", payload: { action: "create", type: worldType, coordinates: worldCoordinates, name: worldName } })} disabled={!canUseWorldTools || !privilegedSessionFresh}>
                         Create
                       </Button>
-                      <Button variant="outline" onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/world-object", payload: { action: "delete", type: worldType, coordinates: worldCoordinates, name: worldName } })}>
+                      <Button variant="outline" onClick={() => shortcutMutation.mutate({ url: "/api/admin/developer-shortcuts/world-object", payload: { action: "delete", type: worldType, coordinates: worldCoordinates, name: worldName } })} disabled={!canUseWorldTools || !privilegedSessionFresh}>
                         Delete
                       </Button>
                     </div>
@@ -1429,26 +1591,32 @@ export default function AdminControl() {
                 <CardDescription>Administrative actions and imported control operations.</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Timestamp</TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Target</TableHead>
-                      <TableHead>Details</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(auditData?.logs || []).map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()}</TableCell>
-                        <TableCell className="font-medium">{log.action}</TableCell>
-                        <TableCell className="text-xs text-slate-500">{log.targetUserId || "-"}</TableCell>
-                        <TableCell className="text-sm text-slate-600">{log.details || "-"}</TableCell>
+                {canViewAudit ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Timestamp</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Target</TableHead>
+                        <TableHead>Details</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {(auditData?.logs || []).map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()}</TableCell>
+                          <TableCell className="font-medium">{log.action}</TableCell>
+                          <TableCell className="text-xs text-slate-500">{log.targetUserId || "-"}</TableCell>
+                          <TableCell className="text-sm text-slate-600">{log.details || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    Audit visibility is disabled by the current control-plane posture for this session.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -1,4 +1,4 @@
-function createRng(seed) {
+function createRng(seed: number) {
   let value = seed >>> 0;
   return function next() {
     value = (value * 1664525 + 1013904223) >>> 0;
@@ -6,7 +6,7 @@ function createRng(seed) {
   };
 }
 
-function pick(list, index) {
+function pick(list: string[], index: number) {
   return list[index % list.length];
 }
 
@@ -22,11 +22,11 @@ const STAR_SUFFIX = [
 
 const ALLIANCES = ["Solar Accord", "Iron Helix", "Verdant League", "Crimson Pact"];
 
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function createMoons(rng, systemIndex, planetIndex, biome) {
+function createMoons(rng: () => number, systemIndex: number, planetIndex: number, biome: string) {
   const moonCount = Math.floor(rng() * 4);
   const moons = [];
 
@@ -45,7 +45,7 @@ function createMoons(rng, systemIndex, planetIndex, biome) {
   return moons;
 }
 
-function createPlanets(rng, systemIndex, economy, threat) {
+function createPlanets(rng: () => number, systemIndex: number, economy: number, threat: number) {
   const planetCount = 2 + Math.floor(rng() * 5);
   const planets = [];
 
@@ -73,7 +73,7 @@ function createPlanets(rng, systemIndex, economy, threat) {
   return planets;
 }
 
-function createStations(rng, systemIndex, logistics, command) {
+function createStations(rng: () => number, systemIndex: number, logistics: number, command: number) {
   const stationCount = 1 + Math.floor(rng() * 3);
   const stations = [];
 
@@ -92,7 +92,7 @@ function createStations(rng, systemIndex, logistics, command) {
   return stations;
 }
 
-function createInterstellarObjects(rng, systemIndex, anomaly, threat) {
+function createInterstellarObjects(rng: () => number, systemIndex: number, anomaly: number, threat: number) {
   const objectCount = 2 + Math.floor(rng() * 5);
   const objects = [];
 
@@ -117,7 +117,7 @@ function createInterstellarObjects(rng, systemIndex, anomaly, threat) {
   return objects;
 }
 
-function createAsteroidBelts(rng, threat) {
+function createAsteroidBelts(rng: () => number, threat: number) {
   const beltCount = 1 + Math.floor(rng() * 2);
   const belts = [];
 
@@ -133,7 +133,7 @@ function createAsteroidBelts(rng, threat) {
   return belts;
 }
 
-function normalizeBridgeSystem(system, index) {
+function normalizeBridgeSystem(system: any, index: number) {
   return {
     ...system,
     index,
@@ -141,7 +141,7 @@ function normalizeBridgeSystem(system, index) {
   };
 }
 
-function createProceduralSystem(rng, index, systemCount, arms, radiusScale) {
+function createProceduralSystem(rng: () => number, index: number, systemCount: number, arms: number, radiusScale: number) {
   const arm = index % arms;
   const normalized = index / systemCount;
   const spiral = normalized * Math.PI * 8.5;
@@ -199,7 +199,7 @@ function createProceduralSystem(rng, index, systemCount, arms, radiusScale) {
   return system;
 }
 
-export function buildGalaxyBlueprint(options) {
+export function buildGalaxyBlueprint(options: any) {
   const seed = options.seed || 1;
   const systemCount = options.systemCount || 420;
   const rng = createRng(seed);

@@ -132,6 +132,16 @@ type AdminWorldObject = {
   createdBy: string;
 };
 
+type ControlPlaneFeatureFlag = keyof AdminControlPlaneState["featureFlags"];
+
+type GuardedAdminAccess = {
+  actorId: string;
+  role: string | null;
+  permissions: string[];
+  controlPlane: AdminControlPlaneState;
+  isFounder: boolean;
+};
+
 function getUserId(req: Request): string {
   return (req.session as any)?.userId || "";
 }
@@ -218,6 +228,107 @@ async function requireAdminPermission(
   }
 
   return { actorId, role: access.role, permissions: access.permissions };
+}
+
+function isFounderAccess(permissions: string[]): boolean {
+  return hasAdminPermission(permissions, "all_access");
+}
+
+function getAdminSessionVerifiedAt(req: Request): number {
+  const raw = (req.session as any)?.adminAuthenticatedAt;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildControlPlanePolicySummary(
+  state: AdminControlPlaneState,
+  permissions: string[],
+  req: Request,
+) {
+  const isFounder = isFounderAccess(permissions);
+  const timeoutMinutes = Math.max(5, Math.floor(parseNumberish(state.security.privilegedSessionTimeoutMinutes, 45)));
+  const verifiedAt = getAdminSessionVerifiedAt(req);
+
+  return {
+    isFounder,
+    incidentLockdownEnabled: state.featureFlags.incidentLockdownEnabled,
+    commandApprovalMode: state.security.commandApprovalMode,
+    privilegedSessionTimeoutMinutes: timeoutMinutes,
+    features: {
+      masquerade: state.featureFlags.allowMasquerade || isFounder,
+      advancedWorldTools: state.featureFlags.advancedWorldTools || isFounder,
+      liveOpsOverrides: state.featureFlags.liveOpsOverridesEnabled || isFounder,
+      auditStreamVisible: state.featureFlags.auditStreamVisible || isFounder,
+    },
+    support: state.support,
+    requiresFounderApproval:
+      state.security.commandApprovalMode === "founder" && !isFounder,
+    requiresDualApproval:
+      state.security.commandApprovalMode === "dual" && !isFounder,
+    sessionFresh:
+      isFounder || !verifiedAt
+        ? true
+        : (Date.now() - verifiedAt) <= timeoutMinutes * 60 * 1000,
+  };
+}
+
+async function requireGuardedAdminPermission(
+  req: Request,
+  res: Response,
+  options: {
+    permission: AdminPermission;
+    featureFlag?: ControlPlaneFeatureFlag;
+    blockedByLockdown?: boolean;
+    requireElevatedApproval?: boolean;
+    enforceFreshSession?: boolean;
+    failureLabel?: string;
+  },
+): Promise<GuardedAdminAccess | null> {
+  const access = await requireAdminPermission(req, res, options.permission);
+  if (!access) {
+    return null;
+  }
+
+  const controlPlane = await loadControlPlaneState();
+  const isFounder = isFounderAccess(access.permissions);
+  const failureLabel = options.failureLabel || "Admin action";
+
+  if (options.featureFlag && !controlPlane.featureFlags[options.featureFlag] && !isFounder) {
+    res.status(423).json({ message: `${failureLabel} is disabled by control-plane policy` });
+    return null;
+  }
+
+  if (options.blockedByLockdown && controlPlane.featureFlags.incidentLockdownEnabled && !isFounder) {
+    res.status(423).json({ message: `${failureLabel} is locked during incident lockdown` });
+    return null;
+  }
+
+  if (options.requireElevatedApproval && !isFounder) {
+    if (controlPlane.security.commandApprovalMode === "founder") {
+      res.status(403).json({ message: `${failureLabel} requires founder approval under the current control-plane posture` });
+      return null;
+    }
+    if (controlPlane.security.commandApprovalMode === "dual") {
+      res.status(409).json({ message: `${failureLabel} requires dual approval under the current control-plane posture` });
+      return null;
+    }
+  }
+
+  if (options.enforceFreshSession && !isFounder) {
+    const verifiedAt = getAdminSessionVerifiedAt(req);
+    const timeoutMinutes = Math.max(5, Math.floor(parseNumberish(controlPlane.security.privilegedSessionTimeoutMinutes, 45)));
+    const expiresAt = verifiedAt + timeoutMinutes * 60 * 1000;
+    if (!verifiedAt || Date.now() > expiresAt) {
+      res.status(403).json({ message: `Privileged session expired. Sign in again through the admin login to continue ${failureLabel.toLowerCase()}.` });
+      return null;
+    }
+  }
+
+  return {
+    ...access,
+    controlPlane,
+    isFounder,
+  };
 }
 
 function parseNumberish(value: unknown, fallback: number): number {
@@ -826,7 +937,11 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/accounts", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "administrate");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "administrate",
+        blockedByLockdown: true,
+        failureLabel: "Admin account access",
+      });
       if (!access) return;
 
       const rows = await db
@@ -862,7 +977,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/accounts", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "administrate");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "administrate",
+        blockedByLockdown: true,
+        requireElevatedApproval: true,
+        enforceFreshSession: true,
+        failureLabel: "Admin account creation",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -876,17 +997,7 @@ export function registerAdminRoutes(app: Express) {
         return res.status(403).json({ message: "Only founders can assign founder or dev admin access" });
       }
 
-      const [userRow] = await db
-        .select({ id: users.id, username: users.username, email: users.email })
-        .from(users)
-        .where(eq(users.username, identifier))
-        .limit(1);
-
-      const resolvedUser = userRow || (await db
-        .select({ id: users.id, username: users.username, email: users.email })
-        .from(users)
-        .where(eq(users.email, identifier))
-        .limit(1))[0];
+      const resolvedUser = await resolveUserByIdentifier(identifier);
 
       if (!resolvedUser) {
         return res.status(404).json({ message: "User not found" });
@@ -934,7 +1045,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.delete("/api/admin/accounts/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "administrate");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "administrate",
+        blockedByLockdown: true,
+        requireElevatedApproval: true,
+        enforceFreshSession: true,
+        failureLabel: "Admin account removal",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -970,7 +1087,11 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/users", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      if (!(await requireAdminPermission(req, res, "view_only"))) return;
+      const access = await requireAdminPermission(req, res, "view_only");
+      if (!access) return;
+      const controlPlane = await loadControlPlaneState();
+      const allowDetailedVisibility =
+        controlPlane.support.playerVisibility === "detailed" || isFounderAccess(access.permissions);
 
       const moderationMap = await loadModerationMap();
 
@@ -994,10 +1115,10 @@ export function registerAdminRoutes(app: Express) {
       const formatted = rows.map((row) => ({
         id: row.id,
         name: row.username || "Unknown",
-        email: row.email || "",
+        email: allowDetailedVisibility ? (row.email || "") : "",
         role: roleMap.has(row.id) ? roleMap.get(row.id) : "user",
         status: moderationMap[row.id] || "active",
-        lastLogin: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
+        lastLogin: allowDetailedVisibility && row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
         ip: "n/a",
       }));
 
@@ -1010,7 +1131,11 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/users/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      if (!(await requireAdminPermission(req, res, "view_only"))) return;
+      const access = await requireAdminPermission(req, res, "view_only");
+      if (!access) return;
+      const controlPlane = await loadControlPlaneState();
+      const allowDetailedVisibility =
+        controlPlane.support.playerVisibility === "detailed" || isFounderAccess(access.permissions);
 
       const { userId } = req.params;
       const moderationMap = await loadModerationMap();
@@ -1040,11 +1165,11 @@ export function registerAdminRoutes(app: Express) {
       const detail = {
         id: userRow.id,
         name: userRow.username || "Unknown",
-        email: userRow.email || "",
+        email: allowDetailedVisibility ? (userRow.email || "") : "",
         role: adminRow?.role || "user",
         status: moderationMap[userId] || "active",
-        createdAt: userRow.createdAt ? new Date(userRow.createdAt).toISOString() : null,
-        lastLogin: userRow.updatedAt ? new Date(userRow.updatedAt).toISOString() : null,
+        createdAt: allowDetailedVisibility && userRow.createdAt ? new Date(userRow.createdAt).toISOString() : null,
+        lastLogin: allowDetailedVisibility && userRow.updatedAt ? new Date(userRow.updatedAt).toISOString() : null,
       };
 
       res.json({ user: detail });
@@ -1086,7 +1211,14 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/console/execute", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "liveops_override");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "liveops_override",
+        featureFlag: "liveOpsOverridesEnabled",
+        blockedByLockdown: true,
+        requireElevatedApproval: true,
+        enforceFreshSession: true,
+        failureLabel: "Admin console execution",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1185,7 +1317,12 @@ export function registerAdminRoutes(app: Express) {
 
   app.get("/api/admin/audit", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      if (!(await requireAdminPermission(req, res, "view_only"))) return;
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "view_only",
+        featureFlag: "auditStreamVisible",
+        failureLabel: "Audit stream access",
+      });
+      if (!access) return;
 
       const logs = await loadAuditLog();
       res.json({ logs: logs.slice().reverse().slice(0, 100) });
@@ -1231,7 +1368,11 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/operations/backup", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "manage");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "manage",
+        enforceFreshSession: true,
+        failureLabel: "Backup creation",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1273,7 +1414,14 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/operations/reset-universe", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "liveops_override");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "liveops_override",
+        featureFlag: "liveOpsOverridesEnabled",
+        blockedByLockdown: true,
+        requireElevatedApproval: true,
+        enforceFreshSession: true,
+        failureLabel: "Universe reset",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1336,7 +1484,14 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/operations/restart", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "liveops_override");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "liveops_override",
+        featureFlag: "liveOpsOverridesEnabled",
+        blockedByLockdown: true,
+        requireElevatedApproval: true,
+        enforceFreshSession: true,
+        failureLabel: "Server restart",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1500,6 +1655,7 @@ export function registerAdminRoutes(app: Express) {
       const access = await requireAdminPermission(req, res, "developer_tools");
       if (!access) return;
       const actorId = access.actorId;
+      const controlPlane = await loadControlPlaneState();
 
       const currentUserId = getUserId(req);
       const worldObjects = await loadWorldObjects();
@@ -1559,6 +1715,7 @@ export function registerAdminRoutes(app: Express) {
         currentUserId,
         actingAdminUserId: actorId,
         masqueradingAsUserId: currentUserId !== actorId ? currentUserId : null,
+        policy: buildControlPlanePolicySummary(controlPlane, access.permissions, req),
         recentActions,
         worldObjects: worldObjects.slice().reverse(),
         userDirectory: userRows.map((row) => ({
@@ -1575,7 +1732,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/impersonate", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "masquerade");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "masquerade",
+        featureFlag: "allowMasquerade",
+        blockedByLockdown: true,
+        enforceFreshSession: true,
+        failureLabel: "Masquerade access",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1654,7 +1817,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/grant-resources", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "developer_tools");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "developer_tools",
+        featureFlag: "advancedWorldTools",
+        blockedByLockdown: true,
+        enforceFreshSession: true,
+        failureLabel: "Resource grant",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1704,7 +1873,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/apply-preset", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "developer_tools");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "developer_tools",
+        featureFlag: "advancedWorldTools",
+        blockedByLockdown: true,
+        enforceFreshSession: true,
+        failureLabel: "Developer preset application",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1796,7 +1971,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/set-building-level", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "developer_tools");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "developer_tools",
+        featureFlag: "advancedWorldTools",
+        blockedByLockdown: true,
+        enforceFreshSession: true,
+        failureLabel: "Building editor access",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1834,7 +2015,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/set-research-level", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "developer_tools");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "developer_tools",
+        featureFlag: "advancedWorldTools",
+        blockedByLockdown: true,
+        enforceFreshSession: true,
+        failureLabel: "Research editor access",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1872,7 +2059,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/add-unit", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "developer_tools");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "developer_tools",
+        featureFlag: "advancedWorldTools",
+        blockedByLockdown: true,
+        enforceFreshSession: true,
+        failureLabel: "Unit editor access",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1913,7 +2106,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/reset-player", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "developer_tools");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "developer_tools",
+        featureFlag: "advancedWorldTools",
+        blockedByLockdown: true,
+        enforceFreshSession: true,
+        failureLabel: "Player reset access",
+      });
       if (!access) return;
       const actorId = access.actorId;
 
@@ -1960,7 +2159,13 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/developer-shortcuts/world-object", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const access = await requireAdminPermission(req, res, "world_tools");
+      const access = await requireGuardedAdminPermission(req, res, {
+        permission: "world_tools",
+        featureFlag: "advancedWorldTools",
+        blockedByLockdown: true,
+        enforceFreshSession: true,
+        failureLabel: "World object tools",
+      });
       if (!access) return;
       const actorId = access.actorId;
 

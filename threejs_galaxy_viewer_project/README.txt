@@ -45,3 +45,20 @@ Folder notes:
 - src/data/gameRuntimeBridge.js : runtime bridge snapshot derived from main-game universe, travel, planet, and client 3D source data
 - game-source/public/assets/3d : browser runtime asset template root
 - game-source/resources/3d : higher-fidelity source asset template root
+
+Stellaris-like Features:
+- Galaxy Map View: Strategic overview of the entire galaxy with star systems
+- System View: Detailed view of individual star systems with planets, stations, and ships
+- Planet View: Close-up view of planetary systems and orbital mechanics
+- Left Side Menu System: Hierarchical menus for Command, Navigation, Intelligence, Economy, Fleets, Diplomacy, and Celestials
+- Right Side Panel: Detailed information panels with system stats, capabilities, and controls
+- Multiple Camera Modes: Smooth transitions between galaxy, system, and planet perspectives
+- Ship Control Modes: Different AI behaviors for fleet management (patrol, survey, intercept, colonize)
+- Real-time HUD: Live status displays for selected systems and current view mode
+- Input Support: Keyboard, mouse, and gamepad controls for full accessibility
+
+3D Assets:
+- assets/models/obj/ship_frigate_a.obj : Frigate ship model
+- assets/models/obj/station_trade_hub_a.obj : Trade station model
+- assets/models/obj/planet_verdant_01.obj : Verdant planet model
+- asset_viewer.html : Standalone viewer for inspecting 3D models
