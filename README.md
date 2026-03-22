@@ -2,6 +2,8 @@
 
 `universe-empire-domions` is the current browser game workspace for a sci-fi empire strategy RPG built with React, Express, TypeScript, and PostgreSQL-compatible storage.
 
+Current live version: `Alpha 1.5.0`
+
 This repository now reflects the live game shell rather than the older upstream-branded documentation. The current build includes:
 
 - a title screen with `Nine Realms` intelligence on the left and `Server Health` telemetry on the right of the login panel

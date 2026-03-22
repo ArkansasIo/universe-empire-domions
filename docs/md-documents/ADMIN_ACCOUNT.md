@@ -1,141 +1,121 @@
 # Admin Account Information
 
-This document contains details about the administrative accounts configured in universe-empire-domions.
+This document reflects the current admin login paths and default permissions used by Stellar Dominion in this workspace.
 
 ---
 
-## Current Admin Account
+## Web Admin Login
 
-The active admin credentials are stored in `.admin-credentials.json`:
+The web admin login is handled by `POST /api/admin/login` in `server/basicAuth.ts`.
+
+Default bootstrap admin account:
 
 - **Username:** `admin`
-- **Password:** Not stored in plaintext (hashed with SHA-256)
-- **Password Hash:** `33d8e6060c342e82afc82c079bba90f75fe7edacab32b1c167dfdd61c15e26
-9f`
-- **Security Code:** `8F54446E`
-- **Created:** `2025-12-02T16:10:32.545Z`
-- **Last Login:** `2025-12-02T16:10:32.546Z`
+- **Email:** `admin@universee.game`
+- **Password:** `Admin@12345`
+- **Role:** `founder`
 
-### Password Management
+These values come from the bootstrap defaults in `server/basicAuth.ts` and can be overridden with:
 
-To change the admin password:
+- `ADMIN_BOOTSTRAP_USERNAME`
+- `ADMIN_BOOTSTRAP_EMAIL`
+- `ADMIN_BOOTSTRAP_PASSWORD`
+- `ADMIN_BOOTSTRAP_ROLE`
+
+### Founder Permissions
+
+The `founder` role receives the full permission set from `server/adminPermissions.ts`:
+
+- `all_access`
+- `administrate`
+- `manage`
+- `moderate`
+- `view_only`
+- `developer_tools`
+- `masquerade`
+- `world_tools`
+- `liveops_override`
+
+---
+
+## Dev Admin Login
+
+The development bypass admin account is also created from `server/basicAuth.ts`.
+
+- **Username:** `devadmin`
+- **Email:** `devadmin@universee.local`
+- **Password:** `dev-password`
+- **Role:** `devadmin`
+
+### Dev Admin Permissions
+
+The `devadmin` role includes:
+
+- `administrate`
+- `manage`
+- `moderate`
+- `view_only`
+- `developer_tools`
+- `masquerade`
+- `world_tools`
+- `liveops_override`
+
+Note: `devadmin` does not include `all_access`.
+
+---
+
+## Admin CLI Account
+
+The terminal admin CLI is launched with:
+
 ```bash
 npm run admin
 ```
 
-Then select option **"1) Change Password"** from the admin CLI menu.
+Its credentials are stored in `.admin-credentials.json` in this workspace.
 
-**Password Requirements:**
-- Minimum 6 characters (for admin CLI)
-- Confirmed by re-entering
+Current local CLI admin details:
 
----
+- **Username:** `admin_root`
+- **Password:** `admin`
+- **Security Code:** `A1B2C3D4`
+- **Created:** `2023-10-27T10:00:00.000Z`
+- **Last Login:** ``
 
-## Root Admin Configuration
-
-Default root admin settings from `shared/config/adminCredentialsConfig.ts`:
-
-- **Username:** `root_admin` (or `process.env.ROOT_ADMIN_USERNAME`)
-- **Email:** `root@stellar.local` (or `process.env.ROOT_ADMIN_EMAIL`)
-- **First Name:** `Root`
-- **Last Name:** `Administrator`
-- **Rank:** `founder`
-
-### Root Admin Password Requirements
-
-- Minimum length: 12 characters
-- Must contain uppercase letters
-- Must contain numbers
-- Must contain special characters
+This CLI account is separate from the database-backed web admin login above.
 
 ---
 
-## Admin Hierarchy
+## Role Map
 
-The system supports a 5-tier admin hierarchy:
+Current role-to-permission mapping from `server/adminPermissions.ts`:
 
-| Rank | Title | Level | Permission Level | Default Count |
-|------|-------|-------|------------------|---------------|
-| `founder` | Founder | 5 | all_access | 1 |
-| `administrator` | Administrator | 4 | administrate | 2 |
-| `suadmin` | Sub-Administrator | 3 | manage | 3 |
-| `moderator` | Moderator | 2 | moderate | 5 |
-| `submod` | Sub-Moderator | 1 | view_only | 10 |
-
----
-
-## Admin Security Settings
-
-### Login Security
-- **Two-Factor Authentication:** Disabled (default)
-- **IP Whitelist:** None (default)
-- **Login Attempt Limit:** 5 attempts
-- **Lockout Duration:** 15 minutes
-- **Session Timeout:** 60 minutes
-- **Require Password Change:** Yes
-- **Password Change Frequency:** 90 days
-
-### Account Maintenance
-- **Inactivity Warning:** 14 days
-- **Inactivity Disable:** 30 days
-- **Audit Log Retention:** 365 days
-- **Require Audit Logging:** Yes
-- **Auto-Archive Inactive Accounts:** Yes
+| Role | Permissions |
+|------|-------------|
+| `founder` | `all_access`, `administrate`, `manage`, `moderate`, `view_only`, `developer_tools`, `masquerade`, `world_tools`, `liveops_override` |
+| `devadmin` | `administrate`, `manage`, `moderate`, `view_only`, `developer_tools`, `masquerade`, `world_tools`, `liveops_override` |
+| `administrator` | `administrate`, `manage`, `moderate`, `view_only` |
+| `suadmin` | `manage`, `moderate`, `view_only`, `liveops_override` |
+| `moderator` | `moderate`, `view_only` |
+| `viewer` | `view_only` |
 
 ---
 
-## Setup Instructions
+## Important Notes
 
-### Initial Root Admin Setup
-
-1. Create root admin account with strong password
-2. Set environment variables:
-   - `ROOT_ADMIN_USERNAME`
-   - `ROOT_ADMIN_PASSWORD_HASH`
-3. Verify root admin can access admin panel
-4. Create secondary administrators
-
-### Creating New Admin Accounts
-
-Use the admin CLI tool:
-```bash
-npm run admin
-```
-
-### Password Expiration
-
-- **Root Admin:** 90 days
-- **Administrator:** 60 days
-- **Moderator:** 45 days
+- The web admin login requires a valid user record plus an admin role record.
+- The CLI admin account uses `.admin-credentials.json` and is not the same as the web admin session.
+- These defaults are suitable for local development only and should be changed for shared or production environments.
 
 ---
 
-## Promotion and Demotion Rules
+## Relevant Files
 
-- **Require Approval:** Yes
-- **Application Period Required:** No
-- **Minimum Time in Role:** 30 days
-- **Performance Rating Required:** 3.0 / 5.0
-- **Track Promotion History:** Yes
-
----
-
-## Suspension Policy
-
-- **Require Cause Documentation:** Yes
-- **Suspension Appeal Allowed:** Yes
-- **Appeal Window:** 7 days
-- **Permanent Removal Requires Vote:** Yes
-- **Voting Threshold:** 75%
+- `server/basicAuth.ts`
+- `server/adminPermissions.ts`
+- `server/adminCli.ts`
+- `.admin-credentials.json`
 
 ---
 
-## Files
-
-- **Credentials File:** `.admin-credentials.json` (git-ignored)
-- **Configuration:** `shared/config/adminCredentialsConfig.ts`
-- **Admin CLI:** `server/adminCli.ts`
-
----
-
-**Last Updated:** March 9, 2026
+**Last Updated:** March 21, 2026

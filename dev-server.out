@@ -1,22 +1,23 @@
 
-> rest-express@1.0.0 dev
+> rest-express@1.5.0 dev
 > tsx script/dev.ts
 
-[dotenv@17.3.1] injecting env (3) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
-[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.3.1] injecting env (3) from .env -- tip: ⚡️ secrets for agents: https://dotenvx.com/as2
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
 Starting full-stack development server...
-[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
-[dotenv@17.3.1] injecting env (3) from .env.local -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
-[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.3.1] injecting env (3) from .env.local -- tip: ⚙️  enable debug logging with { debug: true }
+[dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
 🔌 Connecting to database...
 Resource service started!
 Fleet service started!
 Technology service started!
 Game engine started!
 ✅ Database connection established
-3:09:43 PM ⚠️ [33m[AUTH]    [0m [1mDEV_AUTH_BYPASS is enabled; protected routes will auto-authenticate locally[0m  
-3:09:45 PM [express] [i] serving on port 5001
-3:09:45 PM ℹ️ [34m[SERVER]  [0m [1mserving on port 5001[0m  
+9:26:41 PM ⚠️ [33m[AUTH]    [0m [1mDEV_AUTH_BYPASS is enabled; protected routes will auto-authenticate locally[0m  
+[2m9:26:42 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
+9:26:42 PM [express] [i] serving on port 5001
+9:26:42 PM ℹ️ [34m[SERVER]  [0m [1mserving on port 5001[0m  
 
 [1m[34m================================================[0m
 [1m[34m SERVER STARTUP INITIALIZATION [0m
@@ -127,12 +128,12 @@ Game engine started!
   [32m*[0m Port: [36m5001[0m
   [32m*[0m Environment: [36mdevelopment[0m
   [32m*[0m Health Score: [32m93[0m
-  [32m*[0m Uptime: [36m0d 1h 1m[0m
+  [32m*[0m Uptime: [36m0d 0h 12m[0m
 
 [1mDatabase:[0m
   [32m*[0m PostgreSQL: [32mCONNECTED[0m
   [32m*[0m Host: [36mlocalhost[0m
-  [32m*[0m Connections: [36m6/901[0m
+  [32m*[0m Connections: [36m2/901[0m
   [32m*[0m Active Queries: [36m1[0m
   [32m*[0m Cache Hit Rate: [36m100%[0m
 
@@ -144,7 +145,7 @@ Game engine started!
 
 [1mResources:[0m
   [32m*[0m CPU Usage: [36m7%[0m
-  [32m*[0m Memory: [36m9893MB / 16364MB[0m
+  [32m*[0m Memory: [36m10334MB / 16364MB[0m
   [32m*[0m Disk Usage: [36m78%[0m
 
 [1mServices:[0m
@@ -158,8 +159,8 @@ Game engine started!
   [36m->[0m Health Check: [1mhttp://localhost:5001/api/status/health[0m
 
 [1mHealth Checks:[0m
-  [32m*[0m database: [32mOK[0m (1/75)
-  [32m*[0m memory: [32mOK[0m (60/70)
+  [32m*[0m database: [32mOK[0m (0/75)
+  [32m*[0m memory: [32mOK[0m (63/70)
   [32m*[0m cpu: [32mOK[0m (7/60)
   [33m*[0m diskSpace: [33mWARNING[0m (78/70)
   [32m*[0m api: [32mOK[0m (0/1)
@@ -171,489 +172,48 @@ Game engine started!
   [31m*[0m Offline / Inactive
   [33m*[0m Warning / Resetting
 
-3:10:13 PM [api] [ok] GET    /api/turns                          [200] fast 49ms
-3:10:13 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 49ms[0m  
-3:10:15 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 4ms [0.0KB]
-3:10:15 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 4ms [0.0KB][0m  
-3:10:15 PM [api] [!] POST   /api/admin/login                    [401] quick 95ms [0.0KB]
-3:10:15 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/admin/login                    [401] quick 95ms [0.0KB][0m  
-3:10:21 PM ⚠️ [33m[AUTH]    [0m [1mNo valid authentication for /api/auth/user[0m  
-3:10:21 PM [api] [!] GET    /api/auth/user                      [401] fast 2ms [0.0KB]
-3:10:21 PM ⚠️ [33m[SERVER]  [0m [1mGET    /api/auth/user                      [401] fast 2ms [0.0KB][0m  
-3:10:21 PM [api] [x] GET    /api/status/health                  [503] quick 97ms [0.9KB]
-3:10:21 PM ❌ [31m[SERVER]  [0m [1mGET    /api/status/health                  [503] quick 97ms [0.9KB][0m  
-3:10:24 PM [api] [ok] GET    /api/turns                          [200] fast 7ms
-3:10:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 7ms[0m  
-3:10:24 PM ⚠️ [33m[AUTH]    [0m [1mDev auth bypass granted for /api/account/settings[0m  
-3:10:24 PM ⚠️ [33m[AUTH]    [0m [1mDev auth bypass granted for /api/settings/player/options[0m  
-3:10:24 PM ⚠️ [33m[AUTH]    [0m [1mDev auth bypass granted for /api/admin/me[0m  
-3:10:24 PM [api] [i] GET    /api/settings/player/options        [304] quick 70ms
-3:10:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [304] quick 70ms[0m  
-3:10:24 PM [api] [i] GET    /api/account/settings               [304] quick 83ms
-3:10:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/account/settings               [304] quick 83ms[0m  
-3:10:24 PM [api] [i] GET    /api/admin/me                       [304] quick 96ms
-3:10:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/me                       [304] quick 96ms[0m  
-3:10:30 PM [api] [!] POST   /api/admin/login                    [401] fast 45ms [0.0KB]
-3:10:30 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/admin/login                    [401] fast 45ms [0.0KB][0m  
-3:10:34 PM [api] [ok] GET    /api/turns                          [200] fast 7ms
-3:10:34 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 7ms[0m  
-3:10:44 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:10:44 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-[2m[status][0m uptime=0d 1h 2m health=[33mDEGRADED[0m req=12 rps=0.20 avg=47ms cpu=0% mem=9708MB/16364MB db=6/901
-3:10:51 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 86ms [0.6KB]
-3:10:51 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 86ms [0.6KB][0m  
-3:10:54 PM [api] [ok] GET    /api/turns                          [200] fast 8ms
-3:10:54 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 8ms[0m  
-3:11:05 PM [api] [ok] GET    /api/turns                          [200] fast 8ms
-3:11:05 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 8ms[0m  
-3:11:06 PM [api] [ok] POST   /api/admin/login                    [200] quick 121ms [0.2KB]
-3:11:06 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/admin/login                    [200] quick 121ms [0.2KB][0m  
-3:11:06 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:06 PM [api] [ok] GET    /api/auth/user                      [200] fast 39ms [0.2KB]
-3:11:06 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/auth/user                      [200] fast 39ms [0.2KB][0m  
-3:11:06 PM [api] [ok] GET    /api/turns                          [200] fast 7ms
-3:11:06 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 7ms[0m  
-3:11:06 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:06 PM [api] [i] GET    /api/universe/realms                [304] fast 1ms
-3:11:06 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/universe/realms                [304] fast 1ms[0m  
-3:11:06 PM [api] [ok] GET    /api/game/state                     [200] fast 22ms [1.9KB]
-3:11:06 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/game/state                     [200] fast 22ms [1.9KB][0m  
-3:11:06 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:06 PM [api] [i] GET    /api/messages                       [304] quick 88ms
-3:11:06 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/messages                       [304] quick 88ms[0m  
-3:11:06 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:06 PM [api] [i] GET    /api/game/missions                  [304] quick 107ms
-3:11:06 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/game/missions                  [304] quick 107ms[0m  
-3:11:06 PM [api] [i] GET    /api/alliances/mine                 [304] fast 33ms
-3:11:06 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/alliances/mine                 [304] fast 33ms[0m  
-3:11:07 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:07 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:07 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:07 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:07 PM [api] [ok] GET    /api/turns                          [200] fast 12ms
-3:11:07 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 12ms[0m  
-3:11:07 PM [api] [i] GET    /api/settings/player/options        [304] fast 24ms
-3:11:07 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [304] fast 24ms[0m  
-3:11:07 PM [api] [i] GET    /api/account/settings               [304] fast 42ms
-3:11:07 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/account/settings               [304] fast 42ms[0m  
-3:11:07 PM [api] [i] GET    /api/admin/me                       [304] quick 117ms
-3:11:07 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/me                       [304] quick 117ms[0m  
-3:11:07 PM [api] [ok] GET    /api/admin/accounts                 [200] quick 122ms [0.6KB]
-3:11:07 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/accounts                 [200] quick 122ms [0.6KB][0m  
-3:11:08 PM [api] [ok] PATCH  /api/game/state                     [200] quick 52ms [2.2KB]
-3:11:08 PM ℹ️ [34m[SERVER]  [0m [1mPATCH  /api/game/state                     [200] quick 52ms [2.2KB][0m  
-3:11:13 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:13 PM [api] [ok] GET    /api/admin/operations               [200] quick 87ms [0.0KB]
-3:11:13 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/operations               [200] quick 87ms [0.0KB][0m  
-3:11:17 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:11:17 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:11:27 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:11:27 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:11:27 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:27 PM [api] [ok] GET    /api/turns                          [200] fast 8ms
-3:11:27 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 8ms[0m  
-3:11:28 PM [api] [i] GET    /api/admin/me                       [304] quick 113ms
-3:11:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/me                       [304] quick 113ms[0m  
-3:11:28 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:28 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:28 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:28 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:28 PM [api] [ok] GET    /api/admin/overview                 [200] quick 98ms [0.1KB]
-3:11:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/overview                 [200] quick 98ms [0.1KB][0m  
-3:11:28 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:28 PM [api] [ok] GET    /api/admin/audit                    [200] quick 121ms [0.0KB]
-3:11:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/audit                    [200] quick 121ms [0.0KB][0m  
-3:11:28 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:28 PM [api] [ok] GET    /api/admin/rules-content            [200] quick 68ms [1.3KB]
-3:11:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/rules-content            [200] quick 68ms [1.3KB][0m  
-3:11:28 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:28 PM [api] [ok] GET    /api/admin/server-settings          [200] quick 113ms [0.9KB]
-3:11:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/server-settings          [200] quick 113ms [0.9KB][0m  
-3:11:28 PM [api] [ok] GET    /api/admin/users                    [200] steady 187ms [0.9KB]
-3:11:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/users                    [200] steady 187ms [0.9KB][0m  
-3:11:28 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:28 PM [api] [ok] GET    /api/admin/developer-shortcuts      [200] quick 118ms [1.5KB]
-3:11:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/developer-shortcuts      [200] quick 118ms [1.5KB][0m  
-3:11:28 PM [api] [ok] GET    /api/admin/control-plane            [200] quick 90ms [0.7KB]
-3:11:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/control-plane            [200] quick 90ms [0.7KB][0m  
-3:11:28 PM [api] [ok] GET    /api/status                         [200] quick 92ms [1.9KB]
-3:11:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/status                         [200] quick 92ms [1.9KB][0m  
-3:11:36 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 91ms [0.6KB]
-3:11:36 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 91ms [0.6KB][0m  
-3:11:37 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:11:38 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:11:38 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:38 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:38 PM [api] [i] GET    /api/admin/developer-shortcuts      [304] quick 110ms
-3:11:38 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/developer-shortcuts      [304] quick 110ms[0m  
-3:11:38 PM [api] [ok] GET    /api/status                         [200] quick 103ms [1.9KB]
-3:11:38 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/status                         [200] quick 103ms [1.9KB][0m  
-3:11:43 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:43 PM [api] [i] GET    /api/admin/operations               [304] quick 84ms
-3:11:43 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/operations               [304] quick 84ms[0m  
-3:11:43 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:43 PM [api] [i] GET    /api/admin/audit                    [304] quick 75ms
-3:11:43 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/audit                    [304] quick 75ms[0m  
-3:11:43 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:43 PM [api] [i] GET    /api/admin/control-plane            [304] quick 93ms
-3:11:43 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/control-plane            [304] quick 93ms[0m  
-[2m[status][0m uptime=0d 1h 3m health=[33mDEGRADED[0m req=49 rps=0.40 avg=64ms cpu=0% mem=9645MB/16364MB db=6/901
-3:11:48 PM [api] [ok] GET    /api/turns                          [200] fast 7ms
-3:11:48 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 7ms[0m  
-3:11:48 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:48 PM [api] [i] GET    /api/admin/overview                 [304] quick 131ms
-3:11:48 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/overview                 [304] quick 131ms[0m  
-3:11:48 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:48 PM [api] [i] GET    /api/admin/users                    [304] quick 147ms
-3:11:48 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/users                    [304] quick 147ms[0m  
-3:11:48 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:48 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:48 PM [api] [i] GET    /api/admin/developer-shortcuts      [304] steady 150ms
-3:11:48 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/developer-shortcuts      [304] steady 150ms[0m  
-3:11:48 PM [api] [ok] GET    /api/status                         [200] quick 145ms [1.9KB]
-3:11:48 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/status                         [200] quick 145ms [1.9KB][0m  
-3:11:58 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:11:58 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:11:58 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:58 PM [api] [i] GET    /api/admin/operations               [304] quick 93ms
-3:11:58 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/operations               [304] quick 93ms[0m  
-3:11:58 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:58 PM [api] [i] GET    /api/admin/audit                    [304] quick 92ms
-3:11:58 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/audit                    [304] quick 92ms[0m  
-3:11:58 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:58 PM [api] [i] GET    /api/admin/control-plane            [304] quick 107ms
-3:11:58 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/control-plane            [304] quick 107ms[0m  
-3:11:58 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:58 PM [api] [i] GET    /api/admin/developer-shortcuts      [304] steady 171ms
-3:11:58 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/developer-shortcuts      [304] steady 171ms[0m  
-3:11:58 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:11:58 PM [api] [ok] GET    /api/status                         [200] quick 91ms [1.9KB]
-3:11:58 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/status                         [200] quick 91ms [1.9KB][0m  
-3:12:06 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 93ms [0.6KB]
-3:12:06 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 93ms [0.6KB][0m  
-3:12:08 PM [api] [ok] GET    /api/turns                          [200] fast 6ms
-3:12:08 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 6ms[0m  
-3:12:08 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:08 PM [api] [i] GET    /api/admin/overview                 [304] quick 123ms
-3:12:08 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/overview                 [304] quick 123ms[0m  
-3:12:08 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:08 PM [api] [i] GET    /api/admin/users                    [304] steady 155ms
-3:12:08 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/users                    [304] steady 155ms[0m  
-3:12:08 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:09 PM [api] [i] GET    /api/admin/developer-shortcuts      [304] steady 157ms
-3:12:09 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/developer-shortcuts      [304] steady 157ms[0m  
-3:12:09 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:09 PM [api] [ok] GET    /api/status                         [200] quick 104ms [1.9KB]
-3:12:09 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/status                         [200] quick 104ms [1.9KB][0m  
-3:12:13 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:13 PM [api] [i] GET    /api/admin/operations               [304] quick 102ms
-3:12:13 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/operations               [304] quick 102ms[0m  
-3:12:13 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:13 PM [api] [i] GET    /api/admin/audit                    [304] quick 106ms
-3:12:13 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/audit                    [304] quick 106ms[0m  
-3:12:13 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:13 PM [api] [i] GET    /api/admin/control-plane            [304] quick 90ms
-3:12:13 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/control-plane            [304] quick 90ms[0m  
-3:12:14 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:14 PM [api] [ok] GET    /api/logs                           [200] fast 7ms
-3:12:14 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/logs                           [200] fast 7ms[0m  
-3:12:14 PM [api] [ok] GET    /api/status                         [200] fast 25ms [1.8KB]
-3:12:14 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/status                         [200] fast 25ms [1.8KB][0m  
-3:12:14 PM [api] [x] GET    /api/status/health                  [503] quick 95ms [0.9KB]
-3:12:14 PM ❌ [31m[SERVER]  [0m [1mGET    /api/status/health                  [503] quick 95ms [0.9KB][0m  
-3:12:19 PM [api] [ok] GET    /api/logs                           [200] fast 6ms
-3:12:19 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/logs                           [200] fast 6ms[0m  
-3:12:21 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:21 PM [api] [ok] GET    /api/turns                          [200] fast 6ms
-3:12:21 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 6ms[0m  
-3:12:21 PM [api] [i] GET    /api/settings/player/options        [304] fast 21ms
-3:12:21 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [304] fast 21ms[0m  
-3:12:31 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:31 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:31 PM [api] [ok] GET    /api/status                         [200] quick 88ms [1.9KB]
-3:12:31 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/status                         [200] quick 88ms [1.9KB][0m  
-3:12:31 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:12:31 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:12:31 PM [api] [i] GET    /api/admin/developer-shortcuts      [304] steady 202ms
-3:12:31 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/developer-shortcuts      [304] steady 202ms[0m  
-3:12:36 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:36 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:36 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:36 PM [api] [i] GET    /api/admin/audit                    [304] quick 53ms
-3:12:36 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/audit                    [304] quick 53ms[0m  
-3:12:36 PM [api] [i] GET    /api/admin/operations               [304] quick 67ms
-3:12:36 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/operations               [304] quick 67ms[0m  
-3:12:36 PM [api] [i] GET    /api/admin/control-plane            [304] quick 69ms
-3:12:36 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/control-plane            [304] quick 69ms[0m  
-3:12:36 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 111ms [0.6KB]
-3:12:36 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 111ms [0.6KB][0m  
-3:12:39 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:39 PM [api] [ok] GET    /api/logs                           [200] fast 10ms
-3:12:39 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/logs                           [200] fast 10ms[0m  
-3:12:39 PM [api] [ok] GET    /api/status                         [200] fast 30ms [1.8KB]
-3:12:39 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/status                         [200] fast 30ms [1.8KB][0m  
-3:12:39 PM [api] [x] GET    /api/status/health                  [503] quick 98ms [0.9KB]
-3:12:39 PM ❌ [31m[SERVER]  [0m [1mGET    /api/status/health                  [503] quick 98ms [0.9KB][0m  
-3:12:41 PM [api] [ok] GET    /api/turns                          [200] fast 6ms
-3:12:41 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 6ms[0m  
-3:12:44 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:44 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:44 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:12:44 PM [api] [ok] GET    /api/turns                          [200] fast 9ms
-3:12:44 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 9ms[0m  
-3:12:44 PM [api] [i] GET    /api/population/snapshot            [304] fast 24ms
-3:12:44 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/population/snapshot            [304] fast 24ms[0m  
-3:12:44 PM [api] [i] GET    /api/battle-pass/overview           [304] fast 29ms
-3:12:44 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/battle-pass/overview           [304] fast 29ms[0m  
-3:12:44 PM [api] [i] GET    /api/season-pass/progression        [304] fast 30ms
-3:12:44 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/season-pass/progression        [304] fast 30ms[0m  
-[2m[status][0m uptime=0d 1h 4m health=[33mDEGRADED[0m req=90 rps=0.50 avg=69ms cpu=1% mem=9666MB/16364MB db=7/901
-3:12:47 PM [api] [ok] POST   /api/auth/logout                    [200] fast 1ms [0.0KB]
-3:12:47 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/auth/logout                    [200] fast 1ms [0.0KB][0m  
-3:12:48 PM ⚠️ [33m[AUTH]    [0m [1mNo valid authentication for /api/auth/user[0m  
-3:12:48 PM [api] [!] GET    /api/auth/user                      [401] fast 2ms [0.0KB]
-3:12:48 PM ⚠️ [33m[SERVER]  [0m [1mGET    /api/auth/user                      [401] fast 2ms [0.0KB][0m  
-3:12:48 PM [api] [x] GET    /api/status/health                  [503] fast 47ms [1.0KB]
-3:12:48 PM ❌ [31m[SERVER]  [0m [1mGET    /api/status/health                  [503] fast 47ms [1.0KB][0m  
-3:13:18 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 0ms [0.0KB]
-3:13:18 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 0ms [0.0KB][0m  
-3:13:18 PM [api] [x] GET    /api/status/health                  [503] quick 90ms [1.0KB]
-3:13:18 PM ❌ [31m[SERVER]  [0m [1mGET    /api/status/health                  [503] quick 90ms [1.0KB][0m  
-[2m[status][0m uptime=0d 1h 5m health=[33mDEGRADED[0m req=95 rps=0.39 avg=67ms cpu=0% mem=9690MB/16364MB db=7/901
-3:13:48 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 0ms [0.0KB]
-3:13:48 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 0ms [0.0KB][0m  
-3:13:48 PM [api] [x] GET    /api/status/health                  [503] fast 36ms [0.9KB]
-3:13:48 PM ❌ [31m[SERVER]  [0m [1mGET    /api/status/health                  [503] fast 36ms [0.9KB][0m  
-3:13:53 PM [api] [ok] GET    /api/turns                          [200] fast 9ms
-3:13:53 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 9ms[0m  
-3:13:53 PM ⚠️ [33m[AUTH]    [0m [1mDev auth bypass granted for /api/settings/player/options[0m  
-3:13:53 PM ⚠️ [33m[AUTH]    [0m [1mDev auth bypass granted for /api/battle-pass/overview[0m  
-3:13:53 PM ⚠️ [33m[AUTH]    [0m [1mDev auth bypass granted for /api/population/snapshot[0m  
-3:13:53 PM ⚠️ [33m[AUTH]    [0m [1mDev auth bypass granted for /api/season-pass/progression[0m  
-3:13:53 PM [api] [i] GET    /api/settings/player/options        [304] quick 64ms
-3:13:53 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [304] quick 64ms[0m  
-3:13:53 PM [api] [i] GET    /api/battle-pass/overview           [304] quick 76ms
-3:13:53 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/battle-pass/overview           [304] quick 76ms[0m  
-3:13:53 PM [api] [i] GET    /api/population/snapshot            [304] quick 80ms
-3:13:53 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/population/snapshot            [304] quick 80ms[0m  
-3:13:53 PM [api] [i] GET    /api/season-pass/progression        [304] quick 84ms
-3:13:53 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/season-pass/progression        [304] quick 84ms[0m  
-3:14:03 PM [api] [ok] GET    /api/turns                          [200] fast 4ms
-3:14:03 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 4ms[0m  
-3:14:09 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:09 PM [api] [ok] GET    /api/diagnostics/issues             [200] fast 2ms [0.0KB]
-3:14:09 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/diagnostics/issues             [200] fast 2ms [0.0KB][0m  
-3:14:09 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:09 PM [api] [ok] GET    /api/diagnostics/warnings           [200] fast 1ms [0.0KB]
-3:14:09 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/diagnostics/warnings           [200] fast 1ms [0.0KB][0m  
-3:14:09 PM [api] [ok] GET    /api/turns                          [200] fast 9ms
-3:14:09 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 9ms[0m  
-3:14:09 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:09 PM [api] [ok] GET    /api/diagnostics/debug              [200] fast 2ms [0.0KB]
-3:14:09 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/diagnostics/debug              [200] fast 2ms [0.0KB][0m  
-3:14:18 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 139ms [0.6KB]
-3:14:18 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 139ms [0.6KB][0m  
-3:14:19 PM [api] [ok] GET    /api/turns                          [200] fast 4ms
-3:14:19 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 4ms[0m  
-3:14:20 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:20 PM [api] [i] GET    /api/diagnostics/debug              [304] fast 2ms
-3:14:20 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/diagnostics/debug              [304] fast 2ms[0m  
-3:14:24 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:24 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:24 PM [api] [ok] GET    /api/turns                          [200] fast 7ms
-3:14:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 7ms[0m  
-3:14:24 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:24 PM [api] [i] GET    /api/settings/player/options        [304] fast 20ms
-3:14:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [304] fast 20ms[0m  
-3:14:24 PM [api] [i] GET    /api/account/settings               [304] quick 122ms
-3:14:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/account/settings               [304] quick 122ms[0m  
-3:14:24 PM [api] [i] GET    /api/admin/me                       [304] quick 118ms
-3:14:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/admin/me                       [304] quick 118ms[0m  
-3:14:34 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:14:34 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:14:38 PM [api] [!] POST   /api/admin/login                    [401] quick 96ms [0.0KB]
-3:14:38 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/admin/login                    [401] quick 96ms [0.0KB][0m  
-3:14:44 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:14:44 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-[2m[status][0m uptime=0d 1h 6m health=[33mDEGRADED[0m req=117 rps=0.39 avg=62ms cpu=0% mem=9741MB/16364MB db=7/901
-3:14:48 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 92ms [0.6KB]
-3:14:48 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 92ms [0.6KB][0m  
-3:14:55 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:14:55 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:14:56 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:56 PM [api] [ok] PUT    /api/settings/player/options        [200] fast 39ms [0.6KB]
-3:14:56 PM ℹ️ [34m[SERVER]  [0m [1mPUT    /api/settings/player/options        [200] fast 39ms [0.6KB][0m  
-3:14:57 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:57 PM [api] [ok] GET    /api/settings/player/options        [200] fast 27ms [0.6KB]
-3:14:57 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [200] fast 27ms [0.6KB][0m  
-3:14:59 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:59 PM [api] [ok] PUT    /api/settings/player/options        [200] fast 49ms [0.6KB]
-3:14:59 PM ℹ️ [34m[SERVER]  [0m [1mPUT    /api/settings/player/options        [200] fast 49ms [0.6KB][0m  
-3:14:59 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:14:59 PM [api] [ok] GET    /api/settings/player/options        [200] fast 20ms [0.6KB]
-3:14:59 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [200] fast 20ms [0.6KB][0m  
-3:15:05 PM [api] [ok] GET    /api/turns                          [200] fast 4ms
-3:15:05 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 4ms[0m  
-3:15:15 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:15:15 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:15:18 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 140ms [0.6KB]
-3:15:18 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 140ms [0.6KB][0m  
-3:15:20 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:15:20 PM [api] [ok] GET    /api/turns                          [200] fast 8ms
-3:15:20 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 8ms[0m  
-3:15:20 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:15:20 PM [api] [ok] GET    /api/market/history                 [200] fast 23ms [0.0KB]
-3:15:20 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/market/history                 [200] fast 23ms [0.0KB][0m  
-3:15:20 PM [api] [ok] GET    /api/market/price-trends            [200] quick 79ms [0.0KB]
-3:15:20 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/market/price-trends            [200] quick 79ms [0.0KB][0m  
-3:15:25 PM [api] [ok] GET    /api/auctions/user/listings         [200] fast 31ms [0.0KB]
-3:15:25 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/auctions/user/listings         [200] fast 31ms [0.0KB][0m  
-3:15:25 PM [api] [ok] GET    /api/auctions                       [200] quick 52ms [0.0KB]
-3:15:25 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/auctions                       [200] quick 52ms [0.0KB][0m  
-3:15:25 PM [api] [ok] GET    /api/auctions/user/bids             [200] quick 123ms [0.0KB]
-3:15:25 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/auctions/user/bids             [200] quick 123ms [0.0KB][0m  
-3:15:30 PM [api] [ok] GET    /api/turns                          [200] fast 4ms
-3:15:30 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 4ms[0m  
-3:15:36 PM [api] [ok] GET    /api/turns                          [200] fast 6ms
-3:15:36 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 6ms[0m  
-3:15:36 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:15:36 PM [api] [i] GET    /api/settings/player/options        [304] quick 83ms
-3:15:36 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [304] quick 83ms[0m  
-[2m[status][0m uptime=0d 1h 7m health=[33mDEGRADED[0m req=135 rps=0.37 avg=59ms cpu=0% mem=9799MB/16364MB db=7/901
-3:15:45 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:15:45 PM [api] [ok] GET    /api/storefront/catalog             [200] fast 2ms [8.3KB]
-3:15:45 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/storefront/catalog             [200] fast 2ms [8.3KB][0m  
-3:15:45 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:15:45 PM [api] [ok] GET    /api/turns                          [200] fast 8ms
-3:15:45 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 8ms[0m  
-3:15:45 PM [api] [ok] GET    /api/storefront/balance             [200] fast 26ms [0.1KB]
-3:15:45 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/storefront/balance             [200] fast 26ms [0.1KB][0m  
-3:15:45 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:15:45 PM [api] [ok] POST   /api/storefront/preview-checkout    [200] fast 26ms [0.4KB]
-3:15:45 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/storefront/preview-checkout    [200] fast 26ms [0.4KB][0m  
-3:15:48 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 125ms [0.6KB]
-3:15:48 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 125ms [0.6KB][0m  
-3:15:52 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:15:52 PM [api] [ok] POST   /api/storefront/preview-checkout    [200] fast 23ms [0.4KB]
-3:15:52 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/storefront/preview-checkout    [200] fast 23ms [0.4KB][0m  
-3:15:53 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:15:53 PM [api] [ok] POST   /api/storefront/preview-checkout    [200] fast 25ms [0.4KB]
-3:15:53 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/storefront/preview-checkout    [200] fast 25ms [0.4KB][0m  
-3:15:55 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:15:55 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:16:01 PM [api] [ok] GET    /api/turns                          [200] fast 4ms
-3:16:01 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 4ms[0m  
-3:16:05 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:05 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:16:05 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:16:05 PM [api] [ok] GET    /api/season-pass/overview           [200] quick 121ms [20.9KB]
-3:16:05 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/season-pass/overview           [200] quick 121ms [20.9KB][0m  
-3:16:13 PM [api] [ok] GET    /api/turns                          [200] fast 6ms
-3:16:13 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 6ms[0m  
-3:16:13 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:13 PM [api] [i] GET    /api/settings/player/options        [304] fast 20ms
-3:16:13 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [304] fast 20ms[0m  
-3:16:17 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:17 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:17 PM [api] [ok] GET    /api/turns                          [200] fast 6ms
-3:16:17 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 6ms[0m  
-3:16:17 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:17 PM [api] [ok] GET    /api/story/campaign                 [200] steady 241ms [2.2KB]
-3:16:17 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/story/campaign                 [200] steady 241ms [2.2KB][0m  
-3:16:17 PM [api] [ok] GET    /api/story/missions                 [200] steady 267ms [119.2KB]
-3:16:17 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/story/missions                 [200] steady 267ms [119.2KB][0m  
-3:16:17 PM [api] [ok] GET    /api/story/missions                 [200] steady 285ms [1444.0KB]
-3:16:17 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/story/missions                 [200] steady 285ms [1444.0KB][0m  
-3:16:18 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 102ms [0.6KB]
-3:16:18 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 102ms [0.6KB][0m  
-3:16:27 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:27 PM [api] [ok] GET    /api/turns                          [200] fast 4ms
-3:16:27 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 4ms[0m  
-3:16:27 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:27 PM [api] [ok] GET    /api/friends/requests               [200] fast 20ms [0.0KB]
-3:16:27 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/friends/requests               [200] fast 20ms [0.0KB][0m  
-3:16:27 PM [api] [ok] GET    /api/friends                        [200] fast 29ms [0.0KB]
-3:16:27 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/friends                        [200] fast 29ms [0.0KB][0m  
-3:16:37 PM [api] [ok] GET    /api/turns                          [200] fast 7ms
-3:16:37 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 7ms[0m  
-3:16:37 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:37 PM [api] [ok] GET    /api/trades/incoming                [200] fast 24ms [0.0KB]
-3:16:37 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/trades/incoming                [200] fast 24ms [0.0KB][0m  
-3:16:37 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:37 PM [api] [ok] GET    /api/trades/outgoing                [200] fast 24ms [0.0KB]
-3:16:37 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/trades/outgoing                [200] fast 24ms [0.0KB][0m  
-3:16:37 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:37 PM [api] [ok] GET    /api/trades/history                 [200] fast 21ms [0.0KB]
-3:16:37 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/trades/history                 [200] fast 21ms [0.0KB][0m  
-[2m[status][0m uptime=0d 1h 8m health=[33mDEGRADED[0m req=160 rps=0.38 avg=59ms cpu=0% mem=9674MB/16364MB db=7/901
-3:16:47 PM [api] [ok] GET    /api/turns                          [200] fast 4ms
-3:16:47 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 4ms[0m  
-3:16:48 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 123ms [0.6KB]
-3:16:48 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 123ms [0.6KB][0m  
-3:16:52 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:52 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:16:52 PM [api] [ok] GET    /api/turns                          [200] fast 7ms
-3:16:52 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 7ms[0m  
-3:16:52 PM [api] [i] GET    /api/settings/player/options        [304] fast 20ms
-3:16:52 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [304] fast 20ms[0m  
-3:16:52 PM [api] [ok] GET    /api/alliances                      [200] fast 21ms [0.0KB]
-3:16:52 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/alliances                      [200] fast 21ms [0.0KB][0m  
-3:16:54 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:16:54 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:16:54 PM [api] [ok] GET    /api/leaderboard/empireValue        [200] fast 43ms [0.5KB]
-3:16:54 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/leaderboard/empireValue        [200] fast 43ms [0.5KB][0m  
-3:16:54 PM [api] [ok] GET    /api/leaderboard/ranks/all          [200] quick 51ms [0.8KB]
-3:16:54 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/leaderboard/ranks/all          [200] quick 51ms [0.8KB][0m  
-3:17:04 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:17:04 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:17:05 PM [api] [ok] GET    /api/leaderboard/fleetPower         [200] quick 116ms [0.5KB]
-3:17:05 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/leaderboard/fleetPower         [200] quick 116ms [0.5KB][0m  
-3:17:06 PM [api] [ok] GET    /api/leaderboard/researchProgress   [200] quick 75ms [0.5KB]
-3:17:06 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/leaderboard/researchProgress   [200] quick 75ms [0.5KB][0m  
-3:17:06 PM [api] [ok] GET    /api/leaderboard/resourceProduction [200] quick 66ms [0.5KB]
-3:17:06 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/leaderboard/resourceProduction [200] quick 66ms [0.5KB][0m  
-3:17:07 PM [api] [ok] GET    /api/leaderboard/combatVictories    [200] quick 55ms [0.5KB]
-3:17:07 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/leaderboard/combatVictories    [200] quick 55ms [0.5KB][0m  
-3:17:07 PM [api] [ok] GET    /api/leaderboard/explorationDiscoveries [200] quick 63ms [0.5KB]
-3:17:07 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/leaderboard/explorationDiscoveries [200] quick 63ms [0.5KB][0m  
-3:17:11 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:17:11 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:17:18 PM [api] [ok] POST   /api/game/sync-tick                 [200] steady 155ms [0.6KB]
-3:17:18 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] steady 155ms [0.6KB][0m  
-3:17:21 PM [api] [ok] GET    /api/turns                          [200] fast 4ms
-3:17:21 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 4ms[0m  
-3:17:24 PM ℹ️ [34m[AUTH]    [0m [1mSession auth successful for userId: 12d093ab-08fb-4ded-967f-64bba3ee96b2[0m  
-3:17:24 PM [api] [i] GET    /api/planets                        [304] fast 3ms
-3:17:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/planets                        [304] fast 3ms[0m  
-3:17:24 PM [api] [ok] GET    /api/turns                          [200] fast 11ms
-3:17:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 11ms[0m  
-3:17:24 PM [api] [i] GET    /api/settings/player/options        [304] fast 20ms
-3:17:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/settings/player/options        [304] fast 20ms[0m  
-3:17:24 PM [api] [i] GET    /api/megastructures/player          [304] quick 87ms
-3:17:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/megastructures/player          [304] quick 87ms[0m  
-3:17:24 PM [api] [i] GET    /api/planets/1/sub-planes           [304] fast 2ms
-3:17:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/planets/1/sub-planes           [304] fast 2ms[0m  
-3:17:24 PM [api] [i] GET    /api/planets/1/defense              [304] fast 2ms
-3:17:24 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/planets/1/defense              [304] fast 2ms[0m  
-3:17:28 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:17:28 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:17:32 PM [api] [i] GET    /api/planets/types                  [304] fast 2ms
-3:17:32 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/planets/types                  [304] fast 2ms[0m  
-3:17:32 PM [api] [ok] GET    /api/turns                          [200] fast 8ms
-3:17:32 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 8ms[0m  
-3:17:32 PM [api] [i] GET    /api/travel/player/state            [304] fast 20ms
-3:17:32 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/travel/player/state            [304] fast 20ms[0m  
-3:17:42 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:17:42 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-[2m[status][0m uptime=0d 1h 9m health=[33mDEGRADED[0m req=188 rps=0.39 avg=55ms cpu=0% mem=9702MB/16364MB db=7/901
-3:17:48 PM [api] [ok] POST   /api/game/sync-tick                 [200] quick 101ms [0.6KB]
-3:17:48 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [200] quick 101ms [0.6KB][0m  
-3:17:52 PM [api] [ok] GET    /api/turns                          [200] fast 5ms
-3:17:52 PM ℹ️ [34m[SERVER]  [0m [1mGET    /api/turns                          [200] fast 5ms[0m  
-3:17:53 PM [api] [ok] POST   /api/auth/logout                    [200] fast 1ms [0.0KB]
-3:17:53 PM ℹ️ [34m[SERVER]  [0m [1mPOST   /api/auth/logout                    [200] fast 1ms [0.0KB][0m  
-3:17:53 PM ⚠️ [33m[AUTH]    [0m [1mNo valid authentication for /api/auth/user[0m  
-3:17:53 PM [api] [!] GET    /api/auth/user                      [401] fast 2ms [0.0KB]
-3:17:53 PM ⚠️ [33m[SERVER]  [0m [1mGET    /api/auth/user                      [401] fast 2ms [0.0KB][0m  
-3:17:54 PM [api] [x] GET    /api/status/health                  [503] fast 23ms [0.9KB]
-3:17:54 PM ❌ [31m[SERVER]  [0m [1mGET    /api/status/health                  [503] fast 23ms [0.9KB][0m  
+9:26:51 PM ⚠️ [33m[AUTH]    [0m [1mNo valid authentication for /api/auth/user[0m  
+9:26:52 PM [api] [!] GET    /api/auth/user                      [401] fast 3ms [0.0KB]
+9:26:52 PM ⚠️ [33m[SERVER]  [0m [1mGET    /api/auth/user                      [401] fast 3ms [0.0KB][0m  
+9:26:52 PM [api] [x] GET    /api/status/health                  [503] fast 40ms [0.9KB]
+9:26:52 PM ❌ [31m[SERVER]  [0m [1mGET    /api/status/health                  [503] fast 40ms [0.9KB][0m  
+9:27:22 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 1ms [0.0KB]
+9:27:22 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 1ms [0.0KB][0m  
+9:27:22 PM [api] [x] GET    /api/status/health                  [503] quick 92ms [0.9KB]
+9:27:22 PM ❌ [31m[SERVER]  [0m [1mGET    /api/status/health                  [503] quick 92ms [0.9KB][0m  
+[2m[status][0m uptime=0d 0h 13m health=[33mDEGRADED[0m req=4 rps=0.06 avg=34ms cpu=0% mem=10531MB/16364MB db=4/901
+9:27:52 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 1ms [0.0KB]
+9:27:52 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 1ms [0.0KB][0m  
+9:28:22 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 0ms [0.0KB]
+9:28:22 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 0ms [0.0KB][0m  
+[2m[status][0m uptime=0d 0h 14m health=[33mDEGRADED[0m req=6 rps=0.05 avg=23ms cpu=0% mem=10590MB/16364MB db=4/901
+9:28:52 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 1ms [0.0KB]
+9:28:52 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 1ms [0.0KB][0m  
+9:29:22 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 1ms [0.0KB]
+9:29:22 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 1ms [0.0KB][0m  
+[2m[status][0m uptime=0d 0h 15m health=[33mDEGRADED[0m req=8 rps=0.04 avg=17ms cpu=0% mem=10537MB/16364MB db=4/901
+9:29:52 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 1ms [0.0KB]
+9:29:52 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 1ms [0.0KB][0m  
+9:30:22 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 0ms [0.0KB]
+9:30:22 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 0ms [0.0KB][0m  
+[2m[status][0m uptime=0d 0h 16m health=[33mDEGRADED[0m req=10 rps=0.04 avg=14ms cpu=0% mem=10864MB/16364MB db=4/901
+9:30:52 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 0ms [0.0KB]
+9:30:52 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 0ms [0.0KB][0m  
+9:31:22 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 0ms [0.0KB]
+9:31:22 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 0ms [0.0KB][0m  
+[2m[status][0m uptime=0d 0h 17m health=[33mDEGRADED[0m req=12 rps=0.04 avg=12ms cpu=0% mem=9392MB/16364MB db=4/901
+9:31:52 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 1ms [0.0KB]
+9:31:52 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 1ms [0.0KB][0m  
+9:32:22 PM [api] [!] POST   /api/game/sync-tick                 [401] fast 0ms [0.0KB]
+9:32:22 PM ⚠️ [33m[SERVER]  [0m [1mPOST   /api/game/sync-tick                 [401] fast 0ms [0.0KB][0m  
+[2m[status][0m uptime=0d 0h 18m health=[33mDEGRADED[0m req=14 rps=0.04 avg=10ms cpu=0% mem=9421MB/16364MB db=4/901
+[2m[status][0m uptime=0d 0h 19m health=[33mDEGRADED[0m req=14 rps=0.03 avg=10ms cpu=0% mem=9416MB/16364MB db=4/901
+[2m[status][0m uptime=0d 0h 20m health=[33mDEGRADED[0m req=14 rps=0.03 avg=10ms cpu=0% mem=9652MB/16364MB db=4/901
+[2m[status][0m uptime=0d 0h 21m health=[33mDEGRADED[0m req=14 rps=0.03 avg=10ms cpu=0% mem=9103MB/16364MB db=4/901
+[2m[status][0m uptime=0d 0h 22m health=[33mDEGRADED[0m req=14 rps=0.02 avg=10ms cpu=0% mem=8908MB/16364MB db=5/901
+[2m[status][0m uptime=0d 0h 23m health=[33mDEGRADED[0m req=14 rps=0.02 avg=10ms cpu=0% mem=8893MB/16364MB db=5/901
+[2m[status][0m uptime=0d 0h 24m health=[33mDEGRADED[0m req=14 rps=0.02 avg=10ms cpu=0% mem=8893MB/16364MB db=5/901
+[2m[status][0m uptime=0d 0h 25m health=[33mDEGRADED[0m req=14 rps=0.02 avg=10ms cpu=0% mem=9008MB/16364MB db=5/901
+[2m[status][0m uptime=0d 0h 26m health=[33mDEGRADED[0m req=14 rps=0.02 avg=10ms cpu=0% mem=8906MB/16364MB db=5/901
+[2m[status][0m uptime=0d 0h 27m health=[33mDEGRADED[0m req=14 rps=0.02 avg=10ms cpu=0% mem=8832MB/16364MB db=5/901
+[2m[status][0m uptime=0d 0h 28m health=[33mDEGRADED[0m req=14 rps=0.01 avg=10ms cpu=0% mem=8742MB/16364MB db=5/901

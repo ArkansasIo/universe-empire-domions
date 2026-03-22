@@ -28,7 +28,7 @@ import { Link } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MENU_ASSETS } from "@shared/config";
 
-const GAME_VERSION = "1.0.0";
+const GAME_VERSION = "Alpha 1.5.0";
 const UNIVERSE_ID = "Nexus-Alpha";
 const TEMP_THEME_IMAGE = "/theme-temp.png";
 

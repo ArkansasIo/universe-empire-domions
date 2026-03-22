@@ -9,6 +9,15 @@ import { adminUsers, users, type User } from "../shared/schema";
 import { eq, ilike, or } from "drizzle-orm";
 import { getRolePermissions, normalizeAdminRole } from "./adminPermissions";
 
+const NON_ADMIN_USERNAMES = new Set(["player1", "player2", "player3"]);
+const NON_ADMIN_EMAIL_SUFFIX = "@universe-empire-domions.game";
+
+function isProtectedNonAdminAccount(user: Pick<User, "username" | "email"> | null | undefined) {
+  const username = String(user?.username || "").trim().toLowerCase();
+  const email = String(user?.email || "").trim().toLowerCase();
+  return NON_ADMIN_USERNAMES.has(username) || NON_ADMIN_USERNAMES.has(email.replace(NON_ADMIN_EMAIL_SUFFIX, ""));
+}
+
 function isDevAuthBypassEnabled() {
   const raw = (process.env.DEV_AUTH_BYPASS || "").trim().toLowerCase();
   const isDevelopment = process.env.NODE_ENV === "development";
@@ -140,6 +149,16 @@ async function syncDevPasswordIfNeeded(
 
 async function resolveAdminStatus(userId: string): Promise<{ isAdmin: boolean; adminRole: string | null }> {
   if (!userId) {
+    return { isAdmin: false, adminRole: null };
+  }
+
+  const user = await storage.getUser(userId);
+  if (!user) {
+    return { isAdmin: false, adminRole: null };
+  }
+
+  if (isProtectedNonAdminAccount(user)) {
+    await db.delete(adminUsers).where(eq(adminUsers.userId, userId));
     return { isAdmin: false, adminRole: null };
   }
 

@@ -793,12 +793,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setNeedsSetup(false);
       setIsInitialized(false);
       setUsername("");
+      setIsAdmin(false);
+      setIsActualAdmin(false);
+      setAdminRole(null);
       return;
     }
 
     setIsLoggedIn(true);
     setUsername(authUser.firstName || authUser.email?.split('@')[0] || authUser.username || 'Commander');
     setIsActualAdmin(authUser.isAdmin || false);
+    if (!authUser.isAdmin) {
+      setIsAdmin(false);
+    }
     setAdminRole(authUser.adminRole || null);
   }, [authUser, authLoading]);
 
@@ -1510,6 +1516,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       console.error("Logout API failed", e);
     }
     setIsLoggedIn(false);
+    setIsAdmin(false);
+    setIsActualAdmin(false);
+    setAdminRole(null);
     setUsername("");
     setIsInitialized(false);
     localStorage.removeItem('stellar_username');

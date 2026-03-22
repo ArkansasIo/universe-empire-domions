@@ -16,7 +16,7 @@ import {
   User as UserIcon, Languages, Zap, Users, Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -48,6 +48,7 @@ type PlayerOptions = {
    };
    display: {
       darkMode: boolean;
+      themePreset: "black-style" | "og-white";
       compactView: boolean;
       showAnimations: boolean;
       showResourceRates: boolean;
@@ -118,6 +119,8 @@ type AdminAccountsResponse = {
    accounts: AdminAccountRecord[];
 };
 
+type ThemePreset = "black-style" | "og-white";
+
 const ADMIN_ROLE_OPTIONS = [
    { value: "administrator", label: "Admin", description: "Server controls, moderation, and admin account provisioning." },
    { value: "devadmin", label: "Dev Admin", description: "Admin access plus developer shortcuts, masquerade, and world tools." },
@@ -137,6 +140,32 @@ const PERMISSION_LABELS: Record<string, string> = {
    world_tools: "World Tools",
    liveops_override: "LiveOps Override",
 };
+
+const THEME_PRESET_OPTIONS: Array<{
+   value: ThemePreset;
+   label: string;
+   description: string;
+   helper: string;
+   icon: typeof Moon;
+   previewClassName: string;
+}> = [
+   {
+      value: "black-style",
+      label: "Black Style Theme",
+      description: "The current dark command-shell look.",
+      helper: "Neon accents, dark panels, and the current black interface style.",
+      icon: Moon,
+      previewClassName: "border-cyan-400/50 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.18),transparent_38%),linear-gradient(180deg,#182331,#070b11)]",
+   },
+   {
+      value: "og-white",
+      label: "OG White Theme",
+      description: "The original brighter white interface look.",
+      helper: "Light panels, pale chrome, and the earlier OG white presentation.",
+      icon: Sun,
+      previewClassName: "border-slate-200 bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.14),transparent_38%),linear-gradient(180deg,#f8fbff,#e8eef7)]",
+   },
+];
 
 function formatAdminRole(role: string | null | undefined): string {
    const normalized = String(role || "viewer").trim().toLowerCase();
@@ -189,6 +218,8 @@ export default function Settings() {
    const [newAdminIdentifier, setNewAdminIdentifier] = useState("");
    const [newAdminRole, setNewAdminRole] = useState("administrator");
    const { toast } = useToast();
+   const lastAccountSettingsKeyRef = useRef<string>("");
+   const lastPlayerOptionsKeyRef = useRef<string>("");
   
   const [notifications, setNotifications] = useState({
     attackAlerts: true,
@@ -202,7 +233,8 @@ export default function Settings() {
   });
   
   const [displaySettings, setDisplaySettings] = useState({
-    darkMode: false,
+    darkMode: true,
+    themePreset: "black-style" as ThemePreset,
     compactView: false,
     showAnimations: true,
     showResourceRates: true,
@@ -272,6 +304,12 @@ export default function Settings() {
          return;
       }
 
+      const nextAccountSettingsKey = JSON.stringify(accountSettings);
+      if (lastAccountSettingsKeyRef.current === nextAccountSettingsKey) {
+         return;
+      }
+      lastAccountSettingsKeyRef.current = nextAccountSettingsKey;
+
       setDisplayName(accountSettings.displayName || username || "Commander");
       setCommanderTitle(accountSettings.commanderTitle || "commander");
       setBioMessage(accountSettings.bioMessage || "");
@@ -286,9 +324,16 @@ export default function Settings() {
          return;
       }
 
+      const nextPlayerOptionsKey = JSON.stringify(playerOptions);
+      if (lastPlayerOptionsKeyRef.current === nextPlayerOptionsKey) {
+         return;
+      }
+      lastPlayerOptionsKeyRef.current = nextPlayerOptionsKey;
+
       setNotifications(playerOptions.notifications);
       setDisplaySettings({
-         darkMode: playerOptions.display.darkMode,
+         darkMode: playerOptions.display.themePreset === "black-style",
+         themePreset: playerOptions.display.themePreset || "black-style",
          compactView: playerOptions.display.compactView,
          showAnimations: playerOptions.display.showAnimations,
          showResourceRates: playerOptions.display.showResourceRates,
@@ -628,7 +673,7 @@ export default function Settings() {
         <Tabs defaultValue="account" className="w-full">
            <TabsList className="bg-white border border-slate-200 h-12 w-full justify-start overflow-x-auto">
               <TabsTrigger value="account" className="font-orbitron"><UserIcon className="w-4 h-4 mr-2" /> Account</TabsTrigger>
-              <TabsTrigger value="admin-access" className={cn("font-orbitron", isActualAdmin ? "text-red-600" : "")}><Shield className="w-4 h-4 mr-2" /> Admin Access</TabsTrigger>
+              {isActualAdmin && <TabsTrigger value="admin-access" className={cn("font-orbitron", "text-red-600")}><Shield className="w-4 h-4 mr-2" /> Admin Access</TabsTrigger>}
               <TabsTrigger value="notifications" className="font-orbitron"><Bell className="w-4 h-4 mr-2" /> Notifications</TabsTrigger>
               <TabsTrigger value="display" className="font-orbitron"><Monitor className="w-4 h-4 mr-2" /> Display</TabsTrigger>
               <TabsTrigger value="sound" className="font-orbitron"><Volume2 className="w-4 h-4 mr-2" /> Sound</TabsTrigger>
@@ -873,19 +918,47 @@ export default function Settings() {
                           <Palette className="w-5 h-5 text-purple-600" /> Theme & Appearance
                        </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100">
-                          <div className="flex items-center gap-3">
-                             <Moon className="w-5 h-5 text-slate-400" />
-                             <div>
-                                <div className="font-medium text-slate-900">Dark Mode</div>
-                                <div className="text-xs text-slate-500">Use dark theme for reduced eye strain</div>
-                             </div>
-                          </div>
-                          <Switch 
-                             checked={displaySettings.darkMode}
-                             onCheckedChange={(v) => setDisplaySettings({...displaySettings, darkMode: v})}
-                          />
+                   <CardContent className="space-y-4">
+                       <div className="space-y-3">
+                          {THEME_PRESET_OPTIONS.map((themeOption) => {
+                             const ThemeIcon = themeOption.icon;
+                             const isSelected = displaySettings.themePreset === themeOption.value;
+
+                             return (
+                                <button
+                                   key={themeOption.value}
+                                   type="button"
+                                   className={cn(
+                                      "w-full rounded-xl border p-4 text-left transition-all",
+                                      isSelected
+                                         ? "border-primary bg-primary/5 shadow-sm ring-2 ring-primary/20"
+                                         : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100/80",
+                                   )}
+                                   onClick={() =>
+                                      setDisplaySettings({
+                                         ...displaySettings,
+                                         themePreset: themeOption.value,
+                                         darkMode: themeOption.value === "black-style",
+                                      })
+                                   }
+                                >
+                                   <div className="flex items-start justify-between gap-3">
+                                      <div className="flex items-start gap-3">
+                                         <div className="rounded-lg border border-slate-200 bg-white p-2">
+                                            <ThemeIcon className="w-5 h-5 text-slate-700" />
+                                         </div>
+                                         <div>
+                                            <div className="font-medium text-slate-900">{themeOption.label}</div>
+                                            <div className="text-xs text-slate-500">{themeOption.description}</div>
+                                         </div>
+                                      </div>
+                                      {isSelected && <CheckCircle className="w-5 h-5 text-primary shrink-0" />}
+                                   </div>
+                                   <div className={cn("mt-3 h-16 rounded-lg border", themeOption.previewClassName)} />
+                                   <div className="mt-3 text-xs text-slate-500">{themeOption.helper}</div>
+                                </button>
+                             );
+                          })}
                        </div>
                        
                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100">
@@ -1169,6 +1242,7 @@ export default function Settings() {
               </Card>
            </TabsContent>
 
+           {isActualAdmin && (
            <TabsContent value="admin-access" className="mt-6">
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                  <Card className="bg-white border-slate-200 xl:col-span-2">
@@ -1408,6 +1482,7 @@ export default function Settings() {
                  </div>
               )}
            </TabsContent>
+           )}
 
            {/* GAME RULES TAB (Admin Only) */}
            {isAdmin && (

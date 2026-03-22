@@ -111,7 +111,7 @@ function LoadingSplash() {
       </div>
 
       <div className="absolute bottom-6 text-slate-500 text-xs font-mono">
-        <span className="text-blue-400">v1.0.0</span> • Production Ready
+        <span className="text-blue-400">Alpha 1.5.0</span> • Live Preview Build
       </div>
     </div>
   );

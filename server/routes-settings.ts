@@ -16,7 +16,8 @@ const DEFAULT_PLAYER_OPTIONS = {
     emailNotifications: false,
   },
   display: {
-    darkMode: false,
+    darkMode: true,
+    themePreset: "black-style",
     compactView: false,
     showAnimations: true,
     showResourceRates: true,
@@ -48,6 +49,11 @@ function getPlayerOptionsKey(userId: string) {
 
 function mergePlayerOptions(value: any) {
   const incomingPrivacy = value?.privacy || {};
+  const incomingDisplay = value?.display || {};
+  const normalizedThemePreset =
+    incomingDisplay?.themePreset === "og-white" || incomingDisplay?.themePreset === "black-style"
+      ? incomingDisplay.themePreset
+      : "black-style";
   const normalizedPrivacy = {
     hideOnlineStatus: Boolean(incomingPrivacy.hideOnlineStatus),
     blockStrangers: Boolean(incomingPrivacy.blockStrangers ?? incomingPrivacy.blockStrangerMessages),
@@ -55,7 +61,12 @@ function mergePlayerOptions(value: any) {
 
   return {
     notifications: { ...DEFAULT_PLAYER_OPTIONS.notifications, ...(value?.notifications || {}) },
-    display: { ...DEFAULT_PLAYER_OPTIONS.display, ...(value?.display || {}) },
+    display: {
+      ...DEFAULT_PLAYER_OPTIONS.display,
+      ...incomingDisplay,
+      darkMode: normalizedThemePreset === "black-style",
+      themePreset: normalizedThemePreset,
+    },
     sound: { ...DEFAULT_PLAYER_OPTIONS.sound, ...(value?.sound || {}) },
     privacy: { ...DEFAULT_PLAYER_OPTIONS.privacy, ...normalizedPrivacy },
   };

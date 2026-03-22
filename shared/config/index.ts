@@ -564,6 +564,7 @@ export {
   SHIP_ASSETS,
   TECH_BRANCH_ASSETS,
   BACKGROUND_ASSETS,
+  THREE_D_VIEW_ASSETS,
   getAssetById,
   getAssetPlaceholder,
   getAssetsByCategory,
