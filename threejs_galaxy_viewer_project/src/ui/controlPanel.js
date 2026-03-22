@@ -284,6 +284,126 @@ function renderSettingsDeck(currentState, page) {
   `;
 }
 
+function renderLeftCommandDeck(currentState, menu) {
+  return `
+    <aside class="sd-rail">
+      <div class="sd-brand">
+        <div class="sd-brand-kicker">3D Sector Systems</div>
+        <h1>Galaxy Control Viewer</h1>
+        <p>Left-side command menus, sub menus, and tactical mode routing for the live universe map.</p>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title">Main Menus</div>
+        <div class="sd-menu-list">
+          ${currentState.menus
+            .map(
+              (entry) => `
+                <button class="sd-menu-button ${entry.id === currentState.activeMenuId ? "is-active" : ""}" data-action="menu" data-menu-id="${entry.id}">
+                  <span class="sd-menu-kicker">${entry.kicker}</span>
+                  <strong>${entry.label}</strong>
+                  <span>${entry.description}</span>
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+      </div>
+      <div class="sd-section sd-submenu-section">
+        <div class="sd-section-title">Sub Menus</div>
+        <div class="sd-submenu-list">
+          ${menu.pages
+            .map(
+              (entry) => `
+                <button class="sd-submenu-button ${entry.id === currentState.activePageId ? "is-active" : ""}" data-action="page" data-page-id="${entry.id}">
+                  <span class="sd-chip">${entry.label}</span>
+                  <strong>${entry.title}</strong>
+                  <span>${entry.description}</span>
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+      </div>
+    </aside>
+  `;
+}
+
+function renderViewportStage(currentState, page, activeSystem) {
+  return `
+    <section class="sd-viewport-stage">
+      <div class="sd-viewport-frame">
+        <div class="sd-viewport-corner is-top-left">
+          <span>${page.menuLabel}</span>
+          <strong>${page.label}</strong>
+        </div>
+        <div class="sd-viewport-corner is-top-right">
+          <span>${currentState.viewMode} view</span>
+          <strong>${currentState.shipControlMode}</strong>
+        </div>
+        <div class="sd-viewport-corner is-bottom-left">
+          <span>Selection</span>
+          <strong>${activeSystem ? activeSystem.name : "Awaiting system lock"}</strong>
+        </div>
+        <div class="sd-viewport-corner is-bottom-right">
+          <span>Universe</span>
+          <strong>${currentState.systemCount} systems</strong>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderRightPagePanel(currentState, page, activeSystem) {
+  return `
+    <aside class="sd-page-panel">
+      <div class="sd-section sd-page-hero">
+        <div class="sd-kicker">${page.menuLabel} / ${page.label}</div>
+        <h2>${page.title}</h2>
+        <p>${page.description}</p>
+        <div class="sd-chip-row">
+          ${page.capabilities.map((capability) => `<span class="sd-chip">${capability}</span>`).join("")}
+        </div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title">Page Controls</div>
+        <div class="sd-topbar-actions">
+          <div class="sd-mode-group">
+            ${["galaxy", "system", "planet"]
+              .map(
+                (mode) => `
+                  <button class="sd-pill ${currentState.viewMode === mode ? "is-active" : ""}" data-action="view-mode" data-view-mode="${mode}">
+                    ${mode}
+                  </button>
+                `,
+              )
+              .join("")}
+          </div>
+          <div class="sd-mode-group">
+            ${["patrol", "survey", "intercept", "colonize"]
+              .map(
+                (mode) => `
+                  <button class="sd-pill ${currentState.shipControlMode === mode ? "is-active" : ""}" data-action="ship-mode" data-ship-mode="${mode}">
+                    ${mode}
+                  </button>
+                `,
+              )
+              .join("")}
+          </div>
+          <button class="sd-pill" data-action="focus-selection">Focus Selected</button>
+          <button class="sd-pill" data-action="toggle-motion">${currentState.motionEnabled ? "Pause Motion" : "Resume Motion"}</button>
+          <button class="sd-pill sd-pill-accent" data-action="regenerate">Regenerate</button>
+        </div>
+      </div>
+      ${page.id.startsWith("settings-") ? renderSettingsDeck(currentState, page) : ""}
+      ${renderInputSection(currentState)}
+      <div class="sd-section">
+        <div class="sd-section-title">System Inspector</div>
+        ${renderSystemCard(activeSystem, currentState.selectedPlanet)}
+      </div>
+    </aside>
+  `;
+}
+
 export function createControlPanel(options) {
   const { root, state } = options;
 
@@ -292,91 +412,14 @@ export function createControlPanel(options) {
     const menu = getMenuById(currentState.activeMenuId);
     const page = getPageById(currentState.activePageId);
     const activeSystem = currentState.selectedSystem || currentState.hoveredSystem;
-    const viewModes = ["galaxy", "system", "planet"];
-    const shipModes = ["patrol", "survey", "intercept", "colonize"];
 
     root.innerHTML = `
       <div class="sd-shell">
-        <aside class="sd-rail">
-          <div class="sd-brand">
-            <div class="sd-brand-kicker">3D Sector Systems</div>
-            <h1>Galaxy Control Viewer</h1>
-            <p>Menu-driven command layers mapped directly into the procedural 3D scene.</p>
-          </div>
-          <div class="sd-menu-list">
-            ${currentState.menus
-              .map(
-                (entry) => `
-                  <button class="sd-menu-button ${entry.id === currentState.activeMenuId ? "is-active" : ""}" data-action="menu" data-menu-id="${entry.id}">
-                    <span class="sd-menu-kicker">${entry.kicker}</span>
-                    <strong>${entry.label}</strong>
-                    <span>${entry.description}</span>
-                  </button>
-                `,
-              )
-              .join("")}
-          </div>
-        </aside>
+        ${renderLeftCommandDeck(currentState, menu)}
 
         <div class="sd-center">
           ${renderHudOverview(currentState, page, activeSystem)}
-
-          <section class="sd-topbar">
-            <div>
-              <div class="sd-kicker">${menu.label} / ${page.label}</div>
-              <h2>${page.title}</h2>
-              <p>${page.description}</p>
-            </div>
-            <div class="sd-topbar-actions">
-              <div class="sd-mode-group">
-                ${viewModes
-                  .map(
-                    (mode) => `
-                      <button class="sd-pill ${currentState.viewMode === mode ? "is-active" : ""}" data-action="view-mode" data-view-mode="${mode}">
-                        ${mode}
-                      </button>
-                    `,
-                  )
-                  .join("")}
-              </div>
-              <div class="sd-mode-group">
-                ${shipModes
-                  .map(
-                    (mode) => `
-                      <button class="sd-pill ${currentState.shipControlMode === mode ? "is-active" : ""}" data-action="ship-mode" data-ship-mode="${mode}">
-                        ${mode}
-                      </button>
-                    `,
-                  )
-                  .join("")}
-              </div>
-              <button class="sd-pill" data-action="focus-selection">Focus Selected</button>
-              <button class="sd-pill" data-action="toggle-motion">${currentState.motionEnabled ? "Pause Motion" : "Resume Motion"}</button>
-              <button class="sd-pill sd-pill-accent" data-action="regenerate">Regenerate</button>
-            </div>
-          </section>
-
-          <section class="sd-subpages">
-            ${menu.pages
-              .map(
-                (entry) => `
-                  <button class="sd-subpage-card ${entry.id === currentState.activePageId ? "is-active" : ""}" data-action="page" data-page-id="${entry.id}">
-                    <div class="sd-subpage-top">
-                      <span class="sd-chip">${entry.label}</span>
-                      <span class="sd-subpage-accent" style="background:${entry.accent}"></span>
-                    </div>
-                    <strong>${entry.title}</strong>
-                    <p>${entry.description}</p>
-                    <div class="sd-chip-row">
-                      ${entry.capabilities.map((capability) => `<span class="sd-chip">${capability}</span>`).join("")}
-                    </div>
-                  </button>
-                `,
-              )
-              .join("")}
-          </section>
-
-          ${renderSettingsDeck(currentState, page)}
+          ${renderViewportStage(currentState, page, activeSystem)}
 
           ${renderSubHud(currentState, activeSystem, page)}
 
@@ -398,20 +441,7 @@ export function createControlPanel(options) {
             </div>
           </section>
         </div>
-
-        <aside class="sd-inspector">
-          <div class="sd-section">
-            <div class="sd-section-title">Main Menu Logic</div>
-            <div class="sd-chip-row">
-              ${page.capabilities.map((capability) => `<span class="sd-chip">${capability}</span>`).join("")}
-            </div>
-          </div>
-          ${renderInputSection(currentState)}
-          <div class="sd-section">
-            <div class="sd-section-title">System Inspector</div>
-            ${renderSystemCard(activeSystem, currentState.selectedPlanet)}
-          </div>
-        </aside>
+        ${renderRightPagePanel(currentState, page, activeSystem)}
       </div>
     `;
   }

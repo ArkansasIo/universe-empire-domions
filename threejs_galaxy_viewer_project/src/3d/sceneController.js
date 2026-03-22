@@ -125,13 +125,15 @@ export function createSceneController(options) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x06111d);
   scene.fog = new THREE.FogExp2(0x06111d, 0.00045);
+  const viewportWidth = () => Math.max(options.container.clientWidth || window.innerWidth, 1);
+  const viewportHeight = () => Math.max(options.container.clientHeight || window.innerHeight, 1);
 
-  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 25000);
+  const camera = new THREE.PerspectiveCamera(55, viewportWidth() / viewportHeight(), 0.1, 25000);
   camera.position.set(0, 420, 880);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(viewportWidth(), viewportHeight());
   options.container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -643,9 +645,9 @@ export function createSceneController(options) {
   });
 
   window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.aspect = viewportWidth() / viewportHeight();
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(viewportWidth(), viewportHeight());
   });
 
   const clock = new THREE.Clock();
