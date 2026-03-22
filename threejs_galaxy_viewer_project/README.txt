@@ -23,6 +23,8 @@ Features:
 - dedicated settings pages for input profiles and control references
 - keyboard layout cards and controller keybind tables inside the Settings pages
 - source-link manifest that maps the viewer to the main game folders and 3D asset roots
+- per-page code links that map active viewer menus to real main-game source files
+- runtime bridge snapshot that injects main-game-derived systems, gates, destinations, and planet classes into the 3D scene
 - galaxy, system, and planet camera modes
 - procedural star systems with planets, moons, stations, asteroid belts, and interstellar objects
 - 3D ship token controls for patrol, survey, intercept, and colonize posture
@@ -35,5 +37,7 @@ Folder notes:
 - assets/textures : starter texture folders by format
 - assets/models : starter model folders and template files
 - src/data/projectLinks.js : source-map manifest linking the viewer to the main game code and 3D content roots
+- src/data/projectLinks.js : also maps active pages to concrete source files such as universe config, schema, storage, and client 3D modules
+- src/data/gameRuntimeBridge.js : runtime bridge snapshot derived from main-game universe, travel, planet, and client 3D source data
 - game-source/public/assets/3d : browser runtime asset template root
 - game-source/resources/3d : higher-fidelity source asset template root

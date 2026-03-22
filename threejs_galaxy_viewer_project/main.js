@@ -1,4 +1,5 @@
 import { MENU_DEFINITIONS, getPageById } from "./src/data/menuConfig.js";
+import { GAME_RUNTIME_BRIDGE, summarizeRuntimeBridge } from "./src/data/gameRuntimeBridge.js";
 import { PROJECT_SOURCE_LINKS, VIEWER_ASSET_MOUNTS } from "./src/data/projectLinks.js";
 import { createSceneController } from "./src/3d/sceneController.js";
 import { setupInputManager } from "./src/input/inputManager.js";
@@ -13,6 +14,7 @@ const state = createViewerState({
   initialSystemCount: 420,
   projectLinks: PROJECT_SOURCE_LINKS,
   assetMounts: VIEWER_ASSET_MOUNTS,
+  runtimeBridgeSummary: summarizeRuntimeBridge(GAME_RUNTIME_BRIDGE),
 });
 
 const sceneController = createSceneController({
@@ -39,6 +41,7 @@ const initialState = state.getState();
 sceneController.rebuildGalaxy({
   seed: initialState.seed,
   systemCount: initialState.systemCount,
+  bridgeData: GAME_RUNTIME_BRIDGE,
 });
 sceneController.applyPage(getPageById(initialState.activePageId));
 sceneController.setViewMode(initialState.viewMode);
@@ -52,6 +55,7 @@ state.subscribe((nextState, previousState) => {
     sceneController.rebuildGalaxy({
       seed: nextState.seed,
       systemCount: nextState.systemCount,
+      bridgeData: GAME_RUNTIME_BRIDGE,
     });
   }
 

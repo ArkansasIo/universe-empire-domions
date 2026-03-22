@@ -14,6 +14,7 @@ export function createViewerState(options) {
     menus,
     projectLinks: options.projectLinks || [],
     assetMounts: options.assetMounts || [],
+    runtimeBridgeSummary: options.runtimeBridgeSummary || null,
     seed: randomSeed(),
     systemCount: options.initialSystemCount || 420,
     motionEnabled: true,

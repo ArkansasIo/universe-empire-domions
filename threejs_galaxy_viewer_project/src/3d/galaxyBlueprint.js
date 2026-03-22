@@ -131,73 +131,86 @@ function createAsteroidBelts(rng, threat) {
   return belts;
 }
 
+function normalizeBridgeSystem(system, index) {
+  return {
+    ...system,
+    index,
+    id: system.id || `runtime-system-${index}`,
+  };
+}
+
+function createProceduralSystem(rng, index, systemCount, arms, radiusScale) {
+  const arm = index % arms;
+  const normalized = index / systemCount;
+  const spiral = normalized * Math.PI * 8.5;
+  const distance = 45 + normalized * 930 + rng() * 20;
+  const armOffset = (arm / arms) * Math.PI * 2;
+  const wobble = (rng() - 0.5) * 0.55;
+  const angle = spiral + armOffset + wobble;
+  const x = Math.cos(angle) * (distance + (rng() - 0.5) * radiusScale);
+  const z = Math.sin(angle) * (distance + (rng() - 0.5) * radiusScale);
+  const y = (rng() - 0.5) * 120;
+  const economy = clamp(Math.round(25 + rng() * 75 + (1 - normalized) * 18), 5, 100);
+  const threat = clamp(Math.round(20 + rng() * 80 + normalized * 10), 4, 100);
+  const logistics = clamp(Math.round(30 + rng() * 70 + economy * 0.2), 8, 100);
+  const command = clamp(Math.round(18 + rng() * 85 + logistics * 0.18), 6, 100);
+  const diplomacy = clamp(Math.round(15 + rng() * 85), 3, 100);
+  const recon = clamp(Math.round(10 + rng() * 90), 4, 100);
+  const anomaly = clamp(Math.round(rng() * 100), 0, 100);
+  const jump = clamp(Math.round(logistics * 0.5 + rng() * 50), 0, 100);
+  const alliance = ALLIANCES[Math.floor(rng() * ALLIANCES.length)];
+
+  const system = {
+    id: `system-${index}`,
+    index,
+    name: `${pick(STAR_PREFIX, index)} ${pick(STAR_SUFFIX, Math.floor(rng() * 1000) + index)}`,
+    position: { x, y, z },
+    arm,
+    sector: `A${arm + 1}-S${String(Math.floor(distance / 120)).padStart(2, "0")}`,
+    starSize: 1.7 + rng() * 2.9,
+    temperature: Math.round(3100 + rng() * 6900),
+    planets: createPlanets(rng, index, economy, threat),
+    stations: createStations(rng, index, logistics, command),
+    interstellarObjects: createInterstellarObjects(rng, index, anomaly, threat),
+    asteroidBelts: createAsteroidBelts(rng, threat),
+    metrics: {
+      economy,
+      threat,
+      logistics,
+      command,
+      diplomacy,
+      recon,
+      anomaly,
+      jump,
+    },
+    alliance,
+    hasJumpGate: jump > 70,
+    hasAnomaly: anomaly > 72,
+    description: `${alliance} foothold in sector ${Math.floor(distance / 120) + 1} with ${economy}% economic output, ${threat}% threat pressure, and ${logistics}% logistics readiness.`,
+  };
+
+  system.primaryPlanetId =
+    [...system.planets].sort(
+      (left, right) => right.habitability + right.resourceValue - (left.habitability + left.resourceValue),
+    )[0]?.id || null;
+
+  return system;
+}
+
 export function buildGalaxyBlueprint(options) {
   const seed = options.seed || 1;
   const systemCount = options.systemCount || 420;
   const rng = createRng(seed);
-  const systems = [];
+  const bridgeSystems = (options.bridgeData?.viewerSystems || []).map(normalizeBridgeSystem);
+  const systems = [...bridgeSystems];
   const arms = 5;
   const radiusScale = 22;
-  const routeLanes = [];
-  const tradeLanes = [];
-  const diplomacyLinks = [];
+  const routeLanes = [...(options.bridgeData?.routeLanes || [])];
+  const tradeLanes = [...(options.bridgeData?.tradeLanes || [])];
+  const diplomacyLinks = [...(options.bridgeData?.diplomacyLinks || [])];
 
-  for (let index = 0; index < systemCount; index += 1) {
-    const arm = index % arms;
-    const normalized = index / systemCount;
-    const spiral = normalized * Math.PI * 8.5;
-    const distance = 45 + normalized * 930 + rng() * 20;
-    const armOffset = (arm / arms) * Math.PI * 2;
-    const wobble = (rng() - 0.5) * 0.55;
-    const angle = spiral + armOffset + wobble;
-    const x = Math.cos(angle) * (distance + (rng() - 0.5) * radiusScale);
-    const z = Math.sin(angle) * (distance + (rng() - 0.5) * radiusScale);
-    const y = (rng() - 0.5) * 120;
-    const economy = clamp(Math.round(25 + rng() * 75 + (1 - normalized) * 18), 5, 100);
-    const threat = clamp(Math.round(20 + rng() * 80 + normalized * 10), 4, 100);
-    const logistics = clamp(Math.round(30 + rng() * 70 + economy * 0.2), 8, 100);
-    const command = clamp(Math.round(18 + rng() * 85 + logistics * 0.18), 6, 100);
-    const diplomacy = clamp(Math.round(15 + rng() * 85), 3, 100);
-    const recon = clamp(Math.round(10 + rng() * 90), 4, 100);
-    const anomaly = clamp(Math.round(rng() * 100), 0, 100);
-    const jump = clamp(Math.round(logistics * 0.5 + rng() * 50), 0, 100);
-    const alliance = ALLIANCES[Math.floor(rng() * ALLIANCES.length)];
-
-    const system = {
-      id: `system-${index}`,
-      index,
-      name: `${pick(STAR_PREFIX, index)} ${pick(STAR_SUFFIX, Math.floor(rng() * 1000) + index)}`,
-      position: { x, y, z },
-      arm,
-      sector: `A${arm + 1}-S${String(Math.floor(distance / 120)).padStart(2, "0")}`,
-      starSize: 1.7 + rng() * 2.9,
-      temperature: Math.round(3100 + rng() * 6900),
-      planets: createPlanets(rng, index, economy, threat),
-      stations: createStations(rng, index, logistics, command),
-      interstellarObjects: createInterstellarObjects(rng, index, anomaly, threat),
-      asteroidBelts: createAsteroidBelts(rng, threat),
-      metrics: {
-        economy,
-        threat,
-        logistics,
-        command,
-        diplomacy,
-        recon,
-        anomaly,
-        jump,
-      },
-      alliance,
-      hasJumpGate: jump > 70,
-      hasAnomaly: anomaly > 72,
-      description: `${alliance} foothold in sector ${Math.floor(distance / 120) + 1} with ${economy}% economic output, ${threat}% threat pressure, and ${logistics}% logistics readiness.`,
-    };
-
-    system.primaryPlanetId =
-      [...system.planets].sort(
-        (left, right) => right.habitability + right.resourceValue - (left.habitability + left.resourceValue),
-      )[0]?.id || null;
-
-    systems.push(system);
+  for (let index = bridgeSystems.length; index < systemCount; index += 1) {
+    systems.push(createProceduralSystem(rng, index, systemCount, arms, radiusScale));
   }
 
   const sortedByLogistics = [...systems].sort((left, right) => right.metrics.logistics - left.metrics.logistics);

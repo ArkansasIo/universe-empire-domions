@@ -1,5 +1,6 @@
 import { getMenuById, getPageById } from "../data/menuConfig.js";
 import { CONTROLLER_BINDINGS, KEYBOARD_BINDINGS, KEYBOARD_LAYOUT } from "../data/inputBindings.js";
+import { getGameFileLinksForPage } from "../data/projectLinks.js";
 
 function formatMetric(value) {
   return `${Math.round(value || 0)}%`;
@@ -74,6 +75,32 @@ function renderAssetMounts(mounts) {
           <span class="sd-binding-action">
             <strong>${entry.path}</strong><br>
             ${entry.purpose}
+          </span>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderGameFileLinks(pageId) {
+  const links = getGameFileLinksForPage(pageId);
+  if (links.length === 0) {
+    return `
+      <div class="sd-binding-row">
+        <span class="sd-binding-key">No mapped files</span>
+        <span class="sd-binding-action">This page is not yet connected to a specific main-game source file group.</span>
+      </div>
+    `;
+  }
+
+  return links
+    .map(
+      (entry) => `
+        <div class="sd-binding-row">
+          <span class="sd-binding-key">${entry.label}</span>
+          <span class="sd-binding-action">
+            <strong>${entry.path}</strong><br>
+            ${entry.description}
           </span>
         </div>
       `,
@@ -210,6 +237,11 @@ function renderHudOverview(currentState, page, activeSystem) {
         <span class="sd-kicker">Camera Stack</span>
         <strong>${currentState.viewMode} view</strong>
         <p>${currentState.shipControlMode} posture loaded into tactical ship controls.</p>
+      </div>
+      <div class="sd-hud-card">
+        <span class="sd-kicker">Runtime Bridge</span>
+        <strong>${currentState.runtimeBridgeSummary?.linkedSystems || 0} linked systems</strong>
+        <p>${currentState.runtimeBridgeSummary ? `${currentState.runtimeBridgeSummary.sourceModules} source modules are feeding the viewer bridge.` : "No main-game runtime bridge loaded."}</p>
       </div>
     </section>
   `;
@@ -427,6 +459,23 @@ function renderRightPagePanel(currentState, page, activeSystem) {
         </div>
       </div>
       ${page.id.startsWith("settings-") ? renderSettingsDeck(currentState, page) : ""}
+      <div class="sd-section">
+        <div class="sd-section-title">Active Game Code Links</div>
+        ${renderGameFileLinks(page.id)}
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title">Runtime Bridge Summary</div>
+        ${currentState.runtimeBridgeSummary
+          ? renderBindingRows([
+              { key: "Bridge", action: currentState.runtimeBridgeSummary.name },
+              { key: "Linked Systems", action: String(currentState.runtimeBridgeSummary.linkedSystems) },
+              { key: "Route Lanes", action: String(currentState.runtimeBridgeSummary.routeLanes) },
+              { key: "Trade Lanes", action: String(currentState.runtimeBridgeSummary.tradeLanes) },
+              { key: "Diplomacy Links", action: String(currentState.runtimeBridgeSummary.diplomacyLinks) },
+              { key: "Presets", action: String(currentState.runtimeBridgeSummary.presets) },
+            ])
+          : renderBindingRows([{ key: "Bridge", action: "No runtime bridge loaded." }])}
+      </div>
       <div class="sd-section">
         <div class="sd-section-title">Main Game Source Links</div>
         ${renderSourceLinks(currentState.projectLinks)}
