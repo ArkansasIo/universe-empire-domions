@@ -1,8 +1,8 @@
 .sd-sidebar-shell,
 .sd-sidebar-console {
   background:
-    linear-gradient(180deg, rgba(26, 38, 52, 0.94), rgba(10, 16, 24, 0.94)),
-    radial-gradient(circle at top, rgba(79, 212, 255, 0.08), transparent 28%);
+    linear-gradient(180deg, var(--sd-sidebar-top), var(--sd-sidebar-bottom)),
+    radial-gradient(circle at top, var(--sd-sidebar-radial), transparent 28%);
 }
 
 .sd-sidebar-item,
@@ -60,7 +60,7 @@
 }
 
 .sd-sidebar-status-pill {
-  background: linear-gradient(180deg, rgba(47, 60, 77, 0.92), rgba(20, 30, 40, 0.92));
+  background: linear-gradient(180deg, var(--sd-sidebar-status-top), var(--sd-sidebar-status-bottom));
   border-color: rgba(79, 107, 134, 0.9);
   color: var(--sd-text-secondary);
   box-shadow:

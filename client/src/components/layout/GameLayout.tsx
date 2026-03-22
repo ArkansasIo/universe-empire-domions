@@ -122,6 +122,8 @@ interface DetailCard {
 
 interface LayoutPlayerOptions {
   display?: {
+    darkMode?: boolean;
+    themePreset?: "black-style" | "og-white";
     compactView?: boolean;
     showAnimations?: boolean;
     showResourceRates?: boolean;
@@ -839,6 +841,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
   }, [isMobile]);
 
   const displayPreferences = {
+    themePreset: playerOptions?.display?.themePreset ?? "black-style",
     compactView: Boolean(playerOptions?.display?.compactView),
     showAnimations: playerOptions?.display?.showAnimations ?? true,
     showResourceRates: playerOptions?.display?.showResourceRates ?? true,
@@ -957,6 +960,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     const root = document.documentElement;
+    root.dataset.sdTheme = displayPreferences.themePreset;
     root.dataset.deviceProfile = displayPreferences.deviceProfile;
     root.dataset.browserWidth = displayPreferences.browserWidth;
     root.dataset.touchUi = touchMode ? "true" : "false";
@@ -967,6 +971,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
 
     return () => {
       root.classList.remove("compact-ui", "reduced-motion-ui");
+      delete root.dataset.sdTheme;
       delete root.dataset.deviceProfile;
       delete root.dataset.browserWidth;
       delete root.dataset.touchUi;
@@ -974,6 +979,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
       delete root.dataset.touchTargetSize;
     };
   }, [
+    displayPreferences.themePreset,
     displayPreferences.browserWidth,
     displayPreferences.compactView,
     displayPreferences.deviceProfile,
@@ -985,7 +991,8 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className={cn(
-      "sd-game-shell relative isolate min-h-screen overflow-hidden bg-slate-950/80 text-slate-900 flex flex-col",
+      "sd-game-shell relative isolate min-h-screen overflow-hidden flex flex-col",
+      displayPreferences.themePreset === "black-style" ? "bg-slate-950/80 text-slate-100" : "bg-slate-50 text-slate-900",
       touchMode && "touch-manipulation",
       !displayPreferences.showAnimations && "motion-reduce",
     )}>

@@ -5,7 +5,7 @@
   min-height: 60px;
   padding: 0.75rem;
   border: 1px solid var(--sd-panel-border);
-  background: linear-gradient(180deg, rgba(47, 60, 77, 0.96), rgba(18, 27, 38, 0.96));
+  background: linear-gradient(180deg, var(--sd-command-bar-top), var(--sd-command-bar-bottom));
   box-shadow: 0 0 12px var(--sd-panel-glow);
 }
 
@@ -35,7 +35,7 @@
 .sd-top-link-bar {
   padding: 0.2rem 0.35rem;
   border: 1px solid rgba(79, 107, 134, 0.45);
-  background: linear-gradient(180deg, rgba(37, 47, 60, 0.72), rgba(18, 25, 34, 0.72));
+  background: linear-gradient(180deg, var(--sd-top-link-top), var(--sd-top-link-bottom));
   box-shadow:
     0 0 10px rgba(0, 150, 255, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -48,7 +48,7 @@
 }
 
 .sd-realm-shell {
-  background: linear-gradient(180deg, rgba(47, 60, 77, 0.9), rgba(18, 27, 38, 0.9));
+  background: linear-gradient(180deg, var(--sd-realm-shell-top), var(--sd-realm-shell-bottom));
   border-color: rgba(79, 107, 134, 0.8);
   box-shadow:
     0 0 10px rgba(0, 150, 255, 0.08),
@@ -56,7 +56,7 @@
 }
 
 .sd-realm-status {
-  background: linear-gradient(180deg, rgba(0, 168, 255, 0.2), rgba(0, 90, 141, 0.3));
+  background: linear-gradient(180deg, var(--sd-realm-status-top), var(--sd-realm-status-bottom));
   border-color: rgba(43, 209, 255, 0.55);
   color: #dff7ff;
   box-shadow: 0 0 10px rgba(0, 200, 255, 0.18);

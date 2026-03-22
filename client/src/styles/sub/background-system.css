@@ -1,8 +1,8 @@
 .sd-game-shell {
   background:
-    radial-gradient(circle at top right, var(--sd-nebula-a), transparent 28%),
-    radial-gradient(circle at left center, var(--sd-nebula-b), transparent 24%),
-    #060c14;
+    radial-gradient(circle at top right, var(--sd-shell-nebula-a), transparent 28%),
+    radial-gradient(circle at left center, var(--sd-shell-nebula-b), transparent 24%),
+    var(--sd-shell-bg);
 }
 
 .sd-topbar,
@@ -13,8 +13,8 @@
 
 .sd-scene-layer {
   background:
-    radial-gradient(circle at 75% 18%, rgba(255, 179, 71, 0.08), transparent 14%),
-    radial-gradient(circle at 28% 28%, rgba(110, 197, 255, 0.08), transparent 18%);
+    radial-gradient(circle at 75% 18%, var(--sd-scene-accent-a), transparent 14%),
+    radial-gradient(circle at 28% 28%, var(--sd-scene-accent-b), transparent 18%);
 }
 
 .sd-scene-grid {

@@ -33,7 +33,7 @@
 .sd-select-trigger {
   border: 1px solid var(--sd-button-frame) !important;
   color: var(--sd-text-primary) !important;
-  background: linear-gradient(180deg, rgba(43, 57, 73, 0.96), rgba(18, 26, 35, 0.96)) !important;
+  background: linear-gradient(180deg, var(--sd-input-top), var(--sd-input-bottom)) !important;
   box-shadow:
     0 0 8px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -56,7 +56,7 @@
 
 .sd-select-content {
   border: 1px solid var(--sd-panel-border) !important;
-  background: linear-gradient(180deg, rgba(28, 38, 51, 0.98), rgba(10, 15, 20, 0.98)) !important;
+  background: linear-gradient(180deg, var(--sd-select-content-top), var(--sd-select-content-bottom)) !important;
   color: var(--sd-text-primary) !important;
   box-shadow: 0 0 16px rgba(0, 150, 255, 0.16);
 }
@@ -81,7 +81,7 @@
 
 .sd-tabs-list {
   border: 1px solid rgba(79, 107, 134, 0.55);
-  background: linear-gradient(180deg, rgba(33, 45, 60, 0.92), rgba(13, 20, 28, 0.92));
+  background: linear-gradient(180deg, var(--sd-tabs-top), var(--sd-tabs-bottom));
   box-shadow:
     0 0 10px rgba(0, 150, 255, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -103,7 +103,7 @@
 
 .sd-badge {
   border: 1px solid var(--sd-button-frame);
-  background: linear-gradient(180deg, rgba(47, 60, 77, 0.94), rgba(22, 31, 43, 0.94));
+  background: linear-gradient(180deg, var(--sd-badge-top), var(--sd-badge-bottom));
   color: var(--sd-text-primary);
   font-family: var(--sd-font-display);
   letter-spacing: 0.06em;
