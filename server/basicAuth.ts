@@ -218,6 +218,85 @@ async function ensureBootstrapAdminAccount() {
   }
 }
 
+async function ensureNamedAdminAccount(options: {
+  username: string;
+  email: string;
+  firstName: string;
+  password: string;
+  role: string;
+  label: string;
+}) {
+  const username = options.username.trim();
+  const email = options.email.trim();
+  const firstName = options.firstName.trim();
+  const password = options.password;
+  const role = normalizeAdminRole(options.role);
+
+  if (!username || !email || !password) {
+    logger.warn("AUTH", `${options.label} skipped due to missing credentials`);
+    return null;
+  }
+
+  let user = await resolveUserByIdentifier(username) || await resolveUserByIdentifier(email);
+  if (!user) {
+    user = await storage.createUser({
+      username,
+      email,
+      firstName,
+      passwordHash: hashPassword(password),
+    });
+    logger.info("AUTH", `${options.label} user created: ${username}`);
+  }
+
+  user = await syncDevPasswordIfNeeded(user, password, options.label);
+
+  const [adminRecord] = await db
+    .select({ id: adminUsers.id, role: adminUsers.role })
+    .from(adminUsers)
+    .where(eq(adminUsers.userId, user.id))
+    .limit(1);
+
+  if (!adminRecord) {
+    await db.insert(adminUsers).values({
+      userId: user.id,
+      role,
+      permissions: getRolePermissions(role),
+    });
+    logger.info("AUTH", `${options.label} role granted: ${username} (${role})`);
+  }
+
+  return user;
+}
+
+async function ensureBootstrapAdminAccounts() {
+  await ensureBootstrapAdminAccount();
+
+  if (process.env.NODE_ENV === "development") {
+    await ensureNamedAdminAccount({
+      username: (process.env.DEV_ADMIN_USERNAME || "devadmin").trim(),
+      email: (process.env.DEV_ADMIN_EMAIL || "devadmin@universee.game").trim(),
+      firstName: (process.env.DEV_ADMIN_FIRST_NAME || "Dev Admin").trim(),
+      password: process.env.DEV_ADMIN_PASSWORD || process.env.DEV_AUTH_PASSWORD || "dev-password",
+      role: process.env.DEV_ADMIN_ROLE || "devadmin",
+      label: "Development admin",
+    });
+  }
+
+  const ownerUsername = String(process.env.OWNER_ADMIN_USERNAME || "").trim();
+  const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || "").trim();
+  const ownerPassword = String(process.env.OWNER_ADMIN_PASSWORD || "").trim();
+  if (ownerUsername || ownerEmail || ownerPassword) {
+    await ensureNamedAdminAccount({
+      username: ownerUsername || ownerEmail.split("@")[0] || "owneradmin",
+      email: ownerEmail || `${ownerUsername || "owneradmin"}@universee.game`,
+      firstName: (process.env.OWNER_ADMIN_FIRST_NAME || "Owner Admin").trim(),
+      password: ownerPassword || process.env.ADMIN_BOOTSTRAP_PASSWORD || "Owner@12345",
+      role: process.env.OWNER_ADMIN_ROLE || "founder",
+      label: "Owner admin",
+    });
+  }
+}
+
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   
@@ -236,7 +315,7 @@ export async function setupAuth(app: Express) {
   
   app.use(getSession());
 
-  await ensureBootstrapAdminAccount();
+  await ensureBootstrapAdminAccounts();
   if (isDevAuthBypassEnabled()) {
     await ensureDevBypassUser();
     logger.warn("AUTH", "DEV_AUTH_BYPASS is enabled; protected routes will auto-authenticate locally");

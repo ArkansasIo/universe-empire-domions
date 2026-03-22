@@ -13,6 +13,12 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const fillCredentials = (nextIdentifier: string, nextPassword: string) => {
+    setIdentifier(nextIdentifier);
+    setPassword(nextPassword);
+    setError("");
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
@@ -68,8 +74,28 @@ export default function AdminLogin() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {isDev ? (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-                Local dev defaults: `admin` / `Admin@12345` or `devadmin` / `dev-password`
+              <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                <div>Local dev defaults: `admin` / `Admin@12345` or `devadmin` / `dev-password`</div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-amber-300 text-amber-100 hover:bg-amber-500/20"
+                    onClick={() => fillCredentials("admin", "Admin@12345")}
+                  >
+                    Use admin
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-amber-300 text-amber-100 hover:bg-amber-500/20"
+                    onClick={() => fillCredentials("devadmin", "dev-password")}
+                  >
+                    Use devadmin
+                  </Button>
+                </div>
               </div>
             ) : null}
             <div>

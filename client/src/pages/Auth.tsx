@@ -436,9 +436,27 @@ export default function Auth() {
 
                   <form onSubmit={isForgot ? handleForgotPassword : handleSubmit} className="space-y-4">
                     {isLogin && !isForgot && (
-                      <Button type="button" onClick={useDemoAccount} variant="outline" className="w-full border-slate-300 text-slate-700 hover:bg-slate-100" data-testid="button-demo-login" disabled={submitting}>
-                        Use Demo Account (player1)
-                      </Button>
+                      <div className="space-y-3">
+                        <Button type="button" onClick={useDemoAccount} variant="outline" className="w-full border-slate-300 text-slate-700 hover:bg-slate-100" data-testid="button-demo-login" disabled={submitting}>
+                          Use Demo Account (player1)
+                        </Button>
+                        <div className="rounded-lg border border-red-200 bg-red-50/80 p-3">
+                          <div className="flex items-start gap-2 text-red-900">
+                            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold uppercase tracking-[0.2em]">Administrator Access</p>
+                              <p className="text-xs text-red-800">
+                                Founder, owner, and dev-admin accounts use the dedicated control login.
+                              </p>
+                              <Link href="/admin-login">
+                                <Button type="button" variant="outline" size="sm" className="border-red-300 bg-white text-red-900 hover:bg-red-100" data-testid="button-admin-login-link">
+                                  Open Admin Login
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     )}
 
                     <div>
@@ -584,7 +602,7 @@ export default function Auth() {
                 <Link href="/terms" className="hover:text-slate-900 hover:underline transition-colors" data-testid="link-terms">
                   Terms of Service
                 </Link>
-                <span>•</span>
+                <span>&bull;</span>
                 <Link href="/privacy" className="hover:text-slate-900 hover:underline transition-colors" data-testid="link-privacy">
                   Privacy Policy
                 </Link>
@@ -675,13 +693,13 @@ export default function Auth() {
       <div className="fixed bottom-0 inset-x-0 border-t border-slate-300 bg-white/95 backdrop-blur-sm z-20">
         <div className="max-w-4xl mx-auto px-4 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-600">
           <span className="font-semibold text-slate-700">universe-empire-domions</span>
-          <span>•</span>
+          <span>&bull;</span>
           <span>Version {GAME_VERSION}</span>
-          <span>•</span>
+          <span>&bull;</span>
           <span>{buildChannel}</span>
-          <span>•</span>
+          <span>&bull;</span>
           <span>Universe {UNIVERSE_ID}</span>
-          <span>•</span>
+          <span>&bull;</span>
           <span>Developed by Stephen</span>
         </div>
       </div>
