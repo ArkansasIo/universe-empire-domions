@@ -72,6 +72,7 @@ const Manufacturing = lazy(() => import("@/pages/Manufacturing"));
 const Refining = lazy(() => import("@/pages/Refining"));
 const PlanetaryIndustry = lazy(() => import("@/pages/PlanetaryIndustry"));
 const Invention = lazy(() => import("@/pages/Invention"));
+const AdminLogin = lazy(() => import("@/pages/AdminLogin"));
 
 function LoadingSplash() {
   return (
@@ -158,6 +159,7 @@ function RouterContent() {
   if (!isLoggedIn) {
     return (
       <Switch>
+        <Route path="/admin/login" component={AdminLogin} />
         <Route path="/about" component={About} />
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />

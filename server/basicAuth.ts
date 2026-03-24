@@ -8,6 +8,7 @@ import { db } from "./db";
 import { adminUsers, users, type User } from "../shared/schema";
 import { eq, ilike, or } from "drizzle-orm";
 import { getRolePermissions, normalizeAdminRole } from "./adminPermissions";
+import { requireAdminIp, logAdminActivity } from "./middleware/adminIpCheck";
 
 const NON_ADMIN_USERNAMES = new Set(["player1", "player2", "player3"]);
 const NON_ADMIN_EMAIL_SUFFIX = "@universe-empire-domions.game";
@@ -418,7 +419,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/admin/login", async (req, res) => {
+  app.post("/api/admin/login", logAdminActivity, requireAdminIp, async (req, res) => {
     try {
       const identifier = String(req.body?.identifier || req.body?.username || "").trim();
       const password = String(req.body?.password || "");
@@ -430,11 +431,13 @@ export async function setupAuth(app: Express) {
       const user = await resolveUserByIdentifier(identifier);
 
       if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
+        logger.warn("AUTH", `Admin login failed for identifier: ${identifier}`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       const adminStatus = await resolveAdminStatus(user.id);
       if (!adminStatus.isAdmin) {
+        logger.warn("AUTH", `Non-admin user attempted admin login: ${user.username}`);
         return res.status(403).json({ message: "Admin access required for this account" });
       }
 
@@ -448,6 +451,7 @@ export async function setupAuth(app: Express) {
           return res.status(500).json({ message: "Admin login failed" });
         }
 
+        logger.info("AUTH", `Admin login successful for: ${user!.username} (${adminStatus.adminRole})`);
         res.json({
           message: "Admin login successful",
           user: {
